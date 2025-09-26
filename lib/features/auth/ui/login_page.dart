@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../ register/ui/signup_page.dart';
+
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -160,7 +162,12 @@ class LoginPage extends StatelessWidget {
 
                       // Đăng ký
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SignUpPage())
+                          );
+                        },
                         child: const Text(
                           "Tạo tài khoản mới",
                           style: TextStyle(
