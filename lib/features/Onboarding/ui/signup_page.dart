@@ -67,10 +67,11 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: Column(
                       children: [
                         _buildInput(
-                          label: "Căn cước công dân *",
+                          label: "Căn cước công dân",
                           hint: "Nhập số CCCD",
                           controller: _cccdController,
                           keyboardType: TextInputType.number,
+                          isRequired: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return "Vui lòng nhập CCCD";
@@ -87,16 +88,17 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 20),
 
                         _buildInput(
-                          label: "Số điện thoại *",
+                          label: "Số điện thoại",
                           hint: "Nhập số điện thoại",
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
+                          isRequired: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return "Vui lòng nhập số điện thoại";
                             }
                             if (!RegExp(r'^0[0-9]{9}$').hasMatch(value)) {
-                              return "SĐT phải bắt đầu bằng 0 và đủ 10 số";
+                              return "SĐT không hợp lệ";
                             }
                             return null;
                           },
@@ -104,16 +106,17 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 20),
 
                         _buildInput(
-                          label: "Email *",
+                          label: "Email",
                           hint: "Nhập email",
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          isRequired: false, // 👈 không bắt buộc
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Vui lòng nhập email";
-                            }
-                            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                              return "Email không hợp lệ";
+                            if (value != null && value.isNotEmpty) {
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                  .hasMatch(value)) {
+                                return "Email không hợp lệ";
+                              }
                             }
                             return null;
                           },
@@ -121,10 +124,11 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 20),
 
                         _buildInput(
-                          label: "Họ và tên *",
+                          label: "Họ và tên",
                           hint: "Nhập họ và tên",
                           controller: _nameController,
                           keyboardType: TextInputType.name,
+                          isRequired: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return "Vui lòng nhập họ và tên";
@@ -225,23 +229,26 @@ class _SignUpPageState extends State<SignUpPage> {
     required TextEditingController controller,
     required String? Function(String?) validator,
     required TextInputType keyboardType,
+    bool isRequired = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         RichText(
           text: TextSpan(
-            text: label.substring(0, label.length - 2),
+            text: label,
             style: const TextStyle(
               fontSize: 14,
               color: Colors.black87,
             ),
-            children: const <TextSpan>[
+            children: isRequired
+                ? const <TextSpan>[
               TextSpan(
                 text: ' *',
                 style: TextStyle(color: Colors.red),
               ),
-            ],
+            ]
+                : [],
           ),
         ),
         const SizedBox(height: 6),

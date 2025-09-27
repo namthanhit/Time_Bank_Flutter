@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
 class PasswordSetupScreen extends StatefulWidget {
@@ -13,6 +14,10 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
+  // Trạng thái ẩn/hiện mật khẩu
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
   @override
   void dispose() {
     _passwordController.dispose();
@@ -25,9 +30,29 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
       // Nếu hợp lệ → chuyển sang LoginPage
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
+        MaterialPageRoute(builder: (context) => const PinSetupScreen()),
       );
     }
+  }
+
+  // Hàm kiểm tra ràng buộc mật khẩu: >=8 ký tự và có chữ hoa
+  String? _passwordValidator(String? value) {
+    if (value == null || value.isEmpty) {
+      return "Vui lòng nhập mật khẩu";
+    }
+    if (value.length < 8) {
+      return "Mật khẩu phải ít nhất 8 ký tự";
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return "Mật khẩu phải chứa ít nhất 1 chữ hoa";
+    }
+    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
+      return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt";
+    }
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return "Mật khẩu phải chứa ít nhất 1 chữ số";
+    }
+    return null;
   }
 
   @override
@@ -81,23 +106,27 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           obscuringCharacter: '*',
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            hintText: "******",
+                            hintText: "Nhập mật khẩu",
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Vui lòng nhập mật khẩu";
-                            }
-                            if (value.length < 6) {
-                              return "Mật khẩu phải ít nhất 6 ký tự";
-                            }
-                            return null;
-                          },
+                          validator: _passwordValidator,
                         ),
                         const SizedBox(height: 20),
 
@@ -109,17 +138,35 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _confirmController,
-                          obscureText: true,
+                          obscureText: _obscureConfirm,
                           obscuringCharacter: '*',
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            hintText: "******",
+                            hintText: "Nhập lại mật khẩu",
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureConfirm
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureConfirm = !_obscureConfirm;
+                                });
+                              },
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return "Vui lòng nhập lại mật khẩu";
+                            }
+                            // Trước tiên kiểm tra mật khẩu chính có hợp lệ không
+                            final pwError = _passwordValidator(_passwordController.text);
+                            if (pwError != null) {
+                              // Nếu mật khẩu chính chưa hợp lệ, báo cho user sửa trước
+                              return pwError;
                             }
                             if (value != _passwordController.text) {
                               return "Mật khẩu nhập lại không khớp";

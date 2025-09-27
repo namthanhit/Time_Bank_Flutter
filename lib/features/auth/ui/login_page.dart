@@ -1,9 +1,28 @@
 import 'package:flutter/material.dart';
 
-import '../../ register/ui/signup_page.dart';
+import '../../Onboarding/ui/signup_page.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  // Trạng thái ẩn/hiện mật khẩu
+  bool _obscurePassword = true;
+
+  // (Tùy chọn) controller cho username / password nếu muốn truy xuất
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,13 +86,21 @@ class LoginPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
 
-                      // Username Input
+                      // Username Input (hint mờ)
                       TextField(
+                        controller: _usernameController,
+                        style: const TextStyle(color: Colors.black87),
                         decoration: InputDecoration(
                           hintText: "Nhập số điện thoại hoặc email",
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400, // ← hint mờ ở đây
+                            fontSize: 16,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -85,13 +112,34 @@ class LoginPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Password
+                      // Password (hint mờ) + eye icon
                       TextField(
-                        obscureText: true,
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        style: const TextStyle(color: Colors.black87),
                         decoration: InputDecoration(
                           hintText: "Nhập mật khẩu",
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400, // ← hint mờ ở đây
+                            fontSize: 16,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.grey[600],
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                         ),
                       ),
@@ -106,15 +154,17 @@ class LoginPage extends StatelessWidget {
                             gradient: const LinearGradient(
                               colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              // TODO: xử lý đăng nhập với _usernameController.text & _passwordController.text
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent, // trong suốt
                               shadowColor: Colors.transparent, // bỏ bóng mặc định
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
                             child: const Text(
@@ -134,11 +184,10 @@ class LoginPage extends StatelessWidget {
                           onPressed: () {},
                           child: const Text(
                             "Quên mật khẩu?",
-                            style:
-                            TextStyle(color: Color(0xFF0D1B4C),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold
-                            ),
+                            style: TextStyle(
+                                color: Color(0xFF0D1B4C),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -164,9 +213,9 @@ class LoginPage extends StatelessWidget {
                       TextButton(
                         onPressed: () {
                           Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const SignUpPage())
-                          );
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const SignUpPage()));
                         },
                         child: const Text(
                           "Tạo tài khoản mới",

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/enter_contact_page.dart';
+import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
+import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
 class PinSetupScreen extends StatefulWidget {
   const PinSetupScreen({super.key});
@@ -132,7 +133,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const PasswordSetupScreen(),
+                                builder: (_) => const LoginPage(),
                               ),
                             );
                           } else {
