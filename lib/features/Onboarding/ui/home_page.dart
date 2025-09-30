@@ -119,7 +119,7 @@ class _HomePageState extends State<HomePage> {
             right: 16,
             child: InkWell(
               borderRadius: BorderRadius.circular(24),
-              onTap: () {},
+              onTap: _openNotifications,
               child: const Padding(
                 padding: EdgeInsets.all(6),
                 child: Icon(Icons.notifications, color: Colors.white, size: 28),
@@ -736,6 +736,30 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
+  // ==================== NOTIFICATION POPUP ====================
+  void _openNotifications() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Đóng',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (c, a1, a2) => Center(
+        child: _NotificationPopup(brandColor: _brandColor),
+      ),
+      transitionBuilder: (context, animation, _, child) {
+        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        return Opacity(
+          opacity: curved.value,
+          child: Transform.scale(
+            scale: 0.98 + curved.value * 0.02,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _NavItemData {
@@ -748,4 +772,234 @@ class _NavItemData {
     required this.label,
     this.emphasize = false,
   });
+}
+
+// -------------------- Notification Models & Widgets --------------------
+class _NotificationItem {
+  final String title;
+  final List<String> lines; // body lines (excluding time)
+  final String time; // e.g. 18:20
+  _NotificationItem({required this.title, required this.lines, required this.time});
+}
+
+class _NotificationPopup extends StatefulWidget {
+  final Color brandColor;
+  const _NotificationPopup({required this.brandColor});
+
+  @override
+  State<_NotificationPopup> createState() => _NotificationPopupState();
+}
+
+class _NotificationPopupState extends State<_NotificationPopup> {
+  int _tab = 0; // 0: transaction changes, 1: general notifications
+
+  late final List<_NotificationItem> _transactionItems = List.generate(3, (i) => _NotificationItem(
+        title: 'Biến động số dư thời gian:',
+        lines: [
+          'TK 00787xxx667 | GD: -01H:00M | SD: 30M',
+          'ND: Nam ăn cắt cỏ | 22/09/2025',
+          '22/09/2025',
+        ],
+        time: '18:2${i}',
+      ));
+
+  late final List<_NotificationItem> _generalItems = List.generate(2, (i) => _NotificationItem(
+        title: 'Thông báo hệ thống:',
+        lines: [
+          'Tài khoản của bạn đã được xác minh.',
+          'Cảm ơn bạn đã sử dụng dịch vụ!',
+          '22/09/2025',
+        ],
+        time: '09:3${i}',
+      ));
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _tab == 0 ? _transactionItems : _generalItems;
+    final width = MediaQuery.of(context).size.width;
+    final maxHeight = MediaQuery.of(context).size.height * 0.68;
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: width - 32,
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 28,
+              offset: Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 16, 4),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Thông báo',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 22),
+                    splashRadius: 20,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildTabs(),
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFEAEAEA)),
+            Expanded(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) => _notificationCard(items[index]),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabs() {
+    final tabs = [
+      'Biến động giao dịch',
+      'Thông báo',
+    ];
+    return Row(
+      children: List.generate(tabs.length, (i) {
+        final bool active = _tab == i;
+        return Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            margin: EdgeInsets.only(right: i == 0 ? 8 : 0),
+            height: 38,
+            decoration: BoxDecoration(
+              color: active ? widget.brandColor : Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: widget.brandColor.withValues(alpha: 0.7), width: 1.2),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: widget.brandColor.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(30),
+                onTap: () => setState(() => _tab = i),
+                child: Center(
+                  child: Text(
+                    tabs[i],
+                    style: TextStyle(
+                      color: active ? Colors.white : widget.brandColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _notificationCard(_NotificationItem item) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE4E4E4)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  item.lines.isNotEmpty ? item.lines.last : '',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ...item.lines.take(item.lines.length - 1).map(
+              (l) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  l,
+                  style: const TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.25),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              item.time,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
