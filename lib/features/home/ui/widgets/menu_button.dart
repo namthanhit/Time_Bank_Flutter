@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../home_typography.dart';
 
 class MenuButton extends StatefulWidget {
   const MenuButton({
@@ -29,31 +30,28 @@ class _MenuButtonState extends State<MenuButton> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.color ?? const Color(0xFF003E77);
+  // Brand color giống bottom nav (#003E77) nếu không truyền màu tùy chỉnh
+  final accent = widget.color ?? const Color(0xFF003E77);
     final bool highlight = widget.highlight;
-    final backgroundColor = Colors.white;
-    final border = Border.all(
-      color: accent.withOpacity(highlight ? 0.95 : 0.45),
-      width: highlight ? 3 : 2,
-    );
 
+    // Slightly larger
     final double scale = _pressed ? 0.94 : 1.0;
-    final List<BoxShadow> shadow = highlight
-        ? [
-            BoxShadow(
-              color: accent.withOpacity(_pressed ? 0.25 : 0.38),
-              blurRadius: _pressed ? 10 : 14,
-              spreadRadius: 1,
-              offset: Offset(0, _pressed ? 4 : 6),
-            ),
-          ]
-        : [
-            BoxShadow(
-              color: Colors.black.withOpacity(_pressed ? 0.03 : 0.05),
-              blurRadius: _pressed ? 2 : 4,
-              offset: Offset(0, _pressed ? 1 : 2),
-            ),
-          ];
+
+    final List<BoxShadow> shadow = [
+      BoxShadow(
+        color: Colors.black.withOpacity(_pressed ? 0.035 : 0.06),
+        blurRadius: _pressed ? 7 : 12,
+        spreadRadius: 0,
+        offset: Offset(0, _pressed ? 2 : 5),
+      ),
+      if (highlight)
+        BoxShadow(
+          color: accent.withOpacity(0.20),
+          blurRadius: 22,
+          spreadRadius: 2,
+          offset: const Offset(0, 7),
+        ),
+    ];
 
     return GestureDetector(
       onTapDown: _handleTapDown,
@@ -71,28 +69,25 @@ class _MenuButtonState extends State<MenuButton> with SingleTickerProviderStateM
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
-              height: 60,
-              width: 60,
+              height: 68,
+              width: 68,
               decoration: BoxDecoration(
-                color: backgroundColor,
-                border: border,
-                borderRadius: BorderRadius.circular(14),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: shadow,
               ),
               alignment: Alignment.center,
-              child: Icon(widget.icon, size: 28, color: accent),
+              child: Icon(widget.icon, size: 30, color: accent),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10), // slightly more spacing
             SizedBox(
-              width: 74,
+              width: 80,
               child: AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 120),
                 curve: Curves.easeOut,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  color: accent.withOpacity(_pressed ? 0.65 : 1.0),
-                  letterSpacing: _pressed ? 0.2 : 0,
+                style: HomeTypography.menuButtonLabel.copyWith(
+                  color: accent.withOpacity(_pressed ? 0.55 : 0.95),
+                  letterSpacing: _pressed ? 0.15 : 0,
                 ),
                 child: Text(
                   widget.label,
