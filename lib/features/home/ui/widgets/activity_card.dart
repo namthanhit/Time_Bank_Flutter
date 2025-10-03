@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../home_typography.dart';
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
@@ -37,133 +38,177 @@ class ActivityCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
-                radius: 18,
+                radius: 24,
                 backgroundColor: Colors.blue.shade100,
                 child: Text(
                   user.isNotEmpty ? user[0].toUpperCase() : '?',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
+                    fontSize: 18,
                     color: Colors.blue,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user,
+                      style: HomeTypography.cardUserName.copyWith(
+                        fontSize: (HomeTypography.cardUserName.fontSize ?? 14) + 2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    time,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Colors.black54,
+                    Text(
+                      time,
+                      style: HomeTypography.cardUserTime.copyWith(
+                        fontSize: (HomeTypography.cardUserTime.fontSize ?? 12) + 1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.more_horiz, color: Color(0xFF0B4F80)),
+                onPressed: () {
+                  // TODO: handle more options tap
+                },
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
+          Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    // Stronger multi-layer shadow for more elevation
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 22,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 10),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      // Title only (tags overlaid separately)
+                      Text(
+                        title,
+                        style: HomeTypography.cardTitle.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0A3D66),
                         ),
                       ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {},
-                        child: const Padding(
-                          padding: EdgeInsets.all(4.0),
-                          child: Icon(Icons.more_vert, size: 18, color: Colors.black87),
+                      const SizedBox(height: 16),
+                      _alignedInfoRow(
+                        label: '',
+                        value: taskTime,
+                        valueColor: const Color(0xFF2E8B2C),
+                        icon: Icons.calendar_month,
+                      ),
+                      const SizedBox(height: 6),
+                      _alignedInfoRow(
+                        label: '',
+                        value: duration,
+                        valueColor: Colors.red,
+                        icon: Icons.access_time,
+                      ),
+                      const SizedBox(height: 6),
+                      _alignedInfoRow(
+                        label: '',
+                        value: location,
+                        icon: Icons.location_on,
+                      ),
+                      const SizedBox(height: 0),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: statusColor.withOpacity(0.40),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Text(status, style: HomeTypography.statusLabel.copyWith(fontSize: 14)),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  _infoRow(icon: Icons.calendar_month, label: 'Thời gian', value: taskTime),
-                  const SizedBox(height: 6),
-                  _infoRow(
-                    icon: Icons.access_time,
-                    label: 'Thời lượng',
-                    value: duration,
-                    valueColor: Colors.red,
-                  ),
-                  const SizedBox(height: 6),
-                  _infoRow(
-                    icon: Icons.location_on,
-                    label: 'Địa điểm',
-                    value: location,
-                  ),
-                  if (status.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Row(
-                          children: [
-                            _tag(tag1),
-                            const SizedBox(width: 6),
-                            _tag(tag2),
-                          ],
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.check_circle, size: 14, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text(
-                                status,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
+                ),
               ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _yellowTag(tag1),
+                    const SizedBox(height: 6),
+                    _yellowTag(tag2),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _yellowTag(String text) {
+    final icon = _pickTagIcon(text);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1DF3C),
+        borderRadius: BorderRadius.circular(22), // pill shape
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF08415C)),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: HomeTypography.tag.copyWith(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF08415C),
             ),
           ),
         ],
@@ -171,57 +216,38 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  Widget _tag(String text) {
-    return Chip(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      label: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: Colors.orange,
-        ),
-      ),
-      backgroundColor: Colors.orange.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.orange.shade200),
-      ),
-    );
+  IconData _pickTagIcon(String label) {
+    final l = label.toLowerCase();
+    if (l.contains('nội')) return Icons.home_rounded;
+    if (l.contains('việc')) return Icons.task_alt_rounded;
+    if (l.contains('chăm')) return Icons.favorite_rounded;
+    if (l.contains('học')) return Icons.school_rounded;
+    if (l.contains('sửa')) return Icons.build_rounded;
+    return Icons.label_rounded;
   }
 
-  Widget _infoRow({
-    required IconData icon,
+  Widget _alignedInfoRow({
     required String label,
     required String value,
     Color? valueColor,
+    IconData? icon,
   }) {
+    // New compact layout: only icon (optional) + value. No label / colon.
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 18, color: Colors.blue.shade400),
-        const SizedBox(width: 8),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 13,
-                height: 1.4,
-              ),
-              children: [
-                TextSpan(
-                  text: "$label: ",
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                TextSpan(
-                  text: value,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: valueColor ?? Colors.black87,
-                  ),
-                ),
-              ],
+        if (icon != null) ...[
+          Icon(icon, size: 16, color: const Color(0xFF0B4F80)),
+          const SizedBox(width: 6),
+        ],
+        Flexible(
+          child: Text(
+            value,
+            style: HomeTypography.cardInfoValue.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? const Color(0xFF0B3252),
             ),
           ),
         ),
