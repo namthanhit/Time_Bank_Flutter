@@ -38,18 +38,26 @@ class _MenuButtonState extends State<MenuButton> with SingleTickerProviderStateM
     final double scale = _pressed ? 0.94 : 1.0;
 
     final List<BoxShadow> shadow = [
+      // Subtle ambient layer
       BoxShadow(
-        color: Colors.black.withOpacity(_pressed ? 0.035 : 0.06),
-        blurRadius: _pressed ? 7 : 12,
+        color: Colors.black.withOpacity(_pressed ? 0.04 : 0.055),
+        blurRadius: _pressed ? 4 : 8,
         spreadRadius: 0,
-        offset: Offset(0, _pressed ? 2 : 5),
+        offset: Offset(0, _pressed ? 1 : 3),
+      ),
+      // Key shadow slightly toned down
+      BoxShadow(
+        color: Colors.black.withOpacity(_pressed ? 0.085 : 0.13),
+        blurRadius: _pressed ? 10 : 16,
+        spreadRadius: 0,
+        offset: Offset(0, _pressed ? 3 : 8),
       ),
       if (highlight)
         BoxShadow(
-          color: accent.withOpacity(0.20),
+          color: accent.withOpacity(0.22),
           blurRadius: 22,
           spreadRadius: 2,
-          offset: const Offset(0, 7),
+          offset: const Offset(0, 8),
         ),
     ];
 
