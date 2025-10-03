@@ -31,150 +31,145 @@ class ActivityCard extends StatelessWidget {
     final Color statusColor = accepted ? Colors.green : Colors.orange;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.blue.shade100,
-                child: Text(
-                  user.isNotEmpty ? user[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.blue,
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 22,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user,
-                      style: HomeTypography.cardUserName.copyWith(
-                        fontSize: (HomeTypography.cardUserName.fontSize ?? 14) + 2,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      time,
-                      style: HomeTypography.cardUserTime.copyWith(
-                        fontSize: (HomeTypography.cardUserTime.fontSize ?? 12) + 1,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
                 ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.more_horiz, color: Color(0xFF0B4F80)),
-                onPressed: () {
-                  // TODO: handle more options tap
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    // Stronger multi-layer shadow for more elevation
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 22,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 10),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header row (moved inside card)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Title only (tags overlaid separately)
-                      Text(
-                        title,
-                        style: HomeTypography.cardTitle.copyWith(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0A3D66),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _alignedInfoRow(
-                        label: '',
-                        value: taskTime,
-                        valueColor: const Color(0xFF2E8B2C),
-                        icon: Icons.calendar_month,
-                      ),
-                      const SizedBox(height: 6),
-                      _alignedInfoRow(
-                        label: '',
-                        value: duration,
-                        valueColor: Colors.red,
-                        icon: Icons.access_time,
-                      ),
-                      const SizedBox(height: 6),
-                      _alignedInfoRow(
-                        label: '',
-                        value: location,
-                        icon: Icons.location_on,
-                      ),
-                      const SizedBox(height: 0),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: statusColor.withOpacity(0.40),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.blue.shade100,
+                        child: Text(
+                          user.isNotEmpty ? user[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.blue,
                           ),
-                          child: Text(status, style: HomeTypography.statusLabel.copyWith(fontSize: 14)),
                         ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user,
+                              style: HomeTypography.cardUserName.copyWith(
+                                fontSize: (HomeTypography.cardUserName.fontSize ?? 14) + 2,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              time,
+                              style: HomeTypography.cardUserTime.copyWith(
+                                fontSize: (HomeTypography.cardUserTime.fontSize ?? 12) + 1,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.more_horiz, color: Color(0xFF0B4F80)),
+                        onPressed: () {
+                          // TODO: handle more options tap
+                        },
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  Text(
+                    title,
+                    style: HomeTypography.cardTitle.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A3D66),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _alignedInfoRow(
+                    label: '',
+                    value: taskTime,
+                    valueColor: const Color(0xFF2E8B2C),
+                    icon: Icons.calendar_month,
+                  ),
+                  const SizedBox(height: 6),
+                  _alignedInfoRow(
+                    label: '',
+                    value: duration,
+                    valueColor: Colors.red,
+                    icon: Icons.access_time,
+                  ),
+                  const SizedBox(height: 6),
+                  _alignedInfoRow(
+                    label: '',
+                    value: location,
+                    icon: Icons.location_on,
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: statusColor.withOpacity(0.40),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Text(status, style: HomeTypography.statusLabel.copyWith(fontSize: 14)),
+                    ),
+                  ),
+                ],
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _yellowTag(tag1),
-                    const SizedBox(height: 6),
-                    _yellowTag(tag2),
-                  ],
-                ),
-              ),
-            ],
+            ),
+          ),
+          // Overlay tags (reverted style)
+          Positioned(
+            top: 78,
+            right: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _yellowTag(tag1),
+                const SizedBox(height: 6),
+                _yellowTag(tag2),
+              ],
+            ),
           ),
         ],
       ),
@@ -186,7 +181,7 @@ class ActivityCard extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFF1DF3C),
         borderRadius: BorderRadius.circular(22), // pill shape
