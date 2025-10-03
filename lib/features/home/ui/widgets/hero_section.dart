@@ -117,9 +117,6 @@ class HeroSection extends StatelessWidget {
                               isHidden ? "••••••" : timeBalance,
                               style: HomeTypography.heroBalanceValue.copyWith(
                                 color: Colors.white,
-                                shadows: const [
-                                  Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 2)),
-                                ],
                               ),
                             ),
                           ],
