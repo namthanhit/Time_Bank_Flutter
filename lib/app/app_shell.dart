@@ -40,8 +40,20 @@ class _AppShellState extends State<AppShell> {
   ];
 
   void _onTap(int i) {
-    setState(() => _currentIndex = i);
-    // TODO: handle special QR index action if needed.
+    final item = _navItems[i];
+    if (item.emphasize) {
+      // Treat QR as action button: do NOT change current index.
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const _QrActionPage(),
+          fullscreenDialog: true,
+        ),
+      );
+      return;
+    }
+    if (_currentIndex != i) {
+      setState(() => _currentIndex = i);
+    }
   }
 
   @override
@@ -133,7 +145,7 @@ class _BottomNavItem extends StatelessWidget {
     final inactiveColor = Colors.white.withOpacity(0.60);
     final bool isQr = data.emphasize;
     final bool squareInactive = isQr && !isActive;
-    final double iconSize = isQr ? 30 : (isActive ? 26 : 22);
+  final double iconSize = isQr ? 30 : 24; // constant size for non-QR
     final EdgeInsets padding = isQr
         ? (isActive
             ? const EdgeInsets.symmetric(vertical: 10, horizontal: 14)
@@ -146,36 +158,22 @@ class _BottomNavItem extends StatelessWidget {
     List<BoxShadow>? shadow;
 
     if (isQr) {
-      if (isActive) {
-        bgColor = Colors.white;
-        iconColor = brandColor;
-        textColor = brandColor;
-        shadow = const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ];
-      } else if (squareInactive) {
-        bgColor = Colors.white.withOpacity(0.06);
-        iconColor = Colors.white;
-        textColor = Colors.white.withOpacity(0.90);
-      } else {
-        bgColor = Colors.transparent;
-        iconColor = inactiveColor;
-        textColor = inactiveColor;
-      }
+      // White pill background for QR button (reduced size variant).
+      bgColor = isActive ? Colors.white : Colors.white.withOpacity(0.92);
+      iconColor = isActive ? brandColor : brandColor.withOpacity(0.80);
+      textColor = Colors.transparent; // hidden label
+      shadow = const [
+        BoxShadow(
+          color: Color(0x1F000000), // slightly lighter shadow
+          blurRadius: 8,
+          offset: Offset(0, 3),
+          spreadRadius: 0,
+        ),
+      ];
     } else {
-      if (isActive) {
-        bgColor = Colors.white;
-        iconColor = brandColor;
-        textColor = brandColor;
-      } else {
-        bgColor = Colors.transparent;
-        iconColor = inactiveColor;
-        textColor = inactiveColor;
-      }
+      bgColor = Colors.transparent;
+      iconColor = isActive ? Colors.white : inactiveColor;
+      textColor = isActive ? Colors.white : inactiveColor;
     }
 
     return Material(
@@ -183,54 +181,100 @@ class _BottomNavItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(isQr ? (squareInactive ? 18 : 24) : 22),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        enableFeedback: false,
+        splashFactory: NoSplash.splashFactory,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          padding: padding,
+      padding: isQr
+        ? const EdgeInsets.symmetric(vertical: 8, horizontal: 12)
+        : padding,
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(isQr ? (squareInactive ? 18 : 24) : 22),
-            boxShadow: shadow,
+            boxShadow: isQr ? shadow : null,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              if (isQr)
-                SizedBox(
-                  height: iconSize + 12,
-                  width: iconSize + 12,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Image.asset(
-                        'assets/images/qr_nav.png',
-                        width: iconSize + 16,
-                        height: iconSize + 16,
-                        fit: BoxFit.contain,
-                        color: isActive ? brandColor : Colors.white,
-                        colorBlendMode: BlendMode.srcIn,
-                        errorBuilder: (c, e, s) => Icon(
-                          data.icon,
-                          size: iconSize,
-                          color: isActive ? brandColor : Colors.white,
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isQr)
+                    SizedBox(
+                      height: iconSize + 16, // reduced from +22
+                      width: iconSize + 16,
+                      child: Center(
+                        child: Image.asset(
+                          'assets/images/qr_nav.png',
+                          width: iconSize + 6, // reduced from +10
+                          height: iconSize + 6,
+                          fit: BoxFit.contain,
+                          color: iconColor,
+                          colorBlendMode: BlendMode.srcIn,
+                          errorBuilder: (c, e, s) => Icon(
+                            data.icon,
+                            size: iconSize,
+                            color: iconColor,
+                          ),
                         ),
                       ),
+                    )
+                  else ...[
+                    Icon(data.icon, size: iconSize, color: iconColor),
+                    const SizedBox(height: 6),
+                    Text(
+                      data.label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                        letterSpacing: -0.1,
+                      ),
                     ),
-                  ),
-                )
-              else
-                Icon(data.icon, size: iconSize, color: iconColor),
-              const SizedBox(height: 6),
-              Text(
-                data.label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isQr ? 13 : 12,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: textColor,
-                  letterSpacing: -0.1,
-                ),
+                  ],
+                ],
               ),
+              if (isActive && !isQr)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: -12,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: isActive ? 1 : 0),
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOut,
+                    builder: (context, t, _) {
+                      final double boxSide = (iconSize + 72).clamp(96, 180);
+                      return Opacity(
+                        opacity: t,
+                        child: IgnorePointer(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: SizedBox(
+                              width: boxSide,
+                              height: boxSide,
+                              child: CustomPaint(
+                                painter: _BottomGlowPainter(
+                                  intensity: t,
+                                  overlay: true,
+                                  circular: false,
+                                  halfCircle: true,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -246,9 +290,93 @@ class _NavItemData {
   const _NavItemData({required this.icon, required this.label, this.emphasize = false});
 }
 
+class _BottomGlowPainter extends CustomPainter {
+  final double intensity; // 0..1
+  final bool overlay;
+  final bool circular;
+  final bool halfCircle;
+  _BottomGlowPainter({
+    required this.intensity,
+    this.overlay = false,
+    this.circular = false,
+    required this.halfCircle,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (intensity <= 0) return;
+    // If circular mode, derive radius from box size; else fallback.
+  final radius = halfCircle
+    ? size.width / 2 // exactly from center bottom to one side
+    : (circular ? size.width * 0.46 : size.width * 0.70);
+  final center = halfCircle
+    ? Offset(size.width / 2, size.height)
+    : Offset(size.width / 2, circular ? size.height / 2 : size.height * 0.55);
+  final circleRect = Rect.fromCircle(center: center, radius: radius);
+
+    final gradient = RadialGradient(
+      center: halfCircle ? const Alignment(0, 1) : const Alignment(0, 0),
+      radius: halfCircle ? 1.05 : (circular ? 0.92 : 1.15),
+      colors: halfCircle
+          ? const [
+              Color(0xFFFFFFFF), // core
+              Color(0xDDFFFFFF), // brighter mid
+              Color(0x88FFFFFF),
+              Color(0x33FFFFFF),
+              Color(0x05FFFFFF),
+              Color(0x00000000),
+            ]
+          : const [
+              Color(0xE6FFFFFF),
+              Color(0x99FFFFFF),
+              Color(0x55FFFFFF),
+              Color(0x1AFFFFFF),
+              Color(0x07FFFFFF),
+              Color(0x00FFFFFF),
+            ],
+      stops: halfCircle
+          ? const [0.0, 0.25, 0.48, 0.72, 0.88, 1.0]
+          : const [0.0, 0.26, 0.48, 0.70, 0.85, 1.0],
+    );
+    final paint = Paint()
+      ..shader = gradient.createShader(circleRect)
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.plus
+  ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+
+    canvas.saveLayer(circleRect.inflate(radius * 0.9), Paint());
+    if (halfCircle) {
+      // Clip to upper half only (above bottom edge) so it forms a dome rising up.
+      canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
+      canvas.drawCircle(center, radius, paint..color = Colors.white.withOpacity(intensity));
+    } else {
+      canvas.drawCircle(center, radius, paint..color = Colors.white.withOpacity(intensity));
+    }
+
+    // Inner hotspot for punchy brightness (small additive circle).
+    if (!circular && !halfCircle) {
+      final hotspotPaint = Paint()
+        ..color = Colors.white.withOpacity(0.35 * intensity)
+        ..blendMode = BlendMode.plus
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      canvas.drawCircle(center, radius * 0.38, hotspotPaint);
+    } else if (halfCircle) {
+      final domeHotspot = Paint()
+        ..color = Colors.white.withOpacity(0.20 * intensity)
+        ..blendMode = BlendMode.plus
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+      canvas.drawCircle(center.translate(0, -radius * 0.40), radius * 0.30, domeHotspot);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _BottomGlowPainter oldDelegate) => oldDelegate.intensity != intensity;
+}
+
 class _StubPage extends StatelessWidget {
   final String label;
-  const _StubPage({super.key, required this.label});
+  const _StubPage({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -257,6 +385,29 @@ class _StubPage extends StatelessWidget {
         label,
         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
       ),
+    );
+  }
+}
+
+// Placeholder page for QR action; replace with real scanner later.
+class _QrActionPage extends StatelessWidget {
+  const _QrActionPage();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('QR'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF003E77),
+        elevation: 0.5,
+      ),
+      body: const Center(
+        child: Text(
+          'QR Action Placeholder',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+      ),
+      backgroundColor: Colors.white,
     );
   }
 }
