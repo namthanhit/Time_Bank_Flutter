@@ -36,34 +36,30 @@ class NotificationHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
-                )
-              ],
-            ),
-            child: Row(
-              children: [
-                PillTabButton(
-                  label: 'Biến động giao dịch',
-                  active: current == 0,
-                  onTap: () => onChanged(0),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: PillTabButton(
+                    label: 'Biến động',
+                    active: current == 0,
+                    onTap: () => onChanged(0),
+                  ),
                 ),
-                PillTabButton(
-                  label: 'Thông báo',
-                  active: current == 1,
-                  onTap: () => onChanged(1),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: PillTabButton(
+                    label: 'Thông báo',
+                    active: current == 1,
+                    onTap: () => onChanged(1),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

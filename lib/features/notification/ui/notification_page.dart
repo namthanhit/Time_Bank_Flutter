@@ -47,19 +47,17 @@ class _NotificationPageState extends State<NotificationPage> {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       itemCount: 5,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: TransactionNotificationCard(
-            date: '22/09/2025',
-            account: 'TK 00787xxx667',
-            change: '-01H:00M',
-            balance: '30M',
-            note: 'Nam an cut cho',
-            time: '18:20',
-          ),
-        );
-      },
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.only(bottom: 16),
+        child: TransactionNotificationCard(
+          date: '22/09/2025',
+          account: 'TK 00787xxx667',
+          change: '-01H:00M',
+          balance: '30M',
+          note: 'Ghi chú giao dịch',
+          time: '18:20',
+        ),
+      ),
     );
   }
 
@@ -70,11 +68,10 @@ class _NotificationPageState extends State<NotificationPage> {
       itemBuilder: (context, index) => Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: NotificationItem(
-          title: 'Thông báo chung',
-          message: 'Tin nhắn hệ thống mẫu số ${index + 1}.',
-          time: '18:2${index}',
-          leading: const Icon(Icons.notifications, color: Colors.orangeAccent),
-          unread: index.isEven,
+              title: 'Thông báo chung',
+              message: 'Nội dung thông báo mẫu #${index + 1}.',
+              time: '09:3$index',
+              date: '22/09/2025',
         ),
       ),
     );

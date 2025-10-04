@@ -15,7 +15,7 @@ class TransactionNotificationCard extends StatelessWidget {
   final String account; // e.g. TK 00787xxx667
   final String change; // e.g. -01H:00M
   final String balance; // e.g. 30M
-  final String note; // e.g. Nam an cut cho
+  final String note; // transaction note
   final String time; // e.g. 18:20
 
   @override
@@ -62,7 +62,7 @@ class TransactionNotificationCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '$account | GD: $change | SD: $balance',
+            '$account | THAY ĐỔI: $change | SỐ DƯ: $balance',
             style: TextStyle(
               fontSize: 13,
               height: 1.3,
@@ -71,13 +71,13 @@ class TransactionNotificationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-            Text(
-            '| ND : $note | $date',
+          Text(
+            'GHI CHÚ: $note',
             style: TextStyle(
               fontSize: 13,
               height: 1.3,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade800,
+              color: Colors.grey.shade700,
             ),
           ),
           const SizedBox(height: 14),
