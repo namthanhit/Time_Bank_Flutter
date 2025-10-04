@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/home_models.dart';
 import '../home_typography.dart';
+import 'tag_chip_fixed_width.dart';
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
@@ -153,13 +154,37 @@ class ActivityCard extends StatelessWidget {
               Positioned(
                 top: 78,
                 right: 8,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (activity.tag1.isNotEmpty) _yellowTag(activity.tag1),
-                    const SizedBox(height: 6),
-                    if (activity.tag2.isNotEmpty) _yellowTag(activity.tag2),
-                  ],
+                left: null,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Giới hạn vùng tag (tuỳ bạn, 220 là ví dụ cũ)
+                    const double maxWrapWidth = 220;
+                    const int cols = 2;           // => 2 cột, tag = nhau
+                    const double spacing = 6.0;   // khoảng cách giữa các chip
+
+                    final width = maxWrapWidth;
+                    final cellWidth = (width - spacing * (cols - 1)) / cols;
+
+                    final tags = activity.tags;
+                    // Giới hạn số tag hiển thị và thêm "+N" nếu quá
+                    const maxShow = 4;
+                    final show = tags.length > maxShow
+                        ? [...tags.take(maxShow - 1), '+${tags.length - (maxShow - 1)}']
+                        : tags;
+
+                    return ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: maxWrapWidth),
+                      child: Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        alignment: WrapAlignment.end,
+                        children: [
+                          for (final t in show)
+                            TagChipFixedWidth(text: t, width: cellWidth),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -188,45 +213,6 @@ class ActivityCard extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Widget _yellowTag(String text) {
-    final icon = _pickTagIcon(text);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1DF3C),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4))],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: const Color(0xFF08415C)),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: HomeTypography.tag.copyWith(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF08415C),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _pickTagIcon(String label) {
-    final l = label.toLowerCase();
-    if (l.contains('nội')) return Icons.home_rounded;
-    if (l.contains('việc')) return Icons.task_alt_rounded;
-    if (l.contains('chăm')) return Icons.favorite_rounded;
-    if (l.contains('học')) return Icons.school_rounded;
-    if (l.contains('sửa')) return Icons.build_rounded;
-    return Icons.label_rounded;
   }
 
   Color _statusColor(String s) {

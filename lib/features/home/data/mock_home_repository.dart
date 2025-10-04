@@ -20,8 +20,7 @@ class MockHomeRepository implements HomeRepository {
         taskTime: '11:30 06/09/2025',
         duration: '01:30:00',
         location: 'Yên Nghĩa - Hà Đông - Hà Nội',
-        tag1: 'Nội trợ',
-        tag2: 'Việc nhà',
+        tags: ['Nội trợ', 'Việc nhà', 'Ưu tiên', 'Nhi nhi', 'Thảo Nhi'],
         status: 'Đã nhận',
       ),
       Activity(
@@ -31,8 +30,7 @@ class MockHomeRepository implements HomeRepository {
         taskTime: '11:30 06/09/2025',
         duration: '01:30:00',
         location: 'Yên Nghĩa - Hà Đông - Hà Nội',
-        tag1: 'Nội trợ',
-        tag2: 'Việc nhà',
+        tags: ['Nội trợ', 'Việc nhà'],
         status: 'Đã nhận',
       ),
     ];
