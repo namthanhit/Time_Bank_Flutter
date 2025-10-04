@@ -1,82 +1,94 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
+import '../../domain/models/home_models.dart';
 import '../home_typography.dart';
 
 class HeroSection extends StatelessWidget {
   const HeroSection({
     super.key,
-    required this.rating,
-    required this.timeBalance,
+    required this.summary,
     required this.isHidden,
     required this.onToggleHidden,
     required this.onNotificationsTap,
+    this.avatarAsset = "assets/images/avatar.png",
+    this.backgroundAsset = "assets/images/background.png",
   });
 
-  final double rating;
-  final String timeBalance;
+  final HomeSummary summary;
   final bool isHidden;
   final VoidCallback onToggleHidden;
   final VoidCallback onNotificationsTap;
+
+  // Cho phép cấu hình (nếu sau này lấy từ API)
+  final String avatarAsset;
+  final String backgroundAsset;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 280,
       width: double.infinity,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage("assets/images/background.png"),
+          image: AssetImage(backgroundAsset),
           fit: BoxFit.cover,
         ),
       ),
       child: Stack(
         children: [
+          // overlay gradient
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black54,
-                    Colors.transparent,
-                    Colors.black45,
-                  ],
+                  colors: [Colors.black54, Colors.transparent, Colors.black45],
                 ),
               ),
             ),
           ),
+
+          // notifications button (đã bọc Material)
           Positioned(
             top: 40,
             right: 16,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(24),
-              onTap: onNotificationsTap,
-              child: const Padding(
-                padding: EdgeInsets.all(6),
-                child: Icon(Icons.notifications, color: Colors.white, size: 28),
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onNotificationsTap,
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.notifications, color: Colors.white, size: 28),
+                ),
               ),
             ),
           ),
+
+          // content
           Positioned(
             left: 24,
             right: 24,
-            bottom: 50, // increased from 30 to accommodate overlapping rounded container
+            bottom: 50,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 35,
-                      backgroundImage: AssetImage("assets/images/avatar.png"),
+                      backgroundImage: AssetImage(avatarAsset),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         const Icon(Icons.star, color: Colors.orange, size: 16),
                         const SizedBox(width: 3),
-                        Text(rating.toStringAsFixed(1), style: HomeTypography.ratingValue),
+                        Text(
+                          summary.rating.toStringAsFixed(1),
+                          style: HomeTypography.ratingValue,
+                        ),
                       ],
                     ),
                   ],
@@ -87,7 +99,6 @@ class HeroSection extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
-                      // Gần như trong suốt: chỉ một lớp tint trắng rất nhẹ
                       gradient: LinearGradient(
                         colors: [
                           Colors.white.withOpacity(0.25),
@@ -114,10 +125,8 @@ class HeroSection extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              isHidden ? "••••••" : timeBalance,
-                              style: HomeTypography.heroBalanceValue.copyWith(
-                                color: Colors.white,
-                              ),
+                              isHidden ? "••••••" : summary.timeBalance,
+                              style: HomeTypography.heroBalanceValue.copyWith(color: Colors.white),
                             ),
                           ],
                         ),
