@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
-import 'widgets/notification_item.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/notification_providers.dart';
 import 'widgets/notification_header.dart';
-import 'widgets/transaction_notification_card.dart';
+import 'widgets/activity_list.dart';
+import 'widgets/general_list.dart';
 
-class NotificationPage extends StatefulWidget {
+class NotificationPage extends ConsumerStatefulWidget {
   const NotificationPage({super.key});
-
   @override
-  State<NotificationPage> createState() => _NotificationPageState();
+  ConsumerState<NotificationPage> createState() => _NotificationPageState();
 }
 
-class _NotificationPageState extends State<NotificationPage> {
+class _NotificationPageState extends ConsumerState<NotificationPage> {
   int _tabIndex = 0;
-
-  void _switchTab(int i) {
-    if (_tabIndex != i) setState(() => _tabIndex = i);
-  }
+  void _switchTab(int i) => setState(() => _tabIndex = i);
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final top = media.padding.top;
+    final top = MediaQuery.of(context).padding.top;
+    final activity = ref.watch(activityNotificationsProvider);
+    final general  = ref.watch(generalNotificationsProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F8),
       body: Column(
@@ -34,48 +34,18 @@ class _NotificationPageState extends State<NotificationPage> {
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
               child: _tabIndex == 0
-                  ? _buildActivityNotifications()
-                  : _buildGeneralNotifications(),
+                  ? ActivityList(
+                state: activity,
+                onRefresh: () => ref.refresh(activityNotificationsProvider.future),
+              )
+                  : GeneralList(
+                state: general,
+                onRefresh: () => ref.refresh(generalNotificationsProvider.future),
+              ),
             ),
           )
         ],
       ),
     );
   }
-
-  Widget _buildActivityNotifications() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      itemCount: 5,
-      itemBuilder: (context, index) => const Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: TransactionNotificationCard(
-          date: '22/09/2025',
-          account: 'TK 00787xxx667',
-          change: '-01H:00M',
-          balance: '30M',
-          note: 'Ghi chú giao dịch',
-          time: '18:20',
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGeneralNotifications() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      itemCount: 4,
-      itemBuilder: (context, index) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: NotificationItem(
-              title: 'Thông báo chung',
-              message: 'Nội dung thông báo mẫu #${index + 1}.',
-              time: '09:3$index',
-              date: '22/09/2025',
-        ),
-      ),
-    );
-  }
 }
-
-
