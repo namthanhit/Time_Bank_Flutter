@@ -93,8 +93,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
       next.status.whenOrNull(error: (error, __) {
-        final message =
-            error is OnboardingException ? error.message : error.toString();
+        final message = onboardingErrorMessage(error);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),

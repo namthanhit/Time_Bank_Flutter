@@ -166,3 +166,13 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     }
   }
 }
+
+String onboardingErrorMessage(Object error) {
+  if (error is OnboardingException) {
+    return error.message;
+  }
+  if (error is StateError) {
+    return error.message;
+  }
+  return error.toString();
+}
