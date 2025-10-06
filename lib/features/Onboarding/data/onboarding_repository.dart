@@ -1,14 +1,5 @@
 import '../domain/onboarding_models.dart';
 
-class OnboardingException implements Exception {
-  OnboardingException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
 abstract class OnboardingRepository {
   Future<void> requestOtp(SignUpPayload payload);
   Future<void> verifyOtp({required String phone, required String otp});

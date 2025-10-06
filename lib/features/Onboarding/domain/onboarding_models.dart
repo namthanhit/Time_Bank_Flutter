@@ -1,5 +1,14 @@
 import 'package:equatable/equatable.dart';
 
+class OnboardingException implements Exception {
+  OnboardingException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Thông tin người dùng nhập ở bước đăng ký ban đầu.
 class SignUpPayload extends Equatable {
   const SignUpPayload({
