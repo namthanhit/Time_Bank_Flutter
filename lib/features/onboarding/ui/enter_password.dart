@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
-import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
-class PasswordSetupScreen extends StatefulWidget {
+class PasswordSetupScreen extends ConsumerStatefulWidget {
   const PasswordSetupScreen({super.key});
 
   @override
-  State<PasswordSetupScreen> createState() => _PasswordSetupScreenState();
+  ConsumerState<PasswordSetupScreen> createState() => _PasswordSetupScreenState();
 }
 
-class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
+class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
-  // Trạng thái ẩn/hiện mật khẩu
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
@@ -25,17 +25,22 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
     super.dispose();
   }
 
-  void _onSubmit() {
-    if (_formKey.currentState!.validate()) {
-      // Nếu hợp lệ → chuyển sang LoginPage
+  Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final password = _passwordController.text.trim();
+
+    await ref.read(onboardingControllerProvider.notifier).setPassword(password);
+    final state = ref.read(onboardingControllerProvider);
+
+    if (state.error == null && mounted) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const PinSetupScreen()),
+        MaterialPageRoute(builder: (_) => const PinSetupScreen()),
       );
     }
   }
 
-  // Hàm kiểm tra ràng buộc mật khẩu: >=8 ký tự và có chữ hoa
   String? _passwordValidator(String? value) {
     if (value == null || value.isEmpty) {
       return "Vui lòng nhập mật khẩu";
@@ -46,7 +51,7 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
     if (!RegExp(r'[A-Z]').hasMatch(value)) {
       return "Mật khẩu phải chứa ít nhất 1 chữ hoa";
     }
-    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
+    if (!RegExp(r'[!@#\$%^&*(),.?\":{}|<>]').hasMatch(value)) {
       return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt";
     }
     if (!RegExp(r'[0-9]').hasMatch(value)) {
@@ -57,6 +62,15 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+
+    ref.listen(onboardingControllerProvider, (prev, next) {
+      if (next.error != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.error!)));
+      }
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -82,7 +96,7 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                 ),
                 const SizedBox(height: 45),
 
-                // Box trắng
+                // Box trắng (GIỮ NGUYÊN)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -98,7 +112,6 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Label + ô nhập mật khẩu
                         const Text(
                           "Mật Khẩu:",
                           style: TextStyle(fontSize: 16, color: Colors.black87),
@@ -130,7 +143,6 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Label + ô nhập lại mật khẩu
                         const Text(
                           "Nhập lại mật khẩu:",
                           style: TextStyle(fontSize: 16, color: Colors.black87),
@@ -162,12 +174,9 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                             if (value == null || value.isEmpty) {
                               return "Vui lòng nhập lại mật khẩu";
                             }
-                            // Trước tiên kiểm tra mật khẩu chính có hợp lệ không
-                            final pwError = _passwordValidator(_passwordController.text);
-                            if (pwError != null) {
-                              // Nếu mật khẩu chính chưa hợp lệ, báo cho user sửa trước
-                              return pwError;
-                            }
+                            final pwError =
+                            _passwordValidator(_passwordController.text);
+                            if (pwError != null) return pwError;
                             if (value != _passwordController.text) {
                               return "Mật khẩu nhập lại không khớp";
                             }
@@ -187,7 +196,7 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                             ),
                           ),
                           child: ElevatedButton(
-                            onPressed: _onSubmit,
+                            onPressed: state.loading ? null : _onSubmit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
@@ -196,7 +205,16 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            child: const Text(
+                            child: state.loading
+                                ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                                : const Text(
                               "Hoàn tất",
                               style: TextStyle(fontSize: 16),
                             ),
@@ -209,9 +227,8 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                           width: double.infinity,
                           height: 48,
                           child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
+                            onPressed:
+                            state.loading ? null : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.black),
                               shape: RoundedRectangleBorder(

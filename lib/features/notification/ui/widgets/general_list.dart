@@ -36,12 +36,7 @@ class GeneralList extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (_, i) {
               final n = items[i];
-              return NotificationItem(
-                title: n.title,
-                message: n.message,
-                time: n.timeText ?? '',
-                date: n.dateText ?? '',
-              );
+              return NotificationItem(notification: n);
             },
           ),
         );

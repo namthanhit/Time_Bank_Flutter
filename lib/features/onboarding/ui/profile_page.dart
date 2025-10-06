@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
+import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   DateTime? selectedDate;
 
@@ -19,22 +21,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final TextEditingController _dateController = TextEditingController();
 
-  // Future<void> _pickDate() async {
-  //   DateTime now = DateTime.now();
-  //   final DateTime? picked = await showDatePicker(
-  //     context: context,
-  //     initialDate: DateTime(2000),
-  //     firstDate: DateTime(1950),
-  //     lastDate: now,
-  //   );
-  //   if (picked != null) {
-  //     setState(() {
-  //       selectedDate = picked;
-  //       _dateController.text =
-  //       "${picked.day}/${picked.month}/${picked.year}";
-  //     });
-  //   }
-  // }
   Future<void> _pickDate() async {
     DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
@@ -46,10 +32,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0D1B4C), // xanh navy
-              onPrimary: Colors.white,    // chữ trên header
-              surface: Colors.white,      // nền dialog trắng
-              onSurface: Colors.black,    // chữ trong body
+              primary: Color(0xFF0D1B4C),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
             ),
             dialogBackgroundColor: Colors.white,
             textButtonTheme: TextButtonThemeData(
@@ -87,8 +73,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final payload = CompleteProfilePayload(
+      phone: '', // có thể để trống, vì mock không cần
+      fullName: '',
+      birthdate: selectedDate,
+      gender: gender,
+      specialization: major ?? '',
+      address: address ?? '',
+    );
+
+    await ref.read(onboardingControllerProvider.notifier)
+        .completeProfile(payload);
+
+    final state = ref.read(onboardingControllerProvider);
+    if (state.error == null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PasswordSetupScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+
+    ref.listen(onboardingControllerProvider, (prev, next) {
+      if (next.error != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.error!)));
+      }
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -183,8 +202,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Text("Thiết kế đồ họa")),
                             DropdownMenuItem(
                                 value: "Giáo viên", child: Text("Giáo viên")),
-                            DropdownMenuItem(value: "Bác sĩ", child: Text("Bác sĩ")),
-                            DropdownMenuItem(value: "Kế toán", child: Text("Kế toán")),
+                            DropdownMenuItem(
+                                value: "Bác sĩ", child: Text("Bác sĩ")),
+                            DropdownMenuItem(
+                                value: "Kế toán", child: Text("Kế toán")),
                           ],
                           onChanged: (value) => setState(() => major = value),
                           dropdownColor: Colors.white,
@@ -231,16 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                      const PasswordSetupScreen()),
-                                );
-                              }
-                            },
+                            onPressed: state.loading ? null : _onSubmit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D1B4C),
                               foregroundColor: Colors.white,
@@ -249,7 +261,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text("Tiếp theo"),
+                            child: state.loading
+                                ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                                : const Text("Tiếp theo"),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -258,7 +279,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed:
+                            state.loading ? null : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF0D1B4C),
                               side: const BorderSide(color: Color(0xFF0D1B4C)),

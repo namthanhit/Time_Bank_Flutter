@@ -1,22 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../domain/models/notification_models.dart';
 
 class TransactionNotificationCard extends StatelessWidget {
   const TransactionNotificationCard({
     super.key,
-    required this.date,
-    required this.account,
-    required this.change,
-    required this.balance,
-    required this.note,
-    required this.time,
+    required this.notification,
   });
 
-  final String date;
-  final String account; // e.g. TK 00787xxx667
-  final String change; // e.g. -01H:00M
-  final String balance; // e.g. 30M
-  final String note; // transaction note
-  final String time; // e.g. 18:20
+  final AppNotification notification;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +42,7 @@ class TransactionNotificationCard extends StatelessWidget {
                 ),
               ),
               Text(
-                date,
+                notification.dateText ?? '',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -62,7 +53,7 @@ class TransactionNotificationCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '$account | THAY ĐỔI: $change | SỐ DƯ: $balance',
+            '${notification.account ?? ''} | THAY ĐỔI: ${notification.change ?? ''} | SỐ DƯ: ${notification.balance ?? ''}',
             style: TextStyle(
               fontSize: 13,
               height: 1.3,
@@ -72,7 +63,7 @@ class TransactionNotificationCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'GHI CHÚ: $note',
+            'GHI CHÚ: ${notification.note ?? ''}',
             style: TextStyle(
               fontSize: 13,
               height: 1.3,
@@ -82,7 +73,7 @@ class TransactionNotificationCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            time,
+            notification.timeText ?? '',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,

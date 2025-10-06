@@ -18,7 +18,10 @@ class ActivityList extends StatelessWidget {
   Widget build(BuildContext context) {
     return state.when(
       loading: () => const AsyncShimmerList(),
-      error: (e, _) => AsyncErrorView(message: e.toString(), onRetry: onRefresh),
+      error: (e, _) => AsyncErrorView(
+        message: e.toString(),
+        onRetry: onRefresh,
+      ),
       data: (items) {
         if (items.isEmpty) {
           return const AsyncEmptyView(
@@ -26,6 +29,7 @@ class ActivityList extends StatelessWidget {
             subtitle: 'Khi có giao dịch mới, chúng sẽ xuất hiện tại đây.',
           );
         }
+
         return RefreshIndicator(
           onRefresh: onRefresh,
           color: Colors.white,
@@ -35,15 +39,8 @@ class ActivityList extends StatelessWidget {
             itemCount: items.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (_, i) {
-              final n = items[i];
-              return TransactionNotificationCard(
-                date: n.dateText ?? '',
-                account: n.account ?? '',
-                change: n.change ?? '',
-                balance: n.balance ?? '',
-                note: n.note ?? '',
-                time: n.timeText ?? '',
-              );
+              final notification = items[i];
+              return TransactionNotificationCard(notification: notification);
             },
           ),
         );

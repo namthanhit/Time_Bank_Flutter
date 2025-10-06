@@ -1,3 +1,4 @@
+// lib/features/notification/ui/widgets/pill_tab_button.dart
 import 'package:flutter/material.dart';
 
 class PillTabButton extends StatelessWidget {
@@ -14,51 +15,34 @@ class PillTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = const Color(0xFF003E77);
-    return Expanded(
+    // KHÔNG dùng Expanded ở đây!
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        height: 40,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: active ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(26),
+          color: active ? const Color(0xFF003E77) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: active ? activeColor : const Color(0xFF003E77).withOpacity(0.55),
-            width: 1.1,
+            color: active ? const Color(0xFF003E77) : const Color(0x22000000),
           ),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: activeColor.withOpacity(0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  )
-                ]
-              : null,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(26),
-            onTap: onTap,
-            child: Center(
-              child: AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                  color: active ? Colors.white : activeColor.withOpacity(0.85),
-                  letterSpacing: active ? 0.25 : 0,
-                ),
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.fade,
-                ),
-              ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: active ? Colors.white : Colors.black87,
             ),
           ),
         ),

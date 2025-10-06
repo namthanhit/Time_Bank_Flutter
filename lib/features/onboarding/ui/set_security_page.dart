@@ -1,21 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
-class PinSetupScreen extends StatefulWidget {
+class PinSetupScreen extends ConsumerStatefulWidget {
   const PinSetupScreen({super.key});
 
   @override
-  State<PinSetupScreen> createState() => _PinSetupScreenState();
+  ConsumerState<PinSetupScreen> createState() => _PinSetupScreenState();
 }
 
-class _PinSetupScreenState extends State<PinSetupScreen> {
+class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   String _pin = "";
   String _confirmPin = "";
 
+  Future<void> _onSubmit() async {
+    if (_pin != _confirmPin || _pin.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text("Mã PIN không khớp hoặc chưa đủ 6 số!"),
+        ),
+      );
+      return;
+    }
+
+    await ref.read(onboardingControllerProvider.notifier).setPin(_pin);
+    final state = ref.read(onboardingControllerProvider);
+    if (state.error == null && mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+            (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+
+    // Lắng nghe lỗi từ provider
+    ref.listen(onboardingControllerProvider, (prev, next) {
+      if (next.error != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.error!)));
+      }
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -40,7 +73,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                // Box trắng chứa form
+                // Box trắng chứa form (GIỮ NGUYÊN)
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -54,9 +87,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                       const Text(
                         "Mã PIN giúp bạn xác thực trong mỗi giao dịch",
                         style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -91,9 +125,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                       const Text(
                         "Nhập lại mã PIN đã tạo",
                         style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -128,25 +163,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
                       // Nút Xác Thực
                       GestureDetector(
-                        onTap: () {
-                          if (_pin == _confirmPin && _pin.length == 6) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginPage(),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                backgroundColor: Colors.red,
-                                content: Text(
-                                  "Mã PIN không khớp hoặc chưa đủ 6 số!",
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                        onTap: state.loading ? null : _onSubmit,
                         child: Container(
                           width: double.infinity,
                           height: 48,
@@ -157,7 +174,16 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                             ),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
+                          child: state.loading
+                              ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : const Text(
                             "Xác Thực",
                             style: TextStyle(
                               color: Colors.white,
@@ -169,9 +195,9 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
                       const SizedBox(height: 20),
 
-                      // Nút Hủy
+                      // Nút Hủy (GIỮ NGUYÊN)
                       OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: state.loading ? null : () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
                           side: const BorderSide(color: Color(0xFF0D1B4C)),
@@ -194,6 +220,4 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       ),
     );
   }
-
-
 }

@@ -1,26 +1,22 @@
 import 'package:flutter/material.dart';
+import '../../domain/models/notification_models.dart';
 
 /// Card style notification item: Title + Date, message body, time footer.
 class NotificationItem extends StatelessWidget {
   const NotificationItem({
     super.key,
-    required this.title,
-    required this.message,
-    required this.time,
-    required this.date,
+    required this.notification,
     this.onTap,
   });
 
-  final String title;
-  final String message;
-  final String time;
-  final String date;
+  final AppNotification notification;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     const bodyColor = Color(0xCC000000); // ~80% black
     const caption = Colors.black54;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -35,7 +31,7 @@ class NotificationItem extends StatelessWidget {
                 color: Color(0x14000000),
                 blurRadius: 10,
                 offset: Offset(0, 4),
-              )
+              ),
             ],
           ),
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -47,7 +43,7 @@ class NotificationItem extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      title,
+                      notification.title,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -57,7 +53,7 @@ class NotificationItem extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    date,
+                    notification.dateText ?? '',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -69,7 +65,7 @@ class NotificationItem extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                message,
+                notification.message,
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.38,
@@ -78,7 +74,7 @@ class NotificationItem extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                time,
+                notification.timeText ?? '',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
+import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
-class SignUpPage extends StatefulWidget {
+class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _cccdController = TextEditingController();
@@ -26,11 +29,46 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final payload = SignupPayload(
+      cccd: _cccdController.text.trim(),
+      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim(),
+      fullName: _nameController.text.trim(),
+      birthdate: null,
+      gender: null,
+      specialization: '',
+      address: '',
+    );
+
+    await ref.read(onboardingControllerProvider.notifier).signup(payload);
+
+    final state = ref.read(onboardingControllerProvider);
+    if (state.error == null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const OtpScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+
+    // Lắng nghe lỗi để hiện SnackBar
+    ref.listen(onboardingControllerProvider, (prev, next) {
+      if (next.error != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.error!)));
+      }
+    });
+
     return Scaffold(
       body: Container(
-        // Nền gradient xanh
+        // Nền gradient xanh (GIỮ NGUYÊN)
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -52,7 +90,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Box trắng chứa form
+                // Box trắng chứa form (GIỮ NGUYÊN)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -110,7 +148,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           hint: "Nhập email",
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          isRequired: false, // 👈 không bắt buộc
+                          isRequired: false,
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
                               if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
@@ -139,7 +177,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
                         const SizedBox(height: 32),
 
-                        // Nút Tiếp theo gradient
+                        // Nút Tiếp theo (chỉ đổi onPressed để gọi provider)
                         Container(
                           width: double.infinity,
                           height: 48,
@@ -150,30 +188,32 @@ class _SignUpPageState extends State<SignUpPage> {
                             ),
                           ),
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const OtpScreen()),
-                                );
-                              }
-                            },
+                            onPressed:
+                            state.loading ? null : _onSubmit, // ✅ refactor
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                             ),
-                            child: const Text(
+                            child: state.loading
+                                ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                                : const Text(
                               "Tiếp theo",
-                              style:
-                              TextStyle(color: Colors.white, fontSize: 16),
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16),
                             ),
                           ),
                         ),
 
                         const SizedBox(height: 20),
 
-                        // Divider với chữ "hoặc"
+                        // Divider với chữ "hoặc" (GIỮ NGUYÊN)
                         Row(
                           children: [
                             const Expanded(
@@ -195,13 +235,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
                         const SizedBox(height: 16),
 
-                        // Nút đăng nhập chữ xanh
+                        // Nút đăng nhập (GIỮ NGUYÊN)
                         TextButton(
                           onPressed: () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const LoginPage()));
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const LoginPage()),
+                            );
                           },
                           child: const Text(
                             "Đăng nhập",
@@ -222,7 +263,7 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  /// Input có label + hint text mờ
+  /// Giữ nguyên UI input
   Widget _buildInput({
     required String label,
     required String hint,
