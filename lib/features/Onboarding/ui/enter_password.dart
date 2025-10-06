@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
+import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
-import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
-class PasswordSetupScreen extends StatefulWidget {
+class PasswordSetupScreen extends ConsumerStatefulWidget {
   const PasswordSetupScreen({super.key});
 
   @override
-  State<PasswordSetupScreen> createState() => _PasswordSetupScreenState();
+  ConsumerState<PasswordSetupScreen> createState() => _PasswordSetupScreenState();
 }
 
-class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
+class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -19,20 +21,41 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
   bool _obscureConfirm = true;
 
   @override
+  void initState() {
+    super.initState();
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
+  }
+
+  @override
   void dispose() {
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
-  void _onSubmit() {
-    if (_formKey.currentState!.validate()) {
-      // Nếu hợp lệ → chuyển sang LoginPage
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PinSetupScreen()),
-      );
+  Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    final success = await ref
+        .read(onboardingControllerProvider.notifier)
+        .setPassword(_passwordController.text);
+    if (!mounted || !success) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PinSetupScreen()),
+    );
   }
 
   // Hàm kiểm tra ràng buộc mật khẩu: >=8 ký tự và có chữ hoa
@@ -177,30 +200,45 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
                         const SizedBox(height: 60),
 
                         // Nút Hoàn tất (gradient xanh)
-                        Container(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
-                            ),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _onSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final state =
+                                ref.watch(onboardingControllerProvider);
+                            final isLoading = state.status.isLoading;
+                            return Container(
+                              width: double.infinity,
+                              height: 48,
+                              decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
+                                ),
                               ),
-                            ),
-                            child: const Text(
-                              "Hoàn tất",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
+                              child: ElevatedButton(
+                                onPressed: isLoading ? null : _onSubmit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text(
+                                        "Hoàn tất",
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 12),
 

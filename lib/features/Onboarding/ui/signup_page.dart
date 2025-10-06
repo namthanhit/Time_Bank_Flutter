@@ -1,21 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
+import 'package:time_bank_flutter/features/Onboarding/domain/onboarding_models.dart';
+import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
-class SignUpPage extends StatefulWidget {
+class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _cccdController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -140,34 +160,15 @@ class _SignUpPageState extends State<SignUpPage> {
                         const SizedBox(height: 32),
 
                         // Nút Tiếp theo gradient
-                        Container(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
-                            ),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const OtpScreen()),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                            ),
-                            child: const Text(
-                              "Tiếp theo",
-                              style:
-                              TextStyle(color: Colors.white, fontSize: 16),
-                            ),
+                        _SubmitButton(
+                          formKey: _formKey,
+                          buildPayload: () => SignUpPayload(
+                            citizenId: _cccdController.text.trim(),
+                            phoneNumber: _phoneController.text.trim(),
+                            email: _emailController.text.trim().isEmpty
+                                ? null
+                                : _emailController.text.trim(),
+                            fullName: _nameController.text.trim(),
                           ),
                         ),
 
@@ -274,6 +275,69 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SubmitButton extends ConsumerStatefulWidget {
+  const _SubmitButton({
+    required this.formKey,
+    required this.buildPayload,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final SignUpPayload Function() buildPayload;
+
+  @override
+  ConsumerState<_SubmitButton> createState() => _SubmitButtonState();
+}
+
+class _SubmitButtonState extends ConsumerState<_SubmitButton> {
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+    final isLoading = state.status.isLoading;
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
+        ),
+      ),
+      child: ElevatedButton(
+        onPressed: isLoading
+            ? null
+            : () async {
+                FocusScope.of(context).unfocus();
+                if (!widget.formKey.currentState!.validate()) {
+                  return;
+                }
+                final success = await ref
+                    .read(onboardingControllerProvider.notifier)
+                    .requestOtp(widget.buildPayload());
+                if (!mounted || !success) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OtpScreen()),
+                );
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text(
+                "Tiếp theo",
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+      ),
     );
   }
 }

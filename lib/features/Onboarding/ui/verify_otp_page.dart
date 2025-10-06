@@ -1,27 +1,40 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
+import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/profile_page.dart';
 
-class OtpScreen extends StatefulWidget {
+class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key});
 
   @override
-  State<OtpScreen> createState() => _OtpScreenState();
+  ConsumerState<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
+class _OtpScreenState extends ConsumerState<OtpScreen> {
   int _timeLeft = 20; // thời gian đếm ngược (giây)
   Timer? _timer;
 
   final TextEditingController _otpController = TextEditingController();
-  final String _correctOtp = "123456"; // ví dụ OTP đúng
 
   @override
   void initState() {
     super.initState();
     _startCountdown();
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
   }
 
   void _startCountdown() {
@@ -41,8 +54,8 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
-  void _verifyOtp() {
-    final otp = _otpController.text;
+  Future<void> _verifyOtp() async {
+    final otp = _otpController.text.trim();
 
     if (otp.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -51,14 +64,9 @@ class _OtpScreenState extends State<OtpScreen> {
       return;
     }
 
-    if (otp != _correctOtp) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mã OTP không đúng")),
-      );
-      return;
-    }
-
-    // Nếu đúng thì sang Profile
+    final success =
+        await ref.read(onboardingControllerProvider.notifier).verifyOtp(otp);
+    if (!mounted || !success) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -67,6 +75,9 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+    final phone = state.data.signUp?.phoneNumber ?? '';
+    final isLoading = state.status.isLoading;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -107,10 +118,10 @@ class _OtpScreenState extends State<OtpScreen> {
                         controller: _otpController,
                         length: 6,
                         appContext: context,
-                        onChanged: (value) {},
+                        onChanged: (_) {},
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly, // chỉ nhập số
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
                         autoFocus: true,
                         animationType: AnimationType.fade,
@@ -133,9 +144,10 @@ class _OtpScreenState extends State<OtpScreen> {
                       // Thông báo + Thời gian
                       Column(
                         children: [
-                          const Text(
-                            "Đã gửi mã xác minh đến số điện thoại bạn đăng ký.",
-                            style: TextStyle(fontSize: 14, color: Colors.black87),
+                          Text(
+                            "Đã gửi mã xác minh đến số điện thoại $phone.",
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.black87),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 4),
@@ -154,7 +166,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
                       // Nút Xác Thực
                       GestureDetector(
-                        onTap: _verifyOtp,
+                        onTap: isLoading ? null : _verifyOtp,
                         child: Container(
                           width: double.infinity,
                           height: 48,
@@ -165,13 +177,22 @@ class _OtpScreenState extends State<OtpScreen> {
                             ),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
-                            "Xác Thực",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  "Xác Thực",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
                         ),
                       ),
                     ],

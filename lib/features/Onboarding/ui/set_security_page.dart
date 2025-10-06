@@ -1,18 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
+import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
+import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
-class PinSetupScreen extends StatefulWidget {
+class PinSetupScreen extends ConsumerStatefulWidget {
   const PinSetupScreen({super.key});
 
   @override
-  State<PinSetupScreen> createState() => _PinSetupScreenState();
+  ConsumerState<PinSetupScreen> createState() => _PinSetupScreenState();
 }
 
-class _PinSetupScreenState extends State<PinSetupScreen> {
+class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   String _pin = "";
   String _confirmPin = "";
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,44 +145,67 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                       const SizedBox(height: 20),
 
                       // Nút Xác Thực
-                      GestureDetector(
-                        onTap: () {
-                          if (_pin == _confirmPin && _pin.length == 6) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginPage(),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                backgroundColor: Colors.red,
-                                content: Text(
-                                  "Mã PIN không khớp hoặc chưa đủ 6 số!",
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final state =
+                              ref.watch(onboardingControllerProvider);
+                          final isLoading = state.status.isLoading;
+                          return GestureDetector(
+                            onTap: isLoading
+                                ? null
+                                : () async {
+                                    if (_pin != _confirmPin || _pin.length != 6) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          backgroundColor: Colors.red,
+                                          content: Text(
+                                            "Mã PIN không khớp hoặc chưa đủ 6 số!",
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    final success = await ref
+                                        .read(onboardingControllerProvider
+                                            .notifier)
+                                        .completeRegistration(_pin);
+                                    if (!mounted || !success) return;
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                          builder: (_) => const LoginPage()),
+                                      (route) => false,
+                                    );
+                                  },
+                            child: Container(
+                              width: double.infinity,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
                                 ),
                               ),
-                            );
-                          }
+                              alignment: Alignment.center,
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "Xác Thực",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                            ),
+                          );
                         },
-                        child: Container(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            "Xác Thực",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
                       ),
 
                       const SizedBox(height: 20),

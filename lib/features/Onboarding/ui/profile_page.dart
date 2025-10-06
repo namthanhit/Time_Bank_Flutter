@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
+import 'package:time_bank_flutter/features/Onboarding/domain/onboarding_models.dart';
+import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   DateTime? selectedDate;
 
@@ -88,7 +91,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+    final isLoading = state.status.isLoading;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -231,16 +252,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                      const PasswordSetupScreen()),
-                                );
-                              }
-                            },
+                            onPressed: isLoading
+                                ? null
+                                : () async {
+                                    if (!_formKey.currentState!.validate()) {
+                                      return;
+                                    }
+                                    if (selectedDate == null ||
+                                        gender == null ||
+                                        major == null ||
+                                        address == null) {
+                                      return;
+                                    }
+                                    final info = ProfileInfo(
+                                      birthDate: selectedDate!,
+                                      gender: gender!,
+                                      major: major!,
+                                      address: address!,
+                                    );
+                                    final success = await ref
+                                        .read(onboardingControllerProvider
+                                            .notifier)
+                                        .submitProfile(info);
+                                    if (!mounted || !success) return;
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const PasswordSetupScreen(),
+                                      ),
+                                    );
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D1B4C),
                               foregroundColor: Colors.white,
@@ -249,7 +291,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text("Tiếp theo"),
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text("Tiếp theo"),
                           ),
                         ),
                         const SizedBox(height: 12),
