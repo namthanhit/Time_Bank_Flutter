@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
 import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
 
@@ -19,22 +18,6 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
   // Trạng thái ẩn/hiện mật khẩu
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-
-  @override
-  void initState() {
-    super.initState();
-    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
-      next.status.whenOrNull(error: (error, __) {
-        final message =
-            error is OnboardingException ? error.message : error.toString();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-        ref.read(onboardingControllerProvider.notifier).clearStatus();
-      });
-    });
-  }
 
   @override
   void dispose() {
@@ -80,6 +63,18 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(

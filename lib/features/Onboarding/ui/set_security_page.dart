@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
 import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
@@ -17,8 +16,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   String _confirmPin = "";
 
   @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context) {
     ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
       next.status.whenOrNull(error: (error, __) {
         final message =
@@ -30,10 +28,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         ref.read(onboardingControllerProvider.notifier).clearStatus();
       });
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(

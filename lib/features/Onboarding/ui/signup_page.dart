@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
 import 'package:time_bank_flutter/features/Onboarding/domain/onboarding_models.dart';
 import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
@@ -22,8 +21,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _nameController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
+  void dispose() {
+    _cccdController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
       next.status.whenOrNull(error: (error, __) {
         final message =
@@ -35,19 +42,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         ref.read(onboardingControllerProvider.notifier).clearStatus();
       });
     });
-  }
 
-  @override
-  void dispose() {
-    _cccdController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         // Nền gradient xanh

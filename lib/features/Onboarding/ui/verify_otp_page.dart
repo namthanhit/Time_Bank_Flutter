@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
 import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/profile_page.dart';
 
@@ -24,17 +23,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   void initState() {
     super.initState();
     _startCountdown();
-    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
-      next.status.whenOrNull(error: (error, __) {
-        final message =
-            error is OnboardingException ? error.message : error.toString();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-        ref.read(onboardingControllerProvider.notifier).clearStatus();
-      });
-    });
   }
 
   void _startCountdown() {
@@ -75,6 +63,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
+      next.status.whenOrNull(error: (error, __) {
+        final message =
+            error is OnboardingException ? error.message : error.toString();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        ref.read(onboardingControllerProvider.notifier).clearStatus();
+      });
+    });
+
     final state = ref.watch(onboardingControllerProvider);
     final phone = state.data.signUp?.phoneNumber ?? '';
     final isLoading = state.status.isLoading;

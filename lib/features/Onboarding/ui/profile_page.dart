@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/data/onboarding_repository.dart';
 import 'package:time_bank_flutter/features/Onboarding/domain/onboarding_models.dart';
 import 'package:time_bank_flutter/features/Onboarding/providers/onboarding_controller.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
@@ -91,8 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context) {
     ref.listen<OnboardingState>(onboardingControllerProvider, (prev, next) {
       next.status.whenOrNull(error: (error, __) {
         final message =
@@ -104,10 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.read(onboardingControllerProvider.notifier).clearStatus();
       });
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
     final isLoading = state.status.isLoading;
     return Scaffold(
