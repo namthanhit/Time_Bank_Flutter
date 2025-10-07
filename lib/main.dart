@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/auth/ui/login_page.dart';
+import 'app/app.dart';
+import 'core/app_config.dart';
+import 'features/auth/providers/auth_providers.dart';
+import 'features/auth/data/mock_auth_repository.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ProviderScope(
+      overrides: [
+        if (AppConfig.useMock) authRepoProvider.overrideWithValue(MockAuthRepository()),
+      ],
+      child: const App(),
+    ),
+  );
 }
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false, // tắt banner debug
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const LoginPage(),
-    );
-  }
-}
-

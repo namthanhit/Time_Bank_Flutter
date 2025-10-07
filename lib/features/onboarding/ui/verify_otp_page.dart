@@ -1,22 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/profile_page.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
-class OtpScreen extends StatefulWidget {
+class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key});
 
   @override
-  State<OtpScreen> createState() => _OtpScreenState();
+  ConsumerState<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
+class _OtpScreenState extends ConsumerState<OtpScreen> {
   int _timeLeft = 20; // thời gian đếm ngược (giây)
   Timer? _timer;
 
-  final TextEditingController _otpController = TextEditingController();
-  final String _correctOtp = "123456"; // ví dụ OTP đúng
+  String _otp = ""; // thay cho TextEditingController để tránh lỗi dispose
 
   @override
   void initState() {
@@ -25,7 +26,13 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   void _startCountdown() {
+    _timer?.cancel();
+    _timeLeft = 20;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_timeLeft > 0) {
         setState(() => _timeLeft--);
       } else {
@@ -36,37 +43,40 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _otpController.dispose();
+    _timer?.cancel(); // hủy timer trước khi thoát
     super.dispose();
   }
 
-  void _verifyOtp() {
-    final otp = _otpController.text;
-
-    if (otp.isEmpty) {
+  Future<void> _verifyOtp() async {
+    if (_otp.isEmpty || _otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng nhập OTP")),
+        const SnackBar(content: Text("Vui lòng nhập đủ 6 số OTP")),
       );
       return;
     }
 
-    if (otp != _correctOtp) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mã OTP không đúng")),
+    await ref.read(onboardingControllerProvider.notifier).verifyOtp(_otp);
+    final state = ref.read(onboardingControllerProvider);
+    if (state.error == null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
       );
-      return;
     }
-
-    // Nếu đúng thì sang Profile
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+
+    // Lắng nghe lỗi từ provider để show SnackBar
+    ref.listen(onboardingControllerProvider, (prev, next) {
+      if (next.error != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.error!)));
+      }
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -82,7 +92,7 @@ class _OtpScreenState extends State<OtpScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Tiêu đề
+                // Tiêu đề (GIỮ NGUYÊN)
                 const Text(
                   "Xác Thực OTP",
                   style: TextStyle(
@@ -92,7 +102,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Box trắng
+                // Box trắng (GIỮ NGUYÊN)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -102,15 +112,16 @@ class _OtpScreenState extends State<OtpScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ô nhập OTP
+                      // Ô nhập OTP (không dùng controller để tránh lỗi dispose)
                       PinCodeTextField(
-                        controller: _otpController,
                         length: 6,
                         appContext: context,
-                        onChanged: (value) {},
+                        onChanged: (value) {
+                          _otp = value; // không cần setState vì UI không phụ thuộc
+                        },
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly, // chỉ nhập số
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
                         autoFocus: true,
                         animationType: AnimationType.fade,
@@ -130,7 +141,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
                       const SizedBox(height: 8),
 
-                      // Thông báo + Thời gian
+                      // Thông báo + Thời gian (GIỮ NGUYÊN)
                       Column(
                         children: [
                           const Text(
@@ -152,9 +163,9 @@ class _OtpScreenState extends State<OtpScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Nút Xác Thực
+                      // Nút Xác Thực (GIỮ NGUYÊN layout, thêm loading/disable)
                       GestureDetector(
-                        onTap: _verifyOtp,
+                        onTap: state.loading ? null : _verifyOtp,
                         child: Container(
                           width: double.infinity,
                           height: 48,
@@ -165,7 +176,16 @@ class _OtpScreenState extends State<OtpScreen> {
                             ),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
+                          child: state.loading
+                              ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : const Text(
                             "Xác Thực",
                             style: TextStyle(
                               color: Colors.white,
