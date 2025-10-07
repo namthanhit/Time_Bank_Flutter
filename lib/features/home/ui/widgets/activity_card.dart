@@ -158,8 +158,8 @@ class ActivityCard extends StatelessWidget {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     // Giới hạn vùng tag (tuỳ bạn, 220 là ví dụ cũ)
-                    const double maxWrapWidth = 220;
-                    const int cols = 2;           // => 2 cột, tag = nhau
+                    const double maxWrapWidth = 95;
+                    const int cols = 1;           // => 2 cột, tag = nhau
                     const double spacing = 6.0;   // khoảng cách giữa các chip
 
                     final width = maxWrapWidth;
@@ -167,7 +167,7 @@ class ActivityCard extends StatelessWidget {
 
                     final tags = activity.tags;
                     // Giới hạn số tag hiển thị và thêm "+N" nếu quá
-                    const maxShow = 4;
+                    const maxShow = 2;
                     final show = tags.length > maxShow
                         ? [...tags.take(maxShow - 1), '+${tags.length - (maxShow - 1)}']
                         : tags;
