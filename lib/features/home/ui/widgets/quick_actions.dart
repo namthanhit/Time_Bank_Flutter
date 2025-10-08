@@ -25,8 +25,8 @@ class QuickActions extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               MenuButton(
-                icon: Icons.attach_money,
-                label: 'Chuyển tiền',
+                icon: Icons.compare_arrows,
+                label: 'Chuyển thời gian',
                 onTap: onTransfer,
               ),
               const SizedBox(width: 50),
