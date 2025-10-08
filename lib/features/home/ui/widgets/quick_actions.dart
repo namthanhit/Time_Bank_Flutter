@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'menu_button.dart';
 import '../home_typography.dart';
+import 'package:time_bank_flutter/features/transaction_history/ui/transaction_history_page.dart';
 
 class QuickActions extends StatelessWidget {
   const QuickActions({super.key, this.onTransfer, this.onQr, this.onHistory});
@@ -39,7 +40,14 @@ class QuickActions extends StatelessWidget {
               MenuButton(
                 icon: Icons.history,
                 label: 'Lịch sử\nGiao dịch',
-                onTap: onHistory,
+                onTap: onHistory ?? () {
+                  // Điều hướng tới trang Lịch sử giao dịch nếu không truyền callback tùy biến
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const TransactionHistoryPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
