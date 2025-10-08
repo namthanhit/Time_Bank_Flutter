@@ -16,11 +16,18 @@ class TransactionHistoryPage extends ConsumerWidget {
     final txAsync = ref.watch(transactionsProvider);
     final range = ref.watch(transactionRangeProvider);
 
+    final canPop = Navigator.of(context).canPop();
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFF003E77),
         foregroundColor: Colors.white,
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
         title: const Text('Lịch sử giao dịch'),
       ),
       backgroundColor: const Color(0xFFF4F6F9),
