@@ -57,6 +57,21 @@ class TransactionHistoryPage extends ConsumerWidget {
                     initialDate: range.from,
                     firstDate: DateTime.now().subtract(const Duration(days: 365)),
                     lastDate: DateTime.now(),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(
+                        dialogBackgroundColor: Colors.white,
+                        colorScheme: ColorScheme.light(
+                          primary: const Color(0xFF003E77),
+                          onPrimary: Colors.white,
+                          surface: Colors.white,
+                          surfaceVariant: Colors.white,
+                          background: Colors.white,
+                          onSurface: Colors.black,
+                          onBackground: Colors.black,
+                        ),
+                      ),
+                      child: child!,
+                    ),
                   );
                   if (picked != null) {
                     ref.read(transactionRangeProvider.notifier).state = (from: picked, to: range.to);
@@ -68,6 +83,21 @@ class TransactionHistoryPage extends ConsumerWidget {
                     initialDate: range.to,
                     firstDate: DateTime.now().subtract(const Duration(days: 365)),
                     lastDate: DateTime.now(),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(
+                        dialogBackgroundColor: Colors.white,
+                        colorScheme: ColorScheme.light(
+                          primary: const Color(0xFF003E77),
+                          onPrimary: Colors.white,
+                          surface: Colors.white,
+                          surfaceVariant: Colors.white,
+                          background: Colors.white,
+                          onSurface: Colors.black,
+                          onBackground: Colors.black,
+                        ),
+                      ),
+                      child: child!,
+                    ),
                   );
                   if (picked != null) {
                     ref.read(transactionRangeProvider.notifier).state = (from: range.from, to: picked);
@@ -84,7 +114,7 @@ class TransactionHistoryPage extends ConsumerWidget {
                     foregroundColor: const Color(0xFF0A3D66),
                     elevation: 0,
                     textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () => ref.refresh(transactionsProvider),
                   child: const Text('Truy vấn giao dịch'),
@@ -96,15 +126,58 @@ class TransactionHistoryPage extends ConsumerWidget {
                 style: TextStyle(fontSize: 10.5, color: Color(0xFF546170), height: 1.3),
               ),
               const SizedBox(height: 20),
+              // Direction filter inside a single rounded white container; buttons without borders
+              Consumer(
+                builder: (context, ref, _) {
+                  final dir = ref.watch(transactionDirectionFilterProvider);
+                  Widget _button(String label, TransactionDirection? value) => Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: dir == value ? const Color(0xFF0A3D66) : Colors.transparent,
+                            foregroundColor: dir == value ? Colors.white : const Color(0xFF0A3D66),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 39), // reduce the button height
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                          onPressed: () => ref.read(transactionDirectionFilterProvider.notifier).state = value,
+                          child: Text(label),
+                        ),
+                      );
+
+                  return Container(
+                    height: 42, // make the whole filter box shorter
+                    padding: const EdgeInsets.all(0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: const Color(0xFFE4E6EB)),
+                      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 6, offset: Offset(0,2))],
+                    ),
+                    child: Row(children: [
+                      _button('Tất cả', null),
+                      const SizedBox(width: 6),
+                      _button('Vào', TransactionDirection.incoming),
+                      const SizedBox(width: 6),
+                      _button('Ra', TransactionDirection.out),
+                    ]),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
               txAsync.when(
                 data: (list) {
                   if (list.isEmpty) {
                     return _empty();
                   }
-                  final grouped = _groupByDate(list);
+                  // apply direction filter
+                  final selected = ref.watch(transactionDirectionFilterProvider);
+                  final filtered = selected == null ? list : list.where((e) => e.direction == selected).toList();
+                  final groupedFiltered = _groupByDate(filtered);
                   return Column(
                     children: [
-                      for (final g in grouped.entries)
+                      for (final g in groupedFiltered.entries)
                         DayGroupSection(
                           dateLabel: g.key,
                           entries: g.value,
