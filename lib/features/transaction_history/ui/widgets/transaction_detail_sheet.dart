@@ -103,7 +103,11 @@ class TransactionDetailSheet extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           flex: 6,
-          child: Text(v, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0A3D66), height: 1.35)),
+          child: Text(
+            v,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0A3D66), height: 1.35),
+          ),
         ),
       ],
     ),
