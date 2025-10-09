@@ -16,6 +16,9 @@ final transactionRangeProvider = StateProvider<({DateTime from, DateTime to})>((
   return (from: from, to: to);
 });
 
+// Direction filter: null = all, otherwise filter by TransactionDirection
+final transactionDirectionFilterProvider = StateProvider<TransactionDirection?>((ref) => null);
+
 // Current balance
 final currentBalanceProvider = FutureProvider<int>((ref) async {
   final repo = ref.watch(transactionHistoryRepositoryProvider);
