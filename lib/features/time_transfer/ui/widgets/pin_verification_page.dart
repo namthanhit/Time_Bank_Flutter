@@ -1,90 +1,130 @@
+// no timer/async needed here anymore
 import 'package:flutter/material.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 
-class OtpVerificationPage extends StatefulWidget {
-  const OtpVerificationPage({super.key});
+class PinVerificationDialog extends StatefulWidget {
+  /// onSubmit should return true when the OTP is valid.
+  final Future<bool> Function(String otp)? onSubmit;
+
+  const PinVerificationDialog({super.key, this.onSubmit});
 
   @override
-  State<OtpVerificationPage> createState() => _OtpVerificationPageState();
+  State<PinVerificationDialog> createState() => _PinVerificationDialogState();
 }
 
-class _OtpVerificationPageState extends State<OtpVerificationPage> {
-  final List<String> otp = List.filled(6, '');
+class _PinVerificationDialogState extends State<PinVerificationDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isSubmitting = false;
+  bool _hasError = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
+  final double sheetHeight = MediaQuery.of(context).size.height * 0.55;
 
-    return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.4),
-      body: Center(
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.zero,
+      child: Align(
+        alignment: Alignment.bottomCenter,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
+          height: sheetHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Xác thực OTP',
+                'Xác thực mã PIN',
                 style: TextStyle(
                   color: colorPrimary,
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 36),
 
-              // Các ô tròn nhập PIN
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (index) {
-                  return Container(
-                    width: 20,
-                    height: 20,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: otp[index].isNotEmpty
-                          ? colorPrimary
-                          : const Color(0xFFD9D9D9),
+              // 🔹 Các ô nhập mã PIN — gần nhau hơn
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: PinCodeTextField(
+                  appContext: context,
+                  length: 6,
+                  controller: _controller,
+                  keyboardType: TextInputType.number,
+                  animationType: AnimationType.fade,
+                  obscureText: true,
+                  obscuringWidget: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      color: colorPrimary,
                       shape: BoxShape.circle,
                     ),
-                  );
-                }),
-              ),
-
-              const SizedBox(height: 25),
-              const Text(
-                'Vui lòng nhập mã PIN Digital OTP để xác thực giao dịch',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  minimumSize: const Size(180, 45),
+                  pinTheme: PinTheme(
+                    shape: PinCodeFieldShape.circle,
+                    fieldHeight: 30,
+                    fieldWidth: 30,
+                    activeColor: colorPrimary,
+                    selectedColor: colorPrimary,
+                    inactiveColor: Colors.grey.shade300, // 🔹 Các ô tròn gần nhau hơn
+                  ),
+                  onChanged: (_) {},
+                  onCompleted: (value) async {
+                    setState(() {
+                      _isSubmitting = true;
+                      _hasError = false;
+                    });
+
+                    bool success = false;
+                    try {
+                      success = await (widget.onSubmit?.call(value) ?? Future.value(false));
+                    } catch (_) {
+                      success = false;
+                    }
+
+                    if (!mounted) return;
+                    setState(() {
+                      _isSubmitting = false;
+                    });
+
+                    if (success) {
+                      Navigator.of(context).pop(true);
+                    } else {
+                      setState(() {
+                        _hasError = true;
+                      });
+                      _controller.clear();
+                    }
+                  },
                 ),
-                child: const Text(
-                  'Xác nhận',
+              ),
+
+              if (_isSubmitting) ...[
+                const SizedBox(height: 12),
+                const CircularProgressIndicator(),
+              ] else ...[
+                const SizedBox(height: 24),
+                Text(
+                  _hasError ? 'Nhập sai mã PIN' : 'Vui lòng nhập mã PIN để xác thực giao dịch',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: _hasError ? Colors.red : Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
