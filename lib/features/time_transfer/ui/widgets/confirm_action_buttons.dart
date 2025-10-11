@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:time_bank_flutter/features/time_transfer/ui/confirm_page.dart';
-// import '../pages/confirm_page.dart';
+import '../../domain/models/transaction_ui_data.dart';
 
-class TransferActionButtons extends StatelessWidget {
-  const TransferActionButtons({super.key});
+class ConfirmActionButtons extends StatelessWidget {
+  final TransactionUiData data;
+  final VoidCallback onRequestOtp;
+  final VoidCallback? onBack;
+
+  const ConfirmActionButtons({super.key, required this.data, required this.onRequestOtp, this.onBack});
 
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
-    final colorLightBlue = const Color(0xFFD6E8F5).withOpacity(0.9);
+  final colorLightBlue = const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        // Nút "Quay lại" — ngắn hơn, bóng nhẹ
+        // Nút "Quay lại"
         Container(
           width: 120,
           height: 46,
@@ -22,21 +25,21 @@ class TransferActionButtons extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withAlpha((0.08 * 255).toInt()),
                 offset: const Offset(0, 2),
                 blurRadius: 5,
                 spreadRadius: 1,
               ),
             ],
           ),
-          child: TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            onPressed: () => Navigator.pop(context),
+            child: TextButton(
+            onPressed: () {
+              if (onBack != null) {
+                onBack!();
+              } else {
+                Navigator.pop(context);
+              }
+            },
             child: const Text(
               'Quay lại',
               style: TextStyle(
@@ -50,7 +53,7 @@ class TransferActionButtons extends StatelessWidget {
 
         const SizedBox(width: 12),
 
-        // Nút "Tiếp tục" — dài hơn, bóng mạnh hơn
+        // Nút "Tiếp tục"
         Container(
           width: 280,
           height: 46,
@@ -59,7 +62,7 @@ class TransferActionButtons extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF003E77).withOpacity(0.2),
+                color: colorPrimary.withAlpha((0.2 * 255).toInt()),
                 offset: const Offset(0, 4),
                 blurRadius: 8,
                 spreadRadius: 1,
@@ -68,17 +71,14 @@ class TransferActionButtons extends StatelessWidget {
           ),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent, // để lấy màu từ BoxDecoration
+              backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ConfirmPage()),
-              );
+              onRequestOtp();
             },
             child: const Text(
               'Tiếp tục',
