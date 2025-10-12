@@ -14,7 +14,7 @@ class ConfirmPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     const colorPrimary = Color(0xFF003E77);
 
-  Future<void> onRequestOtp() async {
+    Future<void> onRequestOtp() async {
       final notifier = ref.read(transactionFormProvider.notifier);
       // Tell provider to send OTP; provider will use current preview transaction id
       await notifier.sendOtp();
@@ -40,7 +40,8 @@ class ConfirmPage extends ConsumerWidget {
         if (currentUiData != null) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => TransferSuccessPage(data: currentUiData)),
+            MaterialPageRoute(
+                builder: (_) => TransferSuccessPage(data: currentUiData)),
           );
         } else {
           Navigator.popUntil(context, (route) => route.isFirst);
@@ -48,9 +49,9 @@ class ConfirmPage extends ConsumerWidget {
       }
     }
 
-  final uiData = ref.watch(transactionUiDataProvider);
+    final uiData = ref.watch(transactionUiDataProvider);
 
-  return Scaffold(
+    return Scaffold(
       appBar: AppBar(
         backgroundColor: colorPrimary,
         elevation: 0,
@@ -58,15 +59,23 @@ class ConfirmPage extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Xác nhận thông tin', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Xác nhận thông tin',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
         centerTitle: true,
       ),
       backgroundColor: const Color(0xFFF6F8FA),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (uiData != null) ConfirmInfoCard(data: uiData) else const SizedBox.shrink(),
+            if (uiData != null)
+              ConfirmInfoCard(data: uiData)
+            else
+              const SizedBox.shrink(),
             const SizedBox(height: 16),
             const ConfirmWarningBox(),
             const SizedBox(height: 24),
@@ -84,5 +93,3 @@ class ConfirmPage extends ConsumerWidget {
     );
   }
 }
-
-
