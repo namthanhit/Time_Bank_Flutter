@@ -18,104 +18,106 @@ class TransferActionButtons extends StatelessWidget {
   });
 
   bool get isValid {
-  final receiverNumber = transferData.recipientAccount;
-  final receiverName = transferData.recipientName;
-  final timeAmount = transferData.amount;
+    final receiverNumber = transferData.recipientAccount;
+    final receiverName = transferData.recipientName;
+    final timeAmount = transferData.amount;
 
-  if (receiverNumber.isEmpty || receiverName.isEmpty) return false;
-  if (timeAmount == Duration.zero) return false;
-  if (timeAmount > accountBalance) return false;
+    if (receiverNumber.isEmpty || receiverName.isEmpty) return false;
+    if (timeAmount == Duration.zero) return false;
+    if (timeAmount > accountBalance) return false;
     return true;
   }
 
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
-  final colorLightBlue = const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
+    final colorLightBlue =
+        const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         // Nút quay lại
-        Container(
-          width: 120,
-          height: 46,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha((0.08 * 255).toInt()),
-                offset: const Offset(0, 2),
-                blurRadius: 5,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-            child: TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+        Expanded(
+          flex: 1,
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                  offset: const Offset(0, 2),
+                  blurRadius: 5,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-            onPressed: () {
-              if (onBack != null) {
-                onBack!();
-              } else {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text(
-              'Quay lại',
-              style: TextStyle(
-                color: colorPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: () {
+                if (onBack != null) {
+                  onBack!();
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text(
+                'Quay lại',
+                style: TextStyle(
+                  color: colorPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: 12),
         // Nút tiếp tục
-        Container(
-          width: 280,
-          height: 46,
-          decoration: BoxDecoration(
-            color: colorLightBlue,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: colorPrimary.withAlpha((0.2 * 255).toInt()),
-                offset: const Offset(0, 4),
-                blurRadius: 8,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+        Expanded(
+          flex: 2,
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: colorLightBlue,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: colorPrimary.withAlpha((0.2 * 255).toInt()),
+                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-            onPressed: () {
-              if (isValid) {
-                // Only call the provided callback. Navigation should be handled by the container.
-                onContinue();
-              } else {
-                // Chỉ bật hiển thị lỗi đỏ
-                showErrorsNotifier.value = true;
-              }
-            },
-            child: const Text(
-              'Tiếp tục',
-              style: TextStyle(
-                color: colorPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: () {
+                if (isValid) {
+                  onContinue();
+                } else {
+                  showErrorsNotifier.value = true;
+                }
+              },
+              child: const Text(
+                'Tiếp tục',
+                style: TextStyle(
+                  color: colorPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
