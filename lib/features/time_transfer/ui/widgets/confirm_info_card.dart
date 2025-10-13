@@ -106,7 +106,7 @@ class ConfirmInfoCard extends StatelessWidget {
                 content,
                 textAlign: TextAlign.right,
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+                    fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
               ),
             ),
           ),
