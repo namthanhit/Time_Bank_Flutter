@@ -76,12 +76,14 @@ class OnboardingRepository {
     required PersonalDto personal,
     required String pin,
     required String password,
+    required String skillId
   }) async {
     final r = await api.signupCreate(
       phoneToken: phoneToken,
       personal: personal,
       pin: pin,
       password: password,
+      skillId: skillId
     );
     if (!r.ok) throw OnboardingError('Tạo tài khoản thất bại');
     return r.userId ?? '';

@@ -1,16 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../data/onboarding_api.dart';
+
+import '../data/onboarding_api.dart';            // <-- để dùng OnboardingApi & SkillDto
 import '../data/onboarding_repository.dart';
 import 'onboarding_state.dart';
 
-const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:3000/api/v1');
+import '../domain/models/models.dart';
 
-final onboardingApiProvider = Provider<OnboardingApi>((ref) => OnboardingApi(apiBase));
-final onboardingRepoProvider = Provider<OnboardingRepository>(
-      (ref) => OnboardingRepository(ref.read(onboardingApiProvider), FirebaseAuth.instance),
+const apiBase = String.fromEnvironment(
+  'API_BASE',
+  defaultValue: 'http://10.0.2.2:3000/api/v1',
 );
 
+// API client
+final onboardingApiProvider = Provider<OnboardingApi>(
+      (ref) => OnboardingApi(apiBase),
+);
+
+// Repository
+final onboardingRepoProvider = Provider<OnboardingRepository>(
+      (ref) => OnboardingRepository(
+    ref.read(onboardingApiProvider),
+    FirebaseAuth.instance,
+  ),
+);
+
+// ✅ Provider load danh sách skills từ backend (/skills)
+final skillsProvider = FutureProvider<List<SkillDto>>((ref) {
+  final api = ref.read(onboardingApiProvider);
+  return api.fetchSkills();
+});
+
+// Controller
 final onboardingControllerProvider =
 StateNotifierProvider<OnboardingController, OnboardingState>(
       (ref) => OnboardingController(ref.read(onboardingRepoProvider)),
@@ -57,7 +78,7 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     DateTime? birthdate,
     String? gender,
     String? address,
-    String? specialization,
+    String? specialization, // ⚠️ đang dùng để giữ skill_id (id của skill)
   }) {
     state = state.copyWith(
       fullName: fullName,
@@ -66,7 +87,7 @@ class OnboardingController extends StateNotifier<OnboardingState> {
       birthdate: birthdate,
       gender: gender,
       address: address,
-      specialization: specialization,
+      specialization: specialization, // = skill_id từ dropdown
     );
   }
 
@@ -80,6 +101,10 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     if (state.fullName == null || state.pin == null || state.password == null) {
       throw Exception('Thiếu thông tin bắt buộc');
     }
+    // ✅ bắt buộc đã chọn skill (skill_id)
+    if (state.specialization == null || state.specialization!.isEmpty) {
+      throw Exception('Thiếu skill_id (chuyên môn)');
+    }
 
     state = state.copyWith(loading: true, error: null);
     try {
@@ -92,10 +117,12 @@ class OnboardingController extends StateNotifier<OnboardingState> {
           birthDate: state.birthdate,
           gender: state.gender,
           address: state.address,
-          specializationOrDescription: state.specialization,
+          specializationOrDescription: null, // không dùng nữa
         ),
         pin: state.pin!,
         password: state.password!,
+        // ✅ truyền skillId cho backend (UserSkill)
+        skillId: state.specialization!, // specialization đang giữ skill_id
       );
       state = state.copyWith(loading: false);
       return userId;

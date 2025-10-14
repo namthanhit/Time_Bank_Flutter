@@ -56,3 +56,20 @@ class SetPinPayload {
   final String pin; // 4–6 digits
   const SetPinPayload({required this.phone, required this.pin});
 }
+
+class SkillDto {
+  final String id;
+  final String? parentId;
+  final String name;
+  final String slug;
+
+  SkillDto({required this.id, this.parentId, required this.name, required this.slug});
+
+  factory SkillDto.fromJson(Map<String, dynamic> j) => SkillDto(
+    id: j['id'] as String,
+    parentId: j['parent_id'] as String?,
+    name: j['name'] as String,
+    slug: j['slug'] as String,
+  );
+}
+

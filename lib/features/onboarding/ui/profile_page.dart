@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
-// ❌ Bỏ models: không cần CompleteProfilePayload nữa
-// import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import '../domain/models/models.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -16,9 +15,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   DateTime? selectedDate;
 
-  String? gender;  // UI: "Nam" | "Nữ"
-  String? major;   // chuyên môn
-  String? address; // địa chỉ
+  String? gender;  // "Nam" | "Nữ"
+  String? major;   // ✅ sẽ là skill_id lấy từ API
+  String? address;
 
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _cccdController = TextEditingController();
@@ -81,13 +80,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Map gender UI -> backend enum string
+    // Map gender UI -> enum backend
     String? genderEnum;
     if (gender == "Nam") genderEnum = "male";
     else if (gender == "Nữ") genderEnum = "female";
     else genderEnum = "unknown";
 
-    // Lưu bản nháp vào provider, KHÔNG gọi API ở bước này
+    // Bắt buộc phải chọn 1 skill (major là skill_id)
+    if (major == null || major!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn chuyên môn')),
+      );
+      return;
+    }
+
+    // Lưu bản nháp vào state; specialization tạm dùng để giữ skill_id
     ref.read(onboardingControllerProvider.notifier).setPersonalDraft(
       fullName: _nameController.text.trim(),
       email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
@@ -95,7 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       birthdate: selectedDate,
       gender: genderEnum,
       address: address,
-      specialization: major,
+      specialization: major, // ✅ skill_id (sẽ map sang skill_id khi create account)
     );
 
     if (!mounted) return;
@@ -108,6 +115,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
+
+    // Lấy danh sách kỹ năng từ API
+    final skillsAsync = ref.watch(skillsProvider);
 
     ref.listen(onboardingControllerProvider, (prev, next) {
       if (next.error != null && mounted) {
@@ -260,30 +270,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Chuyên môn
+                        // Chuyên môn (dropdown lấy từ API /skills)
                         _buildLabel("Chuyên môn"),
                         const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          value: major,
-                          items: const [
-                            DropdownMenuItem(value: "CNTT", child: Text("CNTT")),
-                            DropdownMenuItem(value: "Kỹ sư phần mềm", child: Text("Kỹ sư phần mềm")),
-                            DropdownMenuItem(value: "Thiết kế đồ họa", child: Text("Thiết kế đồ họa")),
-                            DropdownMenuItem(value: "Giáo viên", child: Text("Giáo viên")),
-                            DropdownMenuItem(value: "Bác sĩ", child: Text("Bác sĩ")),
-                            DropdownMenuItem(value: "Kế toán", child: Text("Kế toán")),
-                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
-                          ],
-                          onChanged: (value) => setState(() => major = value),
-                          dropdownColor: Colors.white,
-                          decoration: InputDecoration(
-                            hintText: "Chọn chuyên môn",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          validator: (value) =>
-                          (value == null || value.isEmpty) ? "Vui lòng chọn chuyên môn" : null,
+                        skillsAsync.when(
+                          data: (skills) {
+                            // items: value = skill.id, text = skill.name
+                            final items = skills
+                                .map((s) => DropdownMenuItem<String>(
+                              value: s.id,
+                              child: Text(s.name),
+                            ))
+                                .toList();
+
+                            return DropdownButtonFormField<String>(
+                              value: major,
+                              items: items,
+                              onChanged: (value) => setState(() => major = value),
+                              dropdownColor: Colors.white,
+                              decoration: InputDecoration(
+                                hintText: "Chọn chuyên môn",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              validator: (value) => (value == null || value.isEmpty)
+                                  ? "Vui lòng chọn chuyên môn"
+                                  : null,
+                            );
+                          },
+                          loading: () => const LinearProgressIndicator(),
+                          error: (e, _) => Text('Lỗi tải kỹ năng: $e'),
                         ),
                         const SizedBox(height: 20),
 
