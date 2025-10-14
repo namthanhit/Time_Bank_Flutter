@@ -15,28 +15,23 @@ class SignUpPage extends ConsumerStatefulWidget {
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final _cccdController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _nameController = TextEditingController();
 
   @override
   void dispose() {
-    _cccdController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
-    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Signup chỉ thu số điện thoại; các thông tin khác sẽ thu ở Profile.
     final payload = SignupPayload(
-      cccd: _cccdController.text.trim(),
+      cccd: '',
       phone: _phoneController.text.trim(),
-      email: _emailController.text.trim(),
-      fullName: _nameController.text.trim(),
+      email: '',
+      fullName: '',
       birthdate: null,
       gender: null,
       specialization: '',
@@ -105,27 +100,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     child: Column(
                       children: [
                         _buildInput(
-                          label: "Căn cước công dân",
-                          hint: "Nhập số CCCD",
-                          controller: _cccdController,
-                          keyboardType: TextInputType.number,
-                          isRequired: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Vui lòng nhập CCCD";
-                            }
-                            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-                              return "CCCD chỉ được chứa số";
-                            }
-                            if (value.length != 12) {
-                              return "CCCD phải đủ 12 số";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        _buildInput(
                           label: "Số điện thoại",
                           hint: "Nhập số điện thoại",
                           controller: _phoneController,
@@ -137,39 +111,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             }
                             if (!RegExp(r'^0[0-9]{9}$').hasMatch(value)) {
                               return "SĐT không hợp lệ";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        _buildInput(
-                          label: "Email",
-                          hint: "Nhập email",
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          isRequired: false,
-                          validator: (value) {
-                            if (value != null && value.isNotEmpty) {
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                  .hasMatch(value)) {
-                                return "Email không hợp lệ";
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        _buildInput(
-                          label: "Họ và tên",
-                          hint: "Nhập họ và tên",
-                          controller: _nameController,
-                          keyboardType: TextInputType.name,
-                          isRequired: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Vui lòng nhập họ và tên";
                             }
                             return null;
                           },
@@ -189,25 +130,25 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                           ),
                           child: ElevatedButton(
                             onPressed:
-                            state.loading ? null : _onSubmit, // ✅ refactor
+                                state.loading ? null : _onSubmit, // ✅ refactor
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                             ),
                             child: state.loading
                                 ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Text(
-                              "Tiếp theo",
-                              style: TextStyle(
-                                  color: Colors.white, fontSize: 16),
-                            ),
+                                    "Tiếp theo",
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 16),
+                                  ),
                           ),
                         ),
 
@@ -221,7 +162,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             ),
                             Padding(
                               padding:
-                              const EdgeInsets.symmetric(horizontal: 8.0),
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
                                 "hoặc",
                                 style: TextStyle(color: Colors.grey[700]),
@@ -284,11 +225,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             ),
             children: isRequired
                 ? const <TextSpan>[
-              TextSpan(
-                text: ' *',
-                style: TextStyle(color: Colors.red),
-              ),
-            ]
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ]
                 : [],
           ),
         ),

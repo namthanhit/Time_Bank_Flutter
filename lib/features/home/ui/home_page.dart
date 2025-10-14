@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/time_transfer/ui/transfer_page.dart';
 import 'sections/hero_section_container.dart';
 import 'sections/activities_section_container.dart';
 import 'widgets/shadow_separator.dart';
@@ -23,10 +24,17 @@ class HomePage extends ConsumerWidget {
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18)),
                 boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, -2))],
               ),
-              child: const Column(
+              child:  Column(
                 children: [
                   SizedBox(height: 18),
-                  QuickActions(),
+                  QuickActions(
+                    onTransfer: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const TransferPage()),
+                      );
+                    },
+                  ),
                   ShadowSeparator(),
                   ActivitiesSectionContainer(), // lo fetch + error/loading
                 ],

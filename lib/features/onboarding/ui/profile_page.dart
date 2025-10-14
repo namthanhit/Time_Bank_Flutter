@@ -20,6 +20,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? address;
 
   final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _cccdController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _dateController.dispose();
+    _cccdController.dispose();
+    _emailController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickDate() async {
     DateTime now = DateTime.now();
@@ -52,23 +64,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (picked != null) {
       setState(() {
         selectedDate = picked;
-        _dateController.text =
-        "${picked.day}/${picked.month}/${picked.year}";
+        _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
       });
     }
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String text, {bool isRequired = true}) {
     return Row(
       children: [
         Text(
           text,
           style: const TextStyle(fontSize: 14, color: Colors.black87),
         ),
-        const Text(
-          " *",
-          style: TextStyle(color: Colors.red, fontSize: 14),
-        )
+        if (isRequired)
+          const Text(
+            " *",
+            style: TextStyle(color: Colors.red, fontSize: 14),
+          )
       ],
     );
   }
@@ -76,16 +88,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Lấy phone đã lưu ở state của onboardingControllerProvider
+    final phone = ref.read(onboardingControllerProvider).phone ?? '';
+
     final payload = CompleteProfilePayload(
-      phone: '', // có thể để trống, vì mock không cần
-      fullName: '',
+      phone: phone,
+      fullName: _nameController.text.trim(),
       birthdate: selectedDate,
       gender: gender,
       specialization: major ?? '',
       address: address ?? '',
     );
 
-    await ref.read(onboardingControllerProvider.notifier)
+    await ref
+        .read(onboardingControllerProvider.notifier)
         .completeProfile(payload);
 
     final state = ref.read(onboardingControllerProvider);
@@ -127,7 +143,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   style: TextStyle(fontSize: 32, color: Colors.white),
                 ),
                 const SizedBox(height: 40),
-
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -139,6 +154,78 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // CCCD
+                        _buildLabel("Căn cước công dân"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _cccdController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: "Nhập số CCCD",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Vui lòng nhập CCCD";
+                            }
+                            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                              return "CCCD chỉ được chứa số";
+                            }
+                            if (value.length != 12) {
+                              return "CCCD phải đủ 12 số";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Email
+                        _buildLabel("Email", isRequired: false),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText: "Nhập email",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value != null && value.isNotEmpty) {
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                  .hasMatch(value)) {
+                                return "Email không hợp lệ";
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Họ và tên
+                        _buildLabel("Họ và tên"),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _nameController,
+                          keyboardType: TextInputType.name,
+                          decoration: InputDecoration(
+                            hintText: "Nhập họ và tên",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Vui lòng nhập họ và tên";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
                         // Ngày sinh
                         _buildLabel("Ngày sinh"),
                         const SizedBox(height: 6),
@@ -155,8 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) =>
-                          (value == null || value.isEmpty)
+                          validator: (value) => (value == null || value.isEmpty)
                               ? "Vui lòng chọn ngày sinh"
                               : null,
                         ),
@@ -179,8 +265,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) =>
-                          (value == null || value.isEmpty)
+                          validator: (value) => (value == null || value.isEmpty)
                               ? "Vui lòng chọn giới tính"
                               : null,
                         ),
@@ -192,8 +277,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         DropdownButtonFormField<String>(
                           value: major,
                           items: const [
-                            DropdownMenuItem(value: "CNTT", child: Text("CNTT")),
-                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
+                            DropdownMenuItem(
+                                value: "CNTT", child: Text("CNTT")),
+                            DropdownMenuItem(
+                                value: "Khác", child: Text("Khác")),
                             DropdownMenuItem(
                                 value: "Kỹ sư phần mềm",
                                 child: Text("Kỹ sư phần mềm")),
@@ -215,8 +302,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) =>
-                          (value == null || value.isEmpty)
+                          validator: (value) => (value == null || value.isEmpty)
                               ? "Vui lòng chọn chuyên môn"
                               : null,
                         ),
@@ -228,10 +314,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         DropdownButtonFormField<String>(
                           value: address,
                           items: const [
-                            DropdownMenuItem(value: "Hà Nội", child: Text("Hà Nội")),
+                            DropdownMenuItem(
+                                value: "Hà Nội", child: Text("Hà Nội")),
                             DropdownMenuItem(
                                 value: "Hải Dương", child: Text("Hải Dương")),
-                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
+                            DropdownMenuItem(
+                                value: "Khác", child: Text("Khác")),
                           ],
                           onChanged: (value) => setState(() => address = value),
                           dropdownColor: Colors.white,
@@ -241,8 +329,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) =>
-                          (value == null || value.isEmpty)
+                          validator: (value) => (value == null || value.isEmpty)
                               ? "Vui lòng chọn địa chỉ"
                               : null,
                         ),
@@ -263,13 +350,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                             child: state.loading
                                 ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Text("Tiếp theo"),
                           ),
                         ),
@@ -279,8 +366,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
-                            onPressed:
-                            state.loading ? null : () => Navigator.pop(context),
+                            onPressed: state.loading
+                                ? null
+                                : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF0D1B4C),
                               side: const BorderSide(color: Color(0xFF0D1B4C)),
