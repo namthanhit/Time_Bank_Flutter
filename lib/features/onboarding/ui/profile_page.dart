@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
-import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
+// ❌ Bỏ models: không cần CompleteProfilePayload nữa
+// import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -15,9 +16,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   DateTime? selectedDate;
 
-  String? gender;
-  String? major;
-  String? address;
+  String? gender;  // UI: "Nam" | "Nữ"
+  String? major;   // chuyên môn
+  String? address; // địa chỉ
 
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _cccdController = TextEditingController();
@@ -34,8 +35,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _pickDate() async {
-    DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final now = DateTime.now();
+    final picked = await showDatePicker(
       context: context,
       initialDate: DateTime(2000),
       firstDate: DateTime(1950),
@@ -51,9 +52,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             dialogBackgroundColor: Colors.white,
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF0D1B4C),
-              ),
+              style: TextButton.styleFrom(foregroundColor: Color(0xFF0D1B4C)),
             ),
           ),
           child: child!,
@@ -72,15 +71,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildLabel(String text, {bool isRequired = true}) {
     return Row(
       children: [
-        Text(
-          text,
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
-        ),
+        Text(text, style: const TextStyle(fontSize: 14, color: Colors.black87)),
         if (isRequired)
-          const Text(
-            " *",
-            style: TextStyle(color: Colors.red, fontSize: 14),
-          )
+          const Text(" *", style: TextStyle(color: Colors.red, fontSize: 14)),
       ],
     );
   }
@@ -88,29 +81,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Lấy phone đã lưu ở state của onboardingControllerProvider
-    final phone = ref.read(onboardingControllerProvider).phone ?? '';
+    // Map gender UI -> backend enum string
+    String? genderEnum;
+    if (gender == "Nam") genderEnum = "male";
+    else if (gender == "Nữ") genderEnum = "female";
+    else genderEnum = "unknown";
 
-    final payload = CompleteProfilePayload(
-      phone: phone,
+    // Lưu bản nháp vào provider, KHÔNG gọi API ở bước này
+    ref.read(onboardingControllerProvider.notifier).setPersonalDraft(
       fullName: _nameController.text.trim(),
+      email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      cccd: _cccdController.text.trim().isEmpty ? null : _cccdController.text.trim(),
       birthdate: selectedDate,
-      gender: gender,
-      specialization: major ?? '',
-      address: address ?? '',
+      gender: genderEnum,
+      address: address,
+      specialization: major,
     );
 
-    await ref
-        .read(onboardingControllerProvider.notifier)
-        .completeProfile(payload);
-
-    final state = ref.read(onboardingControllerProvider);
-    if (state.error == null && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PasswordSetupScreen()),
-      );
-    }
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PasswordSetupScreen()),
+    );
   }
 
   @override
@@ -195,8 +187,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                  .hasMatch(value)) {
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                                 return "Email không hợp lệ";
                               }
                             }
@@ -242,9 +233,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? "Vui lòng chọn ngày sinh"
-                              : null,
+                          validator: (value) =>
+                          (value == null || value.isEmpty) ? "Vui lòng chọn ngày sinh" : null,
                         ),
                         const SizedBox(height: 20),
 
@@ -265,9 +255,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? "Vui lòng chọn giới tính"
-                              : null,
+                          validator: (value) =>
+                          (value == null || value.isEmpty) ? "Vui lòng chọn giới tính" : null,
                         ),
                         const SizedBox(height: 20),
 
@@ -277,22 +266,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         DropdownButtonFormField<String>(
                           value: major,
                           items: const [
-                            DropdownMenuItem(
-                                value: "CNTT", child: Text("CNTT")),
-                            DropdownMenuItem(
-                                value: "Khác", child: Text("Khác")),
-                            DropdownMenuItem(
-                                value: "Kỹ sư phần mềm",
-                                child: Text("Kỹ sư phần mềm")),
-                            DropdownMenuItem(
-                                value: "Thiết kế đồ họa",
-                                child: Text("Thiết kế đồ họa")),
-                            DropdownMenuItem(
-                                value: "Giáo viên", child: Text("Giáo viên")),
-                            DropdownMenuItem(
-                                value: "Bác sĩ", child: Text("Bác sĩ")),
-                            DropdownMenuItem(
-                                value: "Kế toán", child: Text("Kế toán")),
+                            DropdownMenuItem(value: "CNTT", child: Text("CNTT")),
+                            DropdownMenuItem(value: "Kỹ sư phần mềm", child: Text("Kỹ sư phần mềm")),
+                            DropdownMenuItem(value: "Thiết kế đồ họa", child: Text("Thiết kế đồ họa")),
+                            DropdownMenuItem(value: "Giáo viên", child: Text("Giáo viên")),
+                            DropdownMenuItem(value: "Bác sĩ", child: Text("Bác sĩ")),
+                            DropdownMenuItem(value: "Kế toán", child: Text("Kế toán")),
+                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
                           ],
                           onChanged: (value) => setState(() => major = value),
                           dropdownColor: Colors.white,
@@ -302,9 +282,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? "Vui lòng chọn chuyên môn"
-                              : null,
+                          validator: (value) =>
+                          (value == null || value.isEmpty) ? "Vui lòng chọn chuyên môn" : null,
                         ),
                         const SizedBox(height: 20),
 
@@ -314,12 +293,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         DropdownButtonFormField<String>(
                           value: address,
                           items: const [
-                            DropdownMenuItem(
-                                value: "Hà Nội", child: Text("Hà Nội")),
-                            DropdownMenuItem(
-                                value: "Hải Dương", child: Text("Hải Dương")),
-                            DropdownMenuItem(
-                                value: "Khác", child: Text("Khác")),
+                            DropdownMenuItem(value: "Hà Nội", child: Text("Hà Nội")),
+                            DropdownMenuItem(value: "Hải Dương", child: Text("Hải Dương")),
+                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
                           ],
                           onChanged: (value) => setState(() => address = value),
                           dropdownColor: Colors.white,
@@ -329,9 +305,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? "Vui lòng chọn địa chỉ"
-                              : null,
+                          validator: (value) =>
+                          (value == null || value.isEmpty) ? "Vui lòng chọn địa chỉ" : null,
                         ),
                         const SizedBox(height: 34),
 
@@ -350,13 +325,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                             child: state.loading
                                 ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                                 : const Text("Tiếp theo"),
                           ),
                         ),
@@ -366,9 +341,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
-                            onPressed: state.loading
-                                ? null
-                                : () => Navigator.pop(context),
+                            onPressed: state.loading ? null : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF0D1B4C),
                               side: const BorderSide(color: Color(0xFF0D1B4C)),

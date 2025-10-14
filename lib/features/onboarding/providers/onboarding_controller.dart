@@ -1,95 +1,107 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../data/onboarding_api.dart';
 import '../data/onboarding_repository.dart';
-import '../domain/models/models.dart';
 import 'onboarding_state.dart';
-import '../data/mock_onboarding_repository.dart';
 
-final onboardingRepoProvider = Provider<OnboardingRepository>((ref) {
-  // TODO: đổi sang OnboardingRepositoryImpl(apiHttp) khi có API thật
-  return MockOnboardingRepository();
-});
+const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:3000/api/v1');
+
+final onboardingApiProvider = Provider<OnboardingApi>((ref) => OnboardingApi(apiBase));
+final onboardingRepoProvider = Provider<OnboardingRepository>(
+      (ref) => OnboardingRepository(ref.read(onboardingApiProvider), FirebaseAuth.instance),
+);
 
 final onboardingControllerProvider =
-NotifierProvider<OnboardingController, OnboardingState>(
-    OnboardingController.new);
+StateNotifierProvider<OnboardingController, OnboardingState>(
+      (ref) => OnboardingController(ref.read(onboardingRepoProvider)),
+);
 
-class OnboardingController extends Notifier<OnboardingState> {
-  OnboardingRepository get _repo => ref.read(onboardingRepoProvider);
+class OnboardingController extends StateNotifier<OnboardingState> {
+  OnboardingController(this._repo) : super(const OnboardingState());
+  final OnboardingRepository _repo;
 
-  @override
-  OnboardingState build() => const OnboardingState();
-
-  void _start() => state = state.copyWith(loading: true, error: null);
-  void _done() => state = state.copyWith(loading: false);
-  void _fail(Object e) =>
+  Future<void> startWithPhone(String phone) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final r = await _repo.startPhoneFlow(phone);
+      state = state.copyWith(
+        loading: false,
+        phone: phone,
+        phoneToken: r.phoneToken,
+        verificationId: r.verificationId,
+      );
+    } catch (e) {
       state = state.copyWith(loading: false, error: e.toString());
-
-  Future<void> signup(SignupPayload payload) async {
-    _start();
-    try {
-      await _repo.signup(payload);
-      state = state.copyWith(phone: payload.phone);
-      _done();
-    } catch (e) {
-      _fail(e);
-    }
-  }
-
-  Future<void> resendOtp() async {
-    if (state.phone == null) return;
-    _start();
-    try {
-      await _repo.resendOtp(state.phone!);
-      _done();
-    } catch (e) {
-      _fail(e);
     }
   }
 
   Future<void> verifyOtp(String code) async {
-    if (state.phone == null) return;
-    _start();
+    final verId = state.verificationId;
+    if (verId == null) {
+      state = state.copyWith(error: 'Thiếu verificationId');
+      return;
+    }
+    state = state.copyWith(loading: true, error: null);
     try {
-      await _repo.verifyOtp(
-        VerifyOtpPayload(phone: state.phone!, code: code),
+      await _repo.verifyOtpLocal(verificationId: verId, smsCode: code);
+      state = state.copyWith(loading: false);
+    } catch (e) {
+      state = state.copyWith(loading: false, error: e.toString());
+    }
+  }
+
+  void setPersonalDraft({
+    String? fullName,
+    String? email,
+    String? cccd,
+    DateTime? birthdate,
+    String? gender,
+    String? address,
+    String? specialization,
+  }) {
+    state = state.copyWith(
+      fullName: fullName,
+      email: email,
+      cccd: cccd,
+      birthdate: birthdate,
+      gender: gender,
+      address: address,
+      specialization: specialization,
+    );
+  }
+
+  void setSecurity({String? pin, String? password}) {
+    state = state.copyWith(pin: pin, password: password);
+  }
+
+  Future<String> submitCreateAccount() async {
+    final phoneToken = state.phoneToken;
+    if (phoneToken == null) throw Exception('Thiếu phone_token');
+    if (state.fullName == null || state.pin == null || state.password == null) {
+      throw Exception('Thiếu thông tin bắt buộc');
+    }
+
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final userId = await _repo.createAccount(
+        phoneToken: phoneToken,
+        personal: PersonalDto(
+          fullName: state.fullName!,
+          citizenId: state.cccd,
+          email: state.email,
+          birthDate: state.birthdate,
+          gender: state.gender,
+          address: state.address,
+          specializationOrDescription: state.specialization,
+        ),
+        pin: state.pin!,
+        password: state.password!,
       );
-      _done();
+      state = state.copyWith(loading: false);
+      return userId;
     } catch (e) {
-      _fail(e);
-    }
-  }
-
-  Future<void> setPassword(String password) async {
-    if (state.phone == null) return;
-    _start();
-    try {
-      await _repo.setPassword(
-        SetPasswordPayload(phone: state.phone!, password: password),
-      );
-      _done();
-    } catch (e) {
-      _fail(e);
-    }
-  }
-
-  Future<void> completeProfile(CompleteProfilePayload payload) async {
-    _start();
-    try {
-      await _repo.completeProfile(payload);
-      _done();
-    } catch (e) {
-      _fail(e);
-    }
-  }
-
-  Future<void> setPin(String pin) async {
-    if (state.phone == null) return;
-    _start();
-    try {
-      await _repo.setPin(SetPinPayload(phone: state.phone!, pin: pin));
-      _done();
-    } catch (e) {
-      _fail(e);
+      state = state.copyWith(loading: false, error: e.toString());
+      rethrow;
     }
   }
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
-import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
+// ❌ Bỏ import models vì không còn dùng SignupPayload
+// import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -14,7 +15,6 @@ class SignUpPage extends ConsumerStatefulWidget {
 
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
-
   final _phoneController = TextEditingController();
 
   @override
@@ -26,22 +26,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Signup chỉ thu số điện thoại; các thông tin khác sẽ thu ở Profile.
-    final payload = SignupPayload(
-      cccd: '',
-      phone: _phoneController.text.trim(),
-      email: '',
-      fullName: '',
-      birthdate: null,
-      gender: null,
-      specialization: '',
-      address: '',
-    );
+    final phone = _phoneController.text.trim();
 
-    await ref.read(onboardingControllerProvider.notifier).signup(payload);
+    // ✅ Gọi flow mới: check-phone → gửi OTP (Firebase) → set verificationId/phoneToken
+    await ref.read(onboardingControllerProvider.notifier).startWithPhone(phone);
 
     final state = ref.read(onboardingControllerProvider);
-    if (state.error == null && mounted) {
+    if (state.error == null && state.verificationId != null && mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const OtpScreen()),
@@ -118,7 +109,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                         const SizedBox(height: 32),
 
-                        // Nút Tiếp theo (chỉ đổi onPressed để gọi provider)
+                        // Nút Tiếp theo (GIỮ NGUYÊN layout, đổi onPressed)
                         Container(
                           width: double.infinity,
                           height: 48,
@@ -129,26 +120,25 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             ),
                           ),
                           child: ElevatedButton(
-                            onPressed:
-                                state.loading ? null : _onSubmit, // ✅ refactor
+                            onPressed: state.loading ? null : _onSubmit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                             ),
                             child: state.loading
                                 ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                                 : const Text(
-                                    "Tiếp theo",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 16),
-                                  ),
+                              "Tiếp theo",
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16),
+                            ),
                           ),
                         ),
 
@@ -162,7 +152,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             ),
                             Padding(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              const EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
                                 "hoặc",
                                 style: TextStyle(color: Colors.grey[700]),
@@ -225,11 +215,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             ),
             children: isRequired
                 ? const <TextSpan>[
-                    TextSpan(
-                      text: ' *',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ]
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red),
+              ),
+            ]
                 : [],
           ),
         ),

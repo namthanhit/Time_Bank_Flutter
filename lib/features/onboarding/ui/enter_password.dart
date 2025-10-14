@@ -29,7 +29,9 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final password = _passwordController.text.trim();
-    await ref.read(onboardingControllerProvider.notifier).setPassword(password);
+
+    // ✅ dùng setSecurity thay cho setPassword
+    ref.read(onboardingControllerProvider.notifier).setSecurity(password: password);
 
     final state = ref.read(onboardingControllerProvider);
     if (state.error == null && mounted) {

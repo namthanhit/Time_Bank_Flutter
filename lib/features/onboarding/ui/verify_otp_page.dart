@@ -17,7 +17,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   int _timeLeft = 20; // thời gian đếm ngược (giây)
   Timer? _timer;
 
-  String _otp = ""; // thay cho TextEditingController để tránh lỗi dispose
+  String _otp = ""; // không dùng controller để tránh lỗi dispose
 
   @override
   void initState() {
@@ -43,7 +43,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // hủy timer trước khi thoát
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -56,8 +56,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     }
 
     await ref.read(onboardingControllerProvider.notifier).verifyOtp(_otp);
+
     final state = ref.read(onboardingControllerProvider);
     if (state.error == null && mounted) {
+      // ✅ OTP đã verify local → sang trang nhập thông tin
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -69,7 +71,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
 
-    // Lắng nghe lỗi từ provider để show SnackBar
+    // Lắng nghe lỗi để show SnackBar
     ref.listen(onboardingControllerProvider, (prev, next) {
       if (next.error != null && mounted) {
         ScaffoldMessenger.of(context)
@@ -112,12 +114,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ô nhập OTP (không dùng controller để tránh lỗi dispose)
+                      // Ô nhập OTP
                       PinCodeTextField(
                         length: 6,
                         appContext: context,
                         onChanged: (value) {
-                          _otp = value; // không cần setState vì UI không phụ thuộc
+                          _otp = value;
                         },
                         keyboardType: TextInputType.number,
                         inputFormatters: [
