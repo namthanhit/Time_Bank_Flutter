@@ -38,7 +38,9 @@ class ConfirmPage extends ConsumerWidget {
       if (result == true && context.mounted) {
         final currentUiData = ref.read(transactionUiDataProvider);
         if (currentUiData != null) {
-          Navigator.pushReplacement(
+          // Use push instead of pushReplacement so user can pop (or swipe back on iOS)
+          // to return to the previous screen and edit the transfer if needed.
+          Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (_) => TransferSuccessPage(data: currentUiData)),
