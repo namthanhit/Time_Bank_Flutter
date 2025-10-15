@@ -1,51 +1,52 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../../core/app_config.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/auth_http_client.dart';
+import '../../../core/network/auth_api_client.dart';
+
+import '../domain/i_auth_api.dart';
 import '../data/auth_api.dart';
 import '../data/auth_repository.dart';
 import 'auth_state.dart';
-import 'dart:async';
 
-final dioProvider = Provider<Dio>((ref) {
-  // Có thể tiêm interceptors (token, logging) tại đây
-  return Dio(BaseOptions(
-    baseUrl: 'https://api.example.com', // TODO: đổi sang .env/app_config
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
+/// App config (only one)
+final appConfigProvider = Provider<AppConfig>((_) => AppConfig.fromEnv);
+
+/// Base http (trần)
+final baseHttpProvider = Provider<http.Client>((_) => http.Client());
+
+/// ApiClient KHÔNG auth – dùng cho /auth/login, /auth/refresh, public API
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient(ref.read(baseHttpProvider), ref.read(appConfigProvider));
 });
 
-final authApiProvider = Provider<AuthApi>((ref) {
-  return AuthApi(dio: ref.watch(dioProvider));
+/// AuthApi (implements IAuthApi) – dùng ApiClient (không cần Bearer)
+final authApiProvider = Provider<IAuthApi>((ref) {
+  return AuthApi(ref.read(apiClientProvider));
 });
 
+/// Repository auth (quản lý tokens)
 final authRepoProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(authApiProvider));
+  return AuthRepository(ref.read(authApiProvider), const FlutterSecureStorage());
 });
 
-/// StateNotifier điều khiển submit & error
+/// HTTP client có Bearer + auto refresh
+final authedHttpProvider = Provider<http.Client>((ref) {
+  final repo = ref.read(authRepoProvider);
+  final cfg  = ref.read(appConfigProvider);
+  return AuthHttpClient(ref.read(baseHttpProvider), repo, apiBase: cfg.apiBase);
+});
+
+/// ApiClient có auth – dùng cho mọi API cần login
+final authedApiClientProvider = Provider<AuthApiClient>((ref) {
+  return AuthApiClient(ref.read(authedHttpProvider), ref.read(appConfigProvider));
+});
+
+/// Auth controller
 final authControllerProvider =
 StateNotifierProvider<AuthController, AuthState>((ref) {
-  return AuthController(ref.watch(authRepoProvider));
+  return AuthController(ref.read(authRepoProvider));
 });
-
-class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._repo) : super(const AuthState.idle());
-
-  final AuthRepository _repo;
-
-  Future<void> loginPhone(String phone, String password) async {
-    state = const AuthState.loading();
-    try {
-      final ok = await _repo.loginPhone(phone: phone, password: password);
-      if (ok) {
-        state = const AuthState.success();
-      } else {
-        state = const AuthState.error('Đăng nhập thất bại');
-      }
-    } catch (e) {
-      state = AuthState.error(e.toString());
-    }
-  }
-
-  void reset() => state = const AuthState.idle();
-}

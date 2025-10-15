@@ -1,3 +1,18 @@
 class AppConfig {
-  static const useMock = bool.fromEnvironment('USE_MOCK', defaultValue: true);
+  const AppConfig({
+    required this.apiBase,
+    this.apiKey,
+  });
+
+  /// ex: http://10.0.2.2:3000/api/v1
+  final String apiBase;
+
+  /// nếu backend cần API key
+  final String? apiKey;
+
+  /// lấy từ --dart-define hoặc fallback
+  static const AppConfig fromEnv = AppConfig(
+    apiBase: String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:3000/api/v1'),
+    apiKey:  String.fromEnvironment('API_KEY',  defaultValue: ''), // để trống nếu không dùng
+  );
 }
