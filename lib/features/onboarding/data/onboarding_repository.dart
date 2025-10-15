@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'onboarding_api.dart';
 import '../domain/phone_until.dart';
+import '../domain/models/models.dart';
 
 class OnboardingRepository {
   OnboardingRepository(this.api, this.auth);

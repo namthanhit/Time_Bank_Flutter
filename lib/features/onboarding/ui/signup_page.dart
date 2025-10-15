@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
-// ❌ Bỏ import models vì không còn dùng SignupPayload
-// import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});

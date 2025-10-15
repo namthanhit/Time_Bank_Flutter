@@ -73,3 +73,45 @@ class SkillDto {
   );
 }
 
+class CheckPhoneResp {
+  final bool exists;
+  final String? phoneToken;
+  CheckPhoneResp({required this.exists, this.phoneToken});
+}
+
+class CreateUserResp {
+  final bool ok;
+  final String? userId;
+  CreateUserResp({required this.ok, this.userId});
+}
+
+class PersonalDto {
+  final String fullName;
+  final String? citizenId;
+  final String? email;
+  final DateTime? birthDate;
+  final String? gender;
+  final String? address;
+  final String? specializationOrDescription;
+
+  PersonalDto({
+    required this.fullName,
+    this.citizenId,
+    this.email,
+    this.birthDate,
+    this.gender,
+    this.address,
+    this.specializationOrDescription,
+  });
+
+  Map<String, dynamic> toJson() =>
+      {
+        'full_name': fullName,
+        'citizen_id': citizenId,
+        'email': email,
+        'birth_date': birthDate?.toIso8601String(),
+        'gender': gender,
+        'address': address,
+        'specialization_or_description': specializationOrDescription,
+      };
+}

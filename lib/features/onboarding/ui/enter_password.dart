@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class PasswordSetupScreen extends ConsumerStatefulWidget {
   const PasswordSetupScreen({super.key});

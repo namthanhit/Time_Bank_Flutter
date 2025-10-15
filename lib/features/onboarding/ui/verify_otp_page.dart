@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:time_bank_flutter/features/Onboarding/ui/profile_page.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key});
