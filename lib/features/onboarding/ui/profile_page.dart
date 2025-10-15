@@ -84,6 +84,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     String? genderEnum;
     if (gender == "Nam") genderEnum = "male";
     else if (gender == "Nữ") genderEnum = "female";
+    else if (gender == "Khác") genderEnum = "other";
     else genderEnum = "unknown";
 
     // Bắt buộc phải chọn 1 skill (major là skill_id)
@@ -256,6 +257,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           items: const [
                             DropdownMenuItem(value: "Nam", child: Text("Nam")),
                             DropdownMenuItem(value: "Nữ", child: Text("Nữ")),
+                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
                           ],
                           onChanged: (value) => setState(() => gender = value),
                           dropdownColor: Colors.white,
@@ -275,28 +277,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         const SizedBox(height: 6),
                         skillsAsync.when(
                           data: (skills) {
-                            // items: value = skill.id, text = skill.name
-                            final items = skills
-                                .map((s) => DropdownMenuItem<String>(
-                              value: s.id,
-                              child: Text(s.name),
-                            ))
-                                .toList();
-
                             return DropdownButtonFormField<String>(
-                              value: major,
-                              items: items,
+                              value: major,                       // lưu skill_id
+                              isExpanded: true,                   // giãn ngang, tránh bị … sớm
+                              menuMaxHeight: 320,                 // hạn chế chiều cao, tự scroll
+                              items: skills.map((s) {
+                                return DropdownMenuItem<String>(
+                                  value: s.id,
+                                  child: Text(
+                                    s.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis, // tên dài sẽ … gọn
+                                  ),
+                                );
+                              }).toList(),
                               onChanged: (value) => setState(() => major = value),
                               dropdownColor: Colors.white,
                               decoration: InputDecoration(
                                 hintText: "Chọn chuyên môn",
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              validator: (value) => (value == null || value.isEmpty)
-                                  ? "Vui lòng chọn chuyên môn"
-                                  : null,
+                              validator: (value) =>
+                              (value == null || value.isEmpty) ? "Vui lòng chọn chuyên môn" : null,
                             );
                           },
                           loading: () => const LinearProgressIndicator(),
