@@ -12,7 +12,8 @@ class ChatList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: threads.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+      // remove visible separator line
+      separatorBuilder: (_, __) => const SizedBox.shrink(),
       itemBuilder: (context, index) {
         final t = threads[index];
         return ChatListItem(thread: t, onTap: () => onTap(t));
