@@ -30,13 +30,13 @@ class QuickActions extends StatelessWidget {
                 label: 'Chuyển thời gian',
                 onTap: onTransfer,
               ),
-              const SizedBox(width: 50),
+              const SizedBox(width: 40),
               MenuButton(
                 icon: Icons.qr_code_scanner_rounded,
                 label: 'QR',
                 onTap: onQr,
               ),
-              const SizedBox(width: 50),
+              const SizedBox(width: 40),
               MenuButton(
                 icon: Icons.history,
                 label: 'Lịch sử\nGiao dịch',
