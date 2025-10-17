@@ -4,7 +4,8 @@ import '../../domain/models/message.dart';
 class MessageBubble extends StatelessWidget {
   final Message message;
   final String avatar;
-  const MessageBubble({Key? key, required this.message, required this.avatar}) : super(key: key);
+  final bool online;
+  const MessageBubble({Key? key, required this.message, required this.avatar, this.online = false}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -18,10 +19,30 @@ class MessageBubble extends StatelessWidget {
             if (!isMe) ...[
               Padding(
                 padding: const EdgeInsets.only(right: 6),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.white,
-                  backgroundImage: AssetImage(avatar),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white,
+                      backgroundImage: AssetImage(avatar),
+                    ),
+                    if (online)
+                      Positioned(
+                        right: -4,
+                        bottom: -4,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.greenAccent.shade700,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 2, offset: Offset(0,1))],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
