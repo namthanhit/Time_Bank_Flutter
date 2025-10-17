@@ -6,10 +6,10 @@ class MockChatRepository implements ChatRepository {
   final List<Thread> _threads = [
   const Thread(id: '1', name: 'Lilly Jane', subtitle: 'Online', online: true, avatar: 'assets/images/avatar.png'),
   const Thread(id: '2', name: 'Margo Love', subtitle: 'Online', online: true, avatar: 'assets/images/avatar.png'),
-  const Thread(id: '3', name: 'Candice Fin', subtitle: 'Last seen 10 min ago', avatar: 'assets/images/avatar.png'),
-  const Thread(id: '4', name: 'Casper D', subtitle: 'Last seen 12 min ago', avatar: 'assets/images/avatar.png'),
-  const Thread(id: '5', name: 'Robert T', subtitle: 'Last seen 1 hours ago', avatar: 'assets/images/avatar.png'),
-  const Thread(id: '6', name: 'Josephen', subtitle: 'Last seen 3 hours ago', avatar: 'assets/images/avatar.png'),
+  const Thread(id: '3', name: 'Candice Fin', subtitle: 'Last seen 10 min ago', online: true, avatar: 'assets/images/avatar.png'),
+  const Thread(id: '4', name: 'Casper D', subtitle: 'Last seen 12 min ago', online: true, avatar: 'assets/images/avatar.png'),
+  const Thread(id: '5', name: 'Robert T', subtitle: 'Last seen 1 hours ago', online: true, avatar: 'assets/images/avatar.png'),
+  const Thread(id: '6', name: 'Josephen', subtitle: 'Last seen 3 hours ago', online: true, avatar: 'assets/images/avatar.png'),
   ];
 
   final Map<String, List<Message>> _messages = {
