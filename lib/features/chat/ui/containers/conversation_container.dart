@@ -43,7 +43,7 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
                     data: (threads) => threads.firstWhere((t) => t.id == m.threadId, orElse: () => Thread(id: '', name: '', subtitle: '', online: false, avatar: 'assets/images/avatar.png')),
                     orElse: () => Thread(id: '', name: '', subtitle: '', online: false, avatar: 'assets/images/avatar.png'),
                   );
-                  return MessageBubble(message: m, avatar: thread.avatar);
+                  return MessageBubble(message: m, avatar: thread.avatar, online: thread.online);
                 },
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
