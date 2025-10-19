@@ -9,15 +9,17 @@ plugins {
 android {
     namespace = "com.example.time_bank_flutter"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        // Use Java 17 per current Flutter & AGP requirements
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        // Align Kotlin bytecode target with Java 17
+        jvmTarget = "17"
     }
 
     defaultConfig {
