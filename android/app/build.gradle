@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.time_bank_flutter"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         // Use Java 17 per current Flutter & AGP requirements
