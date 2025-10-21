@@ -21,12 +21,12 @@ class BottomNavItem extends StatelessWidget {
     final inactiveColor = Colors.white.withOpacity(0.60);
     final bool isQr = data.emphasize;
     final bool squareInactive = isQr && !isActive;
-    final double iconSize = isQr ? 30 : 24;
+  final double iconSize = isQr ? 30 : 24;
 
-    final edge = isQr
-        ? (isActive ? const EdgeInsets.symmetric(vertical: 10, horizontal: 14)
-        : const EdgeInsets.symmetric(vertical: 8, horizontal: 8))
-        : const EdgeInsets.symmetric(vertical: 8, horizontal: 12);
+  final edge = isQr
+    ? (isActive ? const EdgeInsets.symmetric(vertical: 10, horizontal: 14)
+    : const EdgeInsets.symmetric(vertical: 8, horizontal: 8))
+    : const EdgeInsets.symmetric(vertical: 8, horizontal: 12);
 
     final Color bg = isQr ? (isActive ? Colors.white : Colors.white.withOpacity(0.92)) : Colors.transparent;
     final Color iconColor = isQr ? (isActive ? brandColor : brandColor.withOpacity(0.80))
@@ -40,6 +40,18 @@ class BottomNavItem extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: () {
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          if (messenger != null) {
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(data.label),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        },
         borderRadius: BorderRadius.circular(isQr ? (squareInactive ? 18 : 24) : 22),
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
@@ -77,7 +89,21 @@ class BottomNavItem extends StatelessWidget {
                   else ...[
                     Icon(data.icon, size: iconSize, color: iconColor),
                     const SizedBox(height: 6),
-                    Text(data.label, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor, letterSpacing: -0.1)),
+                    Tooltip(
+                      message: data.label,
+                      waitDuration: Duration(milliseconds: 300),
+                      showDuration: Duration(seconds: 3),
+                      child: SizedBox(
+                        width: 72,
+                          child: Text(
+                            data.label,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: textColor, letterSpacing: -0.1),
+                          ),
+                      ),
+                    ),
                   ],
                 ],
               ),

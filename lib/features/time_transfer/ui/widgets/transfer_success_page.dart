@@ -1,0 +1,364 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:time_bank_flutter/features/time_transfer/ui/transfer_page.dart';
+import 'package:time_bank_flutter/app/app_shell.dart';
+import '../../domain/models/transaction_ui_data.dart';
+import '../../providers/transaction_providers.dart';
+
+class TransferSuccessPage extends ConsumerStatefulWidget {
+  final TransactionUiData data;
+
+  const TransferSuccessPage({super.key, required this.data});
+
+  @override
+  ConsumerState<TransferSuccessPage> createState() =>
+      _TransferSuccessPageState();
+}
+
+class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
+  // Key để bọc vùng mà ta sẽ chụp ảnh và lưu ra file.
+  final GlobalKey _repaintKey = GlobalKey();
+
+  // Hàm lưu ảnh: chụp widget trong RepaintBoundary và ghi file PNG vào thư mục ứng dụng.
+  Future<void> _saveImage() async {
+    try {
+      final boundary = _repaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Lưu thất bại: không tìm thấy vùng ảnh')));
+        return;
+      }
+
+      // Tăng pixelRatio để ảnh có chất lượng tốt hơn trên thiết bị có mật độ điểm ảnh cao.
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Lưu thất bại: không thể chuyển đổi ảnh')));
+        return;
+      }
+
+      final bytes = byteData.buffer.asUint8List();
+
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File(
+          '${dir.path}/transfer_${DateTime.now().millisecondsSinceEpoch}.png');
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Đã lưu ảnh: ${file.path}')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Lưu thất bại: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+    const colorPrimary = Color(0xFF003E77);
+    const colorSuccess = Color(0xFF2ECC71); // xanh lá cây
+
+    return WillPopScope(
+      onWillPop: () async {
+        // Reset form and open a fresh TransferPage when user pops (swipe/back).
+        ref.read(transactionFormProvider.notifier).reset();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const TransferPage()),
+        );
+        // Returning false because we replace the route ourselves.
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: colorPrimary,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              // Use same behavior as system back: reset and navigate to clean TransferPage
+              ref.read(transactionFormProvider.notifier).reset();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const TransferPage()),
+              );
+            },
+          ),
+        ),
+        body: Stack(
+          children: [
+            // Nền xanh phía trên
+            Container(
+              height: 250,
+              color: colorPrimary,
+            ),
+
+            // Nội dung chính
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Box trắng chính
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: RepaintBoundary(
+                      key: _repaintKey,
+                      // Bọc toàn bộ box trắng chính để chụp ảnh
+                      child: Container(
+                        margin:
+                            const EdgeInsets.only(top: 60, left: 16, right: 16),
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.25),
+                              blurRadius: 15,
+                              spreadRadius: 3,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Dấu tích xanh lá - nền xanh, icon trắng
+                            CircleAvatar(
+                              radius: 32,
+                              backgroundColor: colorSuccess,
+                              child: const Icon(Icons.check,
+                                  color: Colors.white, size: 40),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Tiêu đề
+                            const Text(
+                              "Chuyển thời gian thành công",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Thời gian
+                            Text(
+                              data.timeAmount,
+                              style: const TextStyle(
+                                fontSize: 34,
+                                color: colorPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              DateFormat('HH:mm - dd/MM/yyyy')
+                                  .format(DateTime.now()),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Box người nhận
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Colors.grey.shade300, width: 1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    data.recipientName,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      color: colorPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    data.recipientAccount,
+                                    style: const TextStyle(
+                                        fontSize: 16, color: Colors.black),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    '${data.senderName} chuyển khoản',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+                            const Text(
+                              "Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi",
+                              style:
+                                  TextStyle(color: Colors.black, fontSize: 16),
+                            ),
+                            const SizedBox(height: 36),
+
+                            // 3 nút chia sẻ
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _ActionButton(
+                                    icon: Icons.share_outlined,
+                                    label: "Chia sẻ",
+                                    onTap: () {
+                                      // TODO: implement chia sẻ (share)
+                                    }),
+                                _ActionButton(
+                                    icon: Icons.home_outlined,
+                                    label: "Trang chủ",
+                                    onTap: () {
+                                      Navigator.of(context).pushAndRemoveUntil(
+                                        MaterialPageRoute(
+                                            builder: (_) => const AppShell()),
+                                        (route) => false,
+                                      );
+                                    }),
+                                _ActionButton(
+                                    icon: Icons.download_outlined,
+                                    label: "Lưu ảnh",
+                                    onTap: () async {
+                                      await _saveImage();
+                                    }),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Nút nằm ngoài box trắng, canh đều lề như box
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          // Reset the transaction form so previous inputs are cleared
+                          ref.read(transactionFormProvider.notifier).reset();
+                          // Replace this success page with a fresh TransferPage.
+                          // This ensures the user lands on the Transfer flow ready to start a new transaction.
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TransferPage()),
+                          );
+                        },
+                        child: const Text(
+                          "Thực hiện giao dịch khác",
+                          style: TextStyle(fontSize: 17.5, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// WIDGET: Action Button (icon tròn + nhãn nhỏ)
+// ================================================================
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  const _ActionButton({required this.icon, required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const borderColor = Color(0xFFBDBDBD);
+    const iconColor = Color(0xFF666666);
+
+    return Column(
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(30),
+          splashColor: const Color(0x22003E77),
+          onTap: onTap,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor, width: 1.2),
+            ),
+            child: Center(
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            color: Colors.black,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
