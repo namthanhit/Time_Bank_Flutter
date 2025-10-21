@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/home_providers.dart';
-import '../../domain/models/home_models.dart';
 import '../widgets/activities_list.dart';
 
 class ActivitiesSectionContainer extends ConsumerWidget {
@@ -20,9 +19,12 @@ class ActivitiesSectionContainer extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text('Lỗi tải hoạt động: $e', style: const TextStyle(color: Colors.red)),
+            Text('Lỗi tải hoạt động: $e',
+                style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 8),
-            OutlinedButton(onPressed: () => ref.refresh(activitiesProvider), child: const Text('Thử lại')),
+            OutlinedButton(
+                onPressed: () => ref.refresh(activitiesProvider),
+                child: const Text('Thử lại')),
           ],
         ),
       ),
