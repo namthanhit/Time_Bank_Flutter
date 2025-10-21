@@ -3,6 +3,20 @@ import '../domain/models/service.dart';
 import 'package:flutter/material.dart';
 
 class MockServiceRepository implements ServiceRepository {
+  // Trạng thái ứng tuyển cho job (để sync giữa community và my service)
+  static final Map<int, String> _applicationStatus = {
+    // serviceId -> status: 'none', 'pending', 'approved', 'cancelled'
+  };
+
+  // Lưu trạng thái trước khi cancel để restore khi reject cancel request
+  static final Map<int, String> _previousStatus = {};
+
+  // Current user ID (người dùng hiện tại)
+  static const int currentUserId = 11;
+
+  // Listeners để notify khi có thay đổi
+  static final List<VoidCallback> _changeListeners = [];
+
   // Mock data cho applicants
   static final List<Map<String, dynamic>> mockApplicants = [
     {
@@ -15,19 +29,23 @@ class MockServiceRepository implements ServiceRepository {
       'status': 'pending',
       'statusText': 'Chờ duyệt',
       'statusColor': Colors.orange,
-      'avatar': null,
+      'avatar':
+          'https://anhavatardep.com/wp-content/uploads/2025/05/avatar-don-gian-1.jpg',
+      'serviceId': 2, // link tới service
     },
     {
       'id': 2,
       'name': 'Trần Thị Bình',
       'specialization': 'Công nghệ, Thiết kế, Marketing',
       'rating': 4.2,
-      'requestType': 'cancel',
+      'requestType': 'receive',
       'requestTime': '14:30 14/10/2025',
       'status': 'pending',
       'statusText': 'Chờ duyệt',
       'statusColor': Colors.orange,
-      'avatar': null,
+      'avatar':
+          'https://anhavatardep.com/wp-content/uploads/2025/05/avatar-don-gian-3.jpg',
+      'serviceId': 8, // link tới job test (Photoshop)
     },
     {
       'id': 3,
@@ -36,10 +54,11 @@ class MockServiceRepository implements ServiceRepository {
       'rating': 4.5,
       'requestType': 'receive',
       'requestTime': '11:45 13/10/2025',
-      'status': 'approved',
-      'statusText': 'Duyệt',
+      'status': 'pending',
+      'statusText': 'Chờ duyệt',
       'statusColor': Colors.green,
-      'avatar': null,
+      'avatar': 'https://betapto.edu.vn/upload/2025/08/avatar-con-tho-03.webp',
+      'serviceId': 6, // link tới service
     },
     {
       'id': 4,
@@ -48,10 +67,12 @@ class MockServiceRepository implements ServiceRepository {
       'rating': 4.9,
       'requestType': 'receive',
       'requestTime': '16:20 12/10/2025',
-      'status': 'approved',
-      'statusText': 'Duyệt',
+      'status': 'pending',
+      'statusText': 'Chờ duyệt',
       'statusColor': Colors.green,
-      'avatar': null,
+      'avatar':
+          'https://anhavatardep.com/wp-content/uploads/2025/05/avatar-don-gian-2.jpg',
+      'serviceId': 7, // link tới service
     },
     {
       'id': 5,
@@ -63,7 +84,9 @@ class MockServiceRepository implements ServiceRepository {
       'status': 'pending',
       'statusText': 'Chờ duyệt',
       'statusColor': Colors.orange,
-      'avatar': null,
+      'avatar':
+          'https://cdn-media.sforum.vn/storage/app/media/thanhhuyen/h%C3%ACnh%20n%E1%BB%81n%20th%E1%BB%8F%20b%E1%BA%A3y%20m%C3%A0u/1.2/hinh-nen-tho-bay-mau-19.jpg',
+      'serviceId': 6, // link tới service
     },
   ];
 
@@ -192,7 +215,7 @@ class MockServiceRepository implements ServiceRepository {
       skillId: 6,
       title: 'Hỗ trợ CV tiếng Anh',
       description: 'Chỉnh sửa CV và luyện phỏng vấn tiếng Anh, 1:1.',
-      regionCode: 'Toàn quốc',
+      regionCode: 'Hai Duong',
       minSlotMinutes: 60,
       isPublic: false,
       ratingAvg: 4.4,
@@ -214,7 +237,7 @@ class MockServiceRepository implements ServiceRepository {
       skillId: 5,
       title: 'Hỗ trợ CV tiếng Anh',
       description: 'Chỉnh sửa CV và luyện phỏng vấn tiếng Anh, 1:1.',
-      regionCode: 'Toàn quốc',
+      regionCode: 'Hai Duong',
       minSlotMinutes: 60,
       isPublic: false,
       ratingAvg: 4.4,
@@ -225,6 +248,30 @@ class MockServiceRepository implements ServiceRepository {
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
       providerSpecialization: 'Công nghệ, Thiết kế, Marketing',
       status: 'Riêng tư',
+    ),
+    // Job test để sync giữa Community và My Service
+    Service(
+      id: 8,
+      userId: 11, // Current user - sẽ hiện ở cả Community và My Service
+      skillId: 7,
+      title: 'Dạy Photoshop cơ bản',
+      description:
+          'Hướng dẫn sử dụng Photoshop từ cơ bản đến nâng cao cho người mới bắt đầu.',
+      regionCode: 'HCM',
+      minSlotMinutes: 120,
+      isPublic: true, // Hiện ở Community
+      ratingAvg: 4.6,
+      ratingCount: 15,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      providerName: 'Trần Văn Minh',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      providerSpecialization: 'Công nghệ, Thiết kế, Marketing',
+      serviceImages: [
+        'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=800',
+      ],
+      status: 'Mới',
+      isFeatured: true,
     ),
   ];
 
@@ -244,5 +291,218 @@ class MockServiceRepository implements ServiceRepository {
   Future<List<Service>> fetchServicesByUser(int userId) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return _mockData.where((s) => s.userId == userId).toList();
+  }
+
+  // Method để lấy service theo ID
+  static Service? getServiceById(int serviceId) {
+    final repository = MockServiceRepository();
+    return repository._mockData.where((s) => s.id == serviceId).firstOrNull;
+  }
+
+  // Method chuyển đổi minSlotMinutes thành format HH:MM:SS
+  static String formatDuration(int minSlotMinutes) {
+    final int hours = minSlotMinutes ~/ 60;
+    final int minutes = minSlotMinutes % 60;
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:00';
+  }
+
+  // Methods để quản lý trạng thái ứng tuyển
+  static String getApplicationStatus(int serviceId) {
+    return _applicationStatus[serviceId] ?? 'none';
+  }
+
+  static void setApplicationStatus(int serviceId, String status) {
+    _applicationStatus[serviceId] = status;
+  }
+
+  // Apply cho job (từ Community)
+  static void applyForJob(int serviceId) {
+    _applicationStatus[serviceId] = 'pending';
+
+    // Thêm applicant mới vào mockApplicants
+    final newApplicant = {
+      'id': DateTime.now().millisecondsSinceEpoch,
+      'name': 'Trần Văn Minh', // Current user name
+      'specialization': 'Công nghệ, Thiết kế, Marketing',
+      'rating': 4.5,
+      'requestType': 'receive',
+      'requestTime':
+          '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
+      'status': 'pending',
+      'statusText': 'Chờ duyệt',
+      'statusColor': Colors.orange,
+      'avatar':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      'serviceId': serviceId,
+    };
+
+    mockApplicants.add(newApplicant);
+
+    // Notify all listeners
+    _notifyListeners();
+  }
+
+  // Approve applicant (từ My Service)
+  static void approveApplicant(int serviceId, Map<String, dynamic> applicant) {
+    print('🎯 Approving applicant for serviceId: $serviceId'); // Debug
+    print('📝 Applicant before update: ${applicant.toString()}');
+
+    // Update applicant status
+    applicant['status'] = 'approved';
+    applicant['statusText'] = 'Đã duyệt';
+    applicant['statusColor'] = Colors.green;
+
+    print('📝 Applicant after update: ${applicant.toString()}');
+
+    // Update application status
+    _applicationStatus[serviceId] = 'approved';
+    print(
+        '✅ Set application status to approved for serviceId: $serviceId'); // Debug
+    print('📊 Current _applicationStatus: $_applicationStatus'); // Debug
+
+    // Debug: Check if applicant is still in mockApplicants list
+    final foundApplicant = mockApplicants.firstWhere(
+        (a) => a['serviceId'] == serviceId && a['name'] == applicant['name'],
+        orElse: () => {});
+    print('🔍 Found applicant in list: ${foundApplicant.isNotEmpty}');
+    if (foundApplicant.isNotEmpty) {
+      print('📋 Applicant in list status: ${foundApplicant['status']}');
+    }
+
+    // Notify all listeners
+    _notifyListeners();
+  }
+
+  // Approve cancel request (từ My Service) - reset về trạng thái ban đầu
+  static void approveCancelRequest(int serviceId) {
+    print('✅ Approving cancel request for serviceId: $serviceId');
+
+    // Reset application status về none (như chưa từng apply)
+    _applicationStatus[serviceId] = 'none';
+
+    // Remove applicant from list
+    mockApplicants.removeWhere((applicant) =>
+        applicant['serviceId'] == serviceId &&
+        applicant['name'] == 'Trần Văn Minh');
+
+    print('🔄 Reset application status to none and removed applicant');
+
+    // Clear previous status
+    _previousStatus.remove(serviceId);
+
+    // Notify all listeners
+    _notifyListeners();
+  }
+
+  // Reject cancel request (từ My Service) - giữ nguyên trạng thái trước đó
+  static void rejectCancelRequest(int serviceId) {
+    print('❌ Rejecting cancel request for serviceId: $serviceId');
+
+    // Tìm applicant với requestType 'cancel'
+    final applicantIndex = mockApplicants.indexWhere((applicant) =>
+        applicant['serviceId'] == serviceId &&
+        applicant['name'] == 'Trần Văn Minh' &&
+        applicant['requestType'] == 'cancel');
+
+    if (applicantIndex != -1) {
+      final applicant = mockApplicants[applicantIndex];
+
+      // Restore về trạng thái trước khi cancel
+      final previousStatus = _previousStatus[serviceId] ?? 'pending';
+      _applicationStatus[serviceId] = previousStatus;
+
+      // QUAN TRỌNG: Thay vì xóa, chuyển applicant về receive request
+      applicant['requestType'] = 'receive';
+      applicant['requestTime'] =
+          '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}';
+
+      // Set status dựa trên previousStatus
+      if (previousStatus == 'pending') {
+        applicant['status'] = 'pending';
+        applicant['statusText'] = 'Chờ duyệt';
+        applicant['statusColor'] = Colors.orange;
+      } else if (previousStatus == 'approved') {
+        applicant['status'] = 'approved';
+        applicant['statusText'] = 'Đã duyệt';
+        applicant['statusColor'] = Colors.green;
+      }
+
+      print('🔄 Converted cancel request back to receive request');
+      print(
+          '📝 Restored status: $previousStatus, requestType: ${applicant['requestType']}');
+
+      // Clear previous status sau khi restore
+      _previousStatus.remove(serviceId);
+    } else {
+      print('❌ No cancel request found to reject');
+    }
+
+    // Notify all listeners
+    _notifyListeners();
+  } // Cancel application (từ Community)
+
+  static void cancelApplication(int serviceId) {
+    print(
+        '🗑️ MockServiceRepository.cancelApplication called for serviceId: $serviceId');
+
+    // Lưu trạng thái hiện tại trước khi cancel
+    final currentStatus = _applicationStatus[serviceId] ?? 'none';
+    _previousStatus[serviceId] = currentStatus;
+    print('💾 Saved previous status: $currentStatus');
+
+    _applicationStatus[serviceId] = 'cancelled';
+
+    // Thay vì xóa, chuyển applicant thành cancel request
+    final applicantIndex = mockApplicants.indexWhere((applicant) =>
+        applicant['serviceId'] == serviceId &&
+        applicant['name'] == 'Trần Văn Minh');
+
+    if (applicantIndex != -1) {
+      final applicant = mockApplicants[applicantIndex];
+
+      // Chuyển đổi thành cancel request
+      applicant['requestType'] = 'cancel';
+      applicant['requestTime'] =
+          '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}';
+      applicant['status'] = 'pending'; // Vẫn pending để admin xử lý
+      applicant['statusText'] = 'Chờ duyệt';
+      applicant['statusColor'] = Colors.orange;
+
+      print('🔄 Converted applicant to cancel request');
+      print('📝 Updated requestType: ${applicant['requestType']}');
+    } else {
+      print('❌ No applicant found to convert to cancel request');
+    }
+
+    // Notify all listeners
+    _notifyListeners();
+  }
+
+  // Methods để quản lý listeners
+  static void addListener(VoidCallback listener) {
+    _changeListeners.add(listener);
+  }
+
+  static void removeListener(VoidCallback listener) {
+    _changeListeners.remove(listener);
+  }
+
+  static void _notifyListeners() {
+    for (final listener in _changeListeners) {
+      listener();
+    }
+  }
+
+  // Reset application (từ My Service khi reject)
+  static void resetApplication(int serviceId) {
+    _applicationStatus[serviceId] = 'none';
+
+    // Remove applicant from list
+    mockApplicants.removeWhere((applicant) =>
+        applicant['serviceId'] == serviceId &&
+        applicant['name'] == 'Trần Văn Minh');
+
+    // Notify all listeners
+    _notifyListeners();
   }
 }
