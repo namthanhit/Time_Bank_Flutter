@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/onboarding_repository.dart';
 import 'onboarding_state.dart';
-import '../domain/models/models.dart'; // nếu cần types cho method
+import '../domain/models/models.dart';
 
 class OnboardingController extends StateNotifier<OnboardingState> {
   OnboardingController(this._repo) : super(const OnboardingState());
   final OnboardingRepository _repo;
 
+  // B1: Nhập số điện thoại -> checkPhone + gửi OTP (Firebase)
   Future<void> startWithPhone(String phone) async {
     state = state.copyWith(loading: true, error: null);
     try {
@@ -22,6 +23,7 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     }
   }
 
+  // B2: Xác thực OTP cục bộ (Firebase)
   Future<void> verifyOtp(String code) async {
     final verId = state.verificationId;
     if (verId == null) {
@@ -37,14 +39,15 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     }
   }
 
+  // Lưu bản nháp hồ sơ cá nhân
   void setPersonalDraft({
     String? fullName,
     String? email,
     String? cccd,
     DateTime? birthdate,
-    String? gender,
-    String? address,
-    String? specialization, // đang giữ skill_id
+    String? gender,          // "male" | "female" | "other" | "unknown"
+    String? regionId,        // <- wardId (bắt buộc trước khi submit)
+    String? specialization,  // <- skill_id (bắt buộc trước khi submit)
   }) {
     state = state.copyWith(
       fullName: fullName,
@@ -52,23 +55,36 @@ class OnboardingController extends StateNotifier<OnboardingState> {
       cccd: cccd,
       birthdate: birthdate,
       gender: gender,
-      address: address,
-      specialization: specialization,
+      regionId: regionId,              // thay cho address
+      specialization: specialization,  // skill_id
     );
   }
 
+  // Lưu bảo mật (PIN + mật khẩu)
   void setSecurity({String? pin, String? password}) {
     state = state.copyWith(pin: pin, password: password);
   }
 
+  // B3: Gửi tạo tài khoản lên backend
   Future<String> submitCreateAccount() async {
     final phoneToken = state.phoneToken;
     if (phoneToken == null) throw Exception('Thiếu phone_token');
-    if (state.fullName == null || state.pin == null || state.password == null) {
-      throw Exception('Thiếu thông tin bắt buộc');
+
+    // Validate thông tin bắt buộc
+    if (state.fullName == null || state.fullName!.trim().isEmpty) {
+      throw Exception('Thiếu họ tên');
+    }
+    if (state.pin == null || state.pin!.isEmpty) {
+      throw Exception('Thiếu PIN');
+    }
+    if (state.password == null || state.password!.isEmpty) {
+      throw Exception('Thiếu mật khẩu');
     }
     if (state.specialization == null || state.specialization!.isEmpty) {
       throw Exception('Thiếu skill_id (chuyên môn)');
+    }
+    if (state.regionId == null || state.regionId!.isEmpty) {
+      throw Exception('Thiếu region_id (Xã/Phường)');
     }
 
     state = state.copyWith(loading: true, error: null);
@@ -81,12 +97,12 @@ class OnboardingController extends StateNotifier<OnboardingState> {
           email: state.email,
           birthDate: state.birthdate,
           gender: state.gender,
-          address: state.address,
+          regionId: state.regionId,                 // <-- gửi wardId
           specializationOrDescription: null,
         ),
         pin: state.pin!,
         password: state.password!,
-        skillId: state.specialization!, // specialization giữ skill_id
+        skillId: state.specialization!,             // <-- skill_id
       );
       state = state.copyWith(loading: false);
       return userId;

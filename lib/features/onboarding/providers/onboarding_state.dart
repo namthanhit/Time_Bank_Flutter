@@ -2,19 +2,19 @@ class OnboardingState {
   final bool loading;
   final String? error;
 
-  // giữ tạm thông tin qua các màn
   final String? phone;
   final String? phoneToken;
   final String? verificationId;
 
-  // draft thông tin cá nhân
   final String? fullName;
   final String? email;
   final String? cccd;
   final DateTime? birthdate;
   final String? gender;
-  final String? address;
-  final String? specialization;
+
+  final String? regionId;        // <-- mới
+  final String? specialization;  // skill_id
+
   final String? pin;
   final String? password;
 
@@ -29,7 +29,7 @@ class OnboardingState {
     this.cccd,
     this.birthdate,
     this.gender,
-    this.address,
+    this.regionId,        // <-- mới
     this.specialization,
     this.pin,
     this.password,
@@ -46,7 +46,7 @@ class OnboardingState {
     String? cccd,
     DateTime? birthdate,
     String? gender,
-    String? address,
+    String? regionId,        // <-- mới
     String? specialization,
     String? pin,
     String? password,
@@ -62,7 +62,7 @@ class OnboardingState {
       cccd: cccd ?? this.cccd,
       birthdate: birthdate ?? this.birthdate,
       gender: gender ?? this.gender,
-      address: address ?? this.address,
+      regionId: regionId ?? this.regionId,              // <-- mới
       specialization: specialization ?? this.specialization,
       pin: pin ?? this.pin,
       password: password ?? this.password,

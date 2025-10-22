@@ -1,4 +1,3 @@
-// lib/features/onboarding/data/onboarding_repository.dart
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -11,80 +10,73 @@ class OnboardingRepository {
   final OnboardingApi api;
   final FirebaseAuth auth;
 
-  /// B1: gọi backend check-phone (giữ nguyên 09...) -> lấy phone_token
-  /// B2: gửi OTP bằng Firebase -> YÊU CẦU E.164 (+84...)
+  // ---------- Regions ----------
+  Future<List<Region>> getProvinces() => api.fetchProvinces();
+  Future<List<Region>> getDistricts(String provinceId) => api.fetchDistricts(provinceId);
+  Future<List<Region>> getWards(String districtId) => api.fetchWards(districtId);
+  Future<Region> getRegionDetail(String id) => api.fetchRegionDetail(id);
+
+  // ---------- Uniqueness ----------
+  /// Trả về { 'email_taken': bool, 'citizen_id_taken': bool }
+  Future<Map<String, bool>> checkUnique({String? email, String? citizenId}) {
+    // API phía dưới đã map đúng query: citizen_id (snake_case)
+    return api.checkUnique(email: email, citizenId: citizenId);
+  }
+
+  // ---------- Phone/OTP ----------
   Future<StartPhoneResult> startPhoneFlow(String phoneRaw) async {
-    // 1) Check phone với backend (không chuẩn hoá)
     final r = await api.checkPhone(phoneRaw);
-    if (r.exists) {
-      throw OnboardingError('Số điện thoại đã được sử dụng');
-    }
+    if (r.exists) throw OnboardingError('Số điện thoại đã được sử dụng');
     final phoneToken = r.phoneToken;
-    if (phoneToken == null) {
-      throw OnboardingError('Thiếu phone_token từ server');
-    }
+    if (phoneToken == null) throw OnboardingError('Thiếu phone_token từ server');
 
-    // 2) Firebase verifyPhoneNumber cần E.164
     final phoneE164 = toE164VN(phoneRaw);
-
     final completer = Completer<StartPhoneResult>();
     String? verificationId;
 
     await auth.verifyPhoneNumber(
-      phoneNumber: phoneE164, // ✅ E.164 cho Firebase
+      phoneNumber: phoneE164,
       timeout: const Duration(seconds: 60),
-      verificationCompleted: (PhoneAuthCredential _) {
-        // bỏ auto-signin; user vẫn nhập OTP thủ công
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        completer.completeError(
-          OnboardingError(e.message ?? 'Firebase error'),
-        );
-      },
-      codeSent: (String verId, int? _) {
+      verificationCompleted: (_) {},
+      verificationFailed: (e) => completer.completeError(OnboardingError(e.message ?? 'Firebase error')),
+      codeSent: (verId, _) {
         verificationId = verId;
-        completer.complete(
-          StartPhoneResult(
-            phoneToken: phoneToken,
-            verificationId: verId,
-          ),
-        );
+        completer.complete(StartPhoneResult(phoneToken: phoneToken, verificationId: verId));
       },
-      codeAutoRetrievalTimeout: (String verId) {
-        verificationId ??= verId;
-      },
+      codeAutoRetrievalTimeout: (verId) => verificationId ??= verId,
     );
 
     return completer.future;
   }
 
-  /// B3: người dùng nhập OTP -> xác thực local với Firebase
   Future<void> verifyOtpLocal({
     required String verificationId,
     required String smsCode,
   }) async {
-    final credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
-    );
+    final credential = PhoneAuthProvider.credential(verificationId: verificationId, smsCode: smsCode);
     await auth.signInWithCredential(credential);
     await auth.signOut(); // không giữ session Firebase
   }
 
-  /// B4: gửi toàn bộ thông tin để tạo tài khoản trên backend
+  // ---------- Signup/Create ----------
   Future<String> createAccount({
     required String phoneToken,
     required PersonalDto personal,
     required String pin,
     required String password,
-    required String skillId
+    required String skillId,
   }) async {
+    // Guard nhẹ: cần wardId để lưu vào UserDetail.region_id
+    if ((personal.regionId ?? personal.regionId) == null) {
+      throw OnboardingError('Thiếu region_id (wardId) trong hồ sơ cá nhân');
+    }
+
     final r = await api.signupCreate(
       phoneToken: phoneToken,
       personal: personal,
       pin: pin,
       password: password,
-      skillId: skillId
+      skillId: skillId,
     );
     if (!r.ok) throw OnboardingError('Tạo tài khoản thất bại');
     return r.userId ?? '';

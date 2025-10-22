@@ -1,36 +1,57 @@
-
+export 'region.dart';
 class SignupPayload {
-  final String cccd;
   final String phone;
-  final String email;
+  final String? email;        // optional theo schema
+  final String? cccd;         // optional theo schema
   final String fullName;
   final DateTime? birthdate;
-  final String? gender; // "male" | "female" | "other" | "unknown"
-  final String specialization;
-  final String address;
+  final String? gender;       // "male" | "female" | "other" | "unknown"
+  final String specialization; // skill_id
+  final String regionId;       // <-- wardId (bắt buộc)
 
   const SignupPayload({
-    required this.cccd,
     required this.phone,
-    required this.email,
     required this.fullName,
+    required this.specialization,
+    required this.regionId, // bắt buộc chọn đủ 3 cấp để có wardId
+    this.email,
+    this.cccd,
     this.birthdate,
     this.gender,
-    required this.specialization,
-    required this.address,
   });
+
+  Map<String, dynamic> toJson() => {
+    'phone'        : phone,
+    'full_name'    : fullName,
+    'email'        : email,
+    'citizen_id'   : cccd,
+    'birth_date'   : birthdate?.toIso8601String(),
+    'gender'       : gender,
+    'specialization': specialization,
+    'region_id'    : regionId, // map đúng cột UserDetail.region_id
+  };
 }
 
 class VerifyOtpPayload {
   final String phone;
   final String code; // 6 digits
   const VerifyOtpPayload({required this.phone, required this.code});
+
+  Map<String, dynamic> toJson() => {
+    'phone': phone,
+    'code' : code,
+  };
 }
 
 class SetPasswordPayload {
   final String phone;
   final String password;
   const SetPasswordPayload({required this.phone, required this.password});
+
+  Map<String, dynamic> toJson() => {
+    'phone'    : phone,
+    'password' : password,
+  };
 }
 
 class CompleteProfilePayload {
@@ -38,23 +59,37 @@ class CompleteProfilePayload {
   final String fullName;
   final DateTime? birthdate;
   final String? gender;
-  final String specialization;
-  final String address;
+  final String specialization; // skill_id
+  final String regionId;       // <-- wardId, thay cho address
 
   const CompleteProfilePayload({
     required this.phone,
     required this.fullName,
+    required this.specialization,
+    required this.regionId,
     this.birthdate,
     this.gender,
-    required this.specialization,
-    required this.address,
   });
+
+  Map<String, dynamic> toJson() => {
+    'phone'         : phone,
+    'full_name'     : fullName,
+    'birth_date'    : birthdate?.toIso8601String(),
+    'gender'        : gender,
+    'specialization': specialization,
+    'region_id'     : regionId,
+  };
 }
 
 class SetPinPayload {
   final String phone;
   final String pin; // 4–6 digits
   const SetPinPayload({required this.phone, required this.pin});
+
+  Map<String, dynamic> toJson() => {
+    'phone': phone,
+    'pin'  : pin,
+  };
 }
 
 class SkillDto {
@@ -63,7 +98,12 @@ class SkillDto {
   final String name;
   final String slug;
 
-  SkillDto({required this.id, this.parentId, required this.name, required this.slug});
+  SkillDto({
+    required this.id,
+    this.parentId,
+    required this.name,
+    required this.slug,
+  });
 
   factory SkillDto.fromJson(Map<String, dynamic> j) => SkillDto(
     id: j['id'] as String,
@@ -91,7 +131,7 @@ class PersonalDto {
   final String? email;
   final DateTime? birthDate;
   final String? gender;
-  final String? address;
+  final String? regionId; // đổi tên cho thống nhất camelCase
   final String? specializationOrDescription;
 
   PersonalDto({
@@ -100,18 +140,17 @@ class PersonalDto {
     this.email,
     this.birthDate,
     this.gender,
-    this.address,
+    this.regionId,
     this.specializationOrDescription,
   });
 
-  Map<String, dynamic> toJson() =>
-      {
-        'full_name': fullName,
-        'citizen_id': citizenId,
-        'email': email,
-        'birth_date': birthDate?.toIso8601String(),
-        'gender': gender,
-        'address': address,
-        'specialization_or_description': specializationOrDescription,
-      };
+  Map<String, dynamic> toJson() => {
+    'full_name'                    : fullName,
+    'citizen_id'                   : citizenId,
+    'email'                        : email,
+    'birth_date'                   : birthDate?.toIso8601String(),
+    'gender'                       : gender,
+    'region_id'                    : regionId, // <-- quan trọng
+    'specialization_or_description': specializationOrDescription,
+  };
 }
