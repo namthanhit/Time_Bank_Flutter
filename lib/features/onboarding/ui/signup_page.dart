@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
+import 'package:time_bank_flutter/features/onboarding/ui/verify_otp_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
