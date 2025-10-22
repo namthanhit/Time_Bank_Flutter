@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+
 import 'package:time_bank_flutter/features/Onboarding/ui/profile_page.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
@@ -14,39 +15,71 @@ class OtpScreen extends ConsumerStatefulWidget {
 }
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
-  int _timeLeft = 20; // thời gian đếm ngược (giây)
-  Timer? _timer;
+  /// thời gian chờ để được bấm "Gửi lại mã" (giây)
+  static const int _resendCooldownSec = 60;
+
+  int _resendLeft = _resendCooldownSec;
+  Timer? _resendTimer;
 
   String _otp = ""; // không dùng controller để tránh lỗi dispose
 
   @override
   void initState() {
     super.initState();
-    _startCountdown();
-  }
-
-  void _startCountdown() {
-    _timer?.cancel();
-    _timeLeft = 20;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_timeLeft > 0) {
-        setState(() => _timeLeft--);
-      } else {
-        timer.cancel();
-      }
-    });
+    _startResendCooldown();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _resendTimer?.cancel();
     super.dispose();
   }
 
+  // ---------------- cooldown resend ----------------
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() => _resendLeft = _resendCooldownSec);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      if (_resendLeft > 0) {
+        setState(() => _resendLeft--);
+      } else {
+        t.cancel();
+      }
+    });
+  }
+
+  Future<void> _resendOtp() async {
+    final state = ref.read(onboardingControllerProvider);
+    final phone = state.phone;
+    if (phone == null || phone.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Thiếu số điện thoại để gửi lại OTP")),
+      );
+      return;
+    }
+    // gọi lại startWithPhone để Firebase gửi OTP + cập nhật verificationId/phoneToken
+    try {
+      await ref.read(onboardingControllerProvider.notifier).startWithPhone(phone);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Đã gửi lại mã OTP")),
+      );
+      _otp = "";
+      _startResendCooldown(); // reset đếm chờ resend
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  // ---------------- verify ----------------
   Future<void> _verifyOtp() async {
     if (_otp.isEmpty || _otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -79,6 +112,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       }
     });
 
+    final bool isBusy = state.loading; // loading chung từ controller
+    final bool canResend = _resendLeft == 0 && !isBusy;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -94,7 +130,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Tiêu đề (GIỮ NGUYÊN)
+                // Tiêu đề
                 const Text(
                   "Xác Thực OTP",
                   style: TextStyle(
@@ -104,7 +140,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Box trắng (GIỮ NGUYÊN)
+                // Box trắng
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -143,7 +179,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                       const SizedBox(height: 8),
 
-                      // Thông báo + Thời gian (GIỮ NGUYÊN)
+                      // Thông báo + Đếm thời gian được gửi lại
                       Column(
                         children: [
                           const Text(
@@ -152,8 +188,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 4),
+                          // hiển thị đếm để được gửi lại
                           Text(
-                            "Thời gian còn lại: ${_timeLeft}s",
+                            _resendLeft > 0
+                                ? "Bạn có thể gửi lại OTP sau: ${_resendLeft}s"
+                                : "Bạn có thể gửi lại OTP ngay bây giờ",
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -163,11 +202,36 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // Nút Xác Thực (GIỮ NGUYÊN layout, thêm loading/disable)
+                      // Nút Gửi lại mã
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: canResend ? _resendOtp : null,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0D1B4C),
+                            side: const BorderSide(color: Color(0xFF0D1B4C)),
+                            minimumSize: const Size(double.infinity, 44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: isBusy
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                              : const Text("Gửi lại mã"),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Nút Xác Thực
                       GestureDetector(
-                        onTap: state.loading ? null : _verifyOtp,
+                        onTap: isBusy ? null : _verifyOtp,
                         child: Container(
                           width: double.infinity,
                           height: 48,
@@ -178,7 +242,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                             ),
                           ),
                           alignment: Alignment.center,
-                          child: state.loading
+                          child: isBusy
                               ? const SizedBox(
                             height: 22,
                             width: 22,
