@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../providers/auth_providers.dart';
 import '../providers/auth_state.dart';
 import '../domain/validators.dart';
 import '../../Onboarding/ui/signup_page.dart';
+import '../../chat/providers/chat_providers.dart'; // để bật presence
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -20,11 +22,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pwdCtrl = TextEditingController();
   final _pwdFocus = FocusNode();
   bool _obscure = true;
+
+  // Provider AuthController
   final authControllerProvider =
   StateNotifierProvider<AuthController, AuthState>(
         (ref) => AuthController(ref.read(authRepoProvider)),
   );
-
 
   @override
   void dispose() {
@@ -43,6 +46,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _firebaseSignIn(String? firebaseToken) async {
+    final auth = FirebaseAuth.instance;
+    try {
+      if (firebaseToken != null && firebaseToken.isNotEmpty) {
+        // Nếu đang đăng nhập user khác -> đăng xuất
+        if (auth.currentUser != null) {
+          await auth.signOut();
+        }
+        await auth.signInWithCustomToken(firebaseToken);
+      } else {
+        // fallback: đăng nhập ẩn danh (không khuyến nghị)
+        await auth.signInAnonymously();
+      }
+    } catch (e) {
+      debugPrint('Firebase login error: $e');
+    }
+  }
+
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -51,7 +72,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final pwd = _pwdCtrl.text;
     final device = await _deviceModel();
 
-    await ref.read(authControllerProvider.notifier)
+    await ref
+        .read(authControllerProvider.notifier)
         .signIn(phone, pwd, deviceInfo: device);
   }
 
@@ -60,12 +82,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final state = ref.watch(authControllerProvider);
     final isLoading = state.loading;
 
-    // Lắng nghe thay đổi state để điều hướng / show lỗi
-    ref.listen<AuthState>(authControllerProvider, (prev, next) {
+    // Lắng nghe thay đổi state để điều hướng / xử lý firebase token
+    ref.listen<AuthState>(authControllerProvider, (prev, next) async {
       if (prev?.authenticated != true && next.authenticated) {
+        // Đăng nhập Firebase
+        await _firebaseSignIn(next.firebaseToken);
+
+        // Bật presence cho user này
+        // ignore: unused_result
+        ref.read(startPresenceProvider);
+
         if (!mounted) return;
         Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
       }
+
       if (next.error != null && next.error!.isNotEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -203,11 +233,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
-                            onPressed: isLoading
-                                ? null
-                                : () {
-                              // TODO: Forgot password
-                            },
+                            onPressed: isLoading ? null : () {},
                             child: const Text(
                               "Quên mật khẩu?",
                               style: TextStyle(

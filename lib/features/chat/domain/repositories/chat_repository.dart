@@ -2,7 +2,16 @@ import '../models/message.dart';
 import '../models/thread.dart';
 
 abstract class ChatRepository {
-  Future<List<Thread>> fetchThreads();
-  Future<List<Message>> fetchMessages(String threadId);
-  Future<void> sendMessage(String threadId, String text, {bool isVoice = false});
+  // Threads
+  Stream<List<Thread>> watchThreads(String myUid); // danh sách room có mình
+  Future<String> ensureDmThread(String uidA, String uidB);
+
+  // Messages
+  Stream<List<Message>> watchMessages(String threadId, {int limit});
+  Future<void> sendText({required String threadId, required String text, required String senderId});
+  Future<void> sendImage({required String threadId, required List<int> bytes, required String senderId, String mime});
+
+  // Presence (online/offline)
+  Future<void> startPresence(String myUid);
+  Stream<bool> watchPresence(String uid);
 }
