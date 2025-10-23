@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/enter_password.dart';
-import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+
+import 'package:time_bank_flutter/features/onboarding/ui/enter_password.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/region_providers.dart';
+import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -13,16 +15,29 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  bool _checkingUnique = false;
   DateTime? selectedDate;
 
-  String? gender;
-  String? major;
-  String? address;
+  String? _emailErrorText;
+  String? _cccdErrorText;
+
+  String? gender; // "Nam" | "Nữ" | "Khác"
+  String? major;  // skill_id
 
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _cccdController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Khi vào màn hình, reset form & selections để không dính dữ liệu từ lần trước
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resetForm();
+    });
+  }
 
   @override
   void dispose() {
@@ -33,9 +48,51 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
+  // ---------- Reset helpers ----------
+  void _resetRegionSelections() {
+    // Reset 3 selection
+    ref.read(selectedProvinceIdProvider.notifier).state = null;
+    ref.read(selectedDistrictIdProvider.notifier).state = null;
+    ref.read(selectedWardIdProvider.notifier).state = null;
+
+    // Xoá cache list để lần sau vào fetch mới
+    ref.invalidate(provincesProvider);
+    ref.invalidate(districtsProvider);
+    ref.invalidate(wardsProvider);
+  }
+
+  void _resetForm() {
+    _nameController.clear();
+    _emailController.clear();
+    _cccdController.clear();
+    _dateController.clear();
+    selectedDate = null;
+    gender = null;
+    major  = null;
+
+    _emailErrorText = null;
+    _cccdErrorText = null;
+
+    _resetRegionSelections();
+
+    // Dọn draft trong state nếu có
+    ref.read(onboardingControllerProvider.notifier).setPersonalDraft(
+      fullName: null,
+      email: null,
+      cccd: null,
+      birthdate: null,
+      gender: null,
+      regionId: null,
+      specialization: null,
+    );
+
+    setState(() {});
+  }
+
+  // ---------- UI helpers ----------
   Future<void> _pickDate() async {
-    DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final now = DateTime.now();
+    final picked = await showDatePicker(
       context: context,
       initialDate: DateTime(2000),
       firstDate: DateTime(1950),
@@ -51,9 +108,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             dialogBackgroundColor: Colors.white,
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF0D1B4C),
-              ),
+              style: TextButton.styleFrom(foregroundColor: Color(0xFF0D1B4C)),
             ),
           ),
           child: child!,
@@ -72,15 +127,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildLabel(String text, {bool isRequired = true}) {
     return Row(
       children: [
-        Text(
-          text,
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
-        ),
+        Text(text, style: const TextStyle(fontSize: 14, color: Colors.black87)),
         if (isRequired)
-          const Text(
-            " *",
-            style: TextStyle(color: Colors.red, fontSize: 14),
-          )
+          const Text(" *", style: TextStyle(color: Colors.red, fontSize: 14)),
       ],
     );
   }
@@ -88,34 +137,114 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Lấy phone đã lưu ở state của onboardingControllerProvider
-    final phone = ref.read(onboardingControllerProvider).phone ?? '';
+    // Map gender UI -> enum backend
+    String? genderEnum;
+    if (gender == "Nam") {
+      genderEnum = "male";
+    } else if (gender == "Nữ") {
+      genderEnum = "female";
+    } else if (gender == "Khác") {
+      genderEnum = "other";
+    } else {
+      genderEnum = "unknown";
+    }
 
-    final payload = CompleteProfilePayload(
-      phone: phone,
+    // Bắt buộc: skill + đủ 3 cấp vùng -> wardId
+    final wardSel = ref.read(selectedWardIdProvider);
+    if (major == null || major!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn chuyên môn')),
+      );
+      return;
+    }
+    if (wardSel == null || wardSel.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn đủ Tỉnh/Thành phố, Quận/Huyện, Xã/Phường'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _emailErrorText = null;
+      _cccdErrorText  = null;
+      _checkingUnique = true;
+    });
+
+    // Gọi check-unique (chỉ gửi param có giá trị) qua Repository
+    final email = _emailController.text.trim();
+    final cccd  = _cccdController.text.trim();
+    final repo  = ref.read(onboardingRepoProvider);
+
+    try {
+      final unique = await repo.checkUnique(
+        email: email.isEmpty ? null : email,
+        citizenId: cccd.isEmpty ? null : cccd, // repo sẽ map thành citizen_id
+      );
+
+      bool hasInlineError = false;
+      if (unique['email_taken'] == true) {
+        _emailErrorText = 'Email đã được sử dụng';
+        hasInlineError = true;
+      }
+      if (unique['citizen_id_taken'] == true) {
+        _cccdErrorText = 'CCCD đã được sử dụng';
+        hasInlineError = true;
+      }
+
+      setState(() {
+        _checkingUnique = false;
+      });
+
+      if (hasInlineError) {
+        setState(() {}); // cập nhật UI errorText
+        return;          // dừng submit, KHÔNG điều hướng
+      }
+    } catch (e) {
+      // Nếu checkUnique lỗi mạng thì vẫn cho đi tiếp, hoặc tuỳ bạn xử lý.
+      setState(() => _checkingUnique = false);
+    }
+
+    // Chốt an toàn
+    if (_emailErrorText != null || _cccdErrorText != null) return;
+
+    // Lưu bản nháp vào state; specialization là skill_id, regionId là wardId
+    ref.read(onboardingControllerProvider.notifier).setPersonalDraft(
       fullName: _nameController.text.trim(),
+      email: email.isEmpty ? null : email,
+      cccd: cccd.isEmpty ? null : cccd,
       birthdate: selectedDate,
-      gender: gender,
-      specialization: major ?? '',
-      address: address ?? '',
+      gender: genderEnum,
+      regionId: wardSel,     // <-- lưu wardId
+      specialization: major, // <-- skill_id
     );
 
-    await ref
-        .read(onboardingControllerProvider.notifier)
-        .completeProfile(payload);
-
-    final state = ref.read(onboardingControllerProvider);
-    if (state.error == null && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PasswordSetupScreen()),
-      );
-    }
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PasswordSetupScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
+
+    // Lấy danh sách kỹ năng từ API
+    final skillsAsync = ref.watch(skillsProvider);
+
+    // Regions cascade
+    final provinceSel = ref.watch(selectedProvinceIdProvider);
+    final districtSel = ref.watch(selectedDistrictIdProvider);
+    final wardSel = ref.watch(selectedWardIdProvider);
+
+    final provinces = ref.watch(provincesProvider);
+    final districts = ref.watch(districtsProvider);
+    final wards = ref.watch(wardsProvider);
+
+    // Optional preview địa chỉ đầy đủ
+    final fullAddressAsync = ref.watch(fullAddressTextProvider);
 
     ref.listen(onboardingControllerProvider, (prev, next) {
       if (next.error != null && mounted) {
@@ -151,6 +280,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   child: Form(
                     key: _formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -165,7 +295,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
+                            errorText: _cccdErrorText,
                           ),
+                          onChanged: (_) {
+                            if (_cccdErrorText != null) {
+                              setState(() => _cccdErrorText = null);
+                            }
+                          },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return "Vui lòng nhập CCCD";
@@ -192,7 +328,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
+                            errorText: _emailErrorText,
                           ),
+                          onChanged: (_) {
+                            if (_emailErrorText != null) {
+                              setState(() => _emailErrorText = null);
+                            }
+                          },
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
                               if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
@@ -256,6 +398,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           items: const [
                             DropdownMenuItem(value: "Nam", child: Text("Nam")),
                             DropdownMenuItem(value: "Nữ", child: Text("Nữ")),
+                            DropdownMenuItem(value: "Khác", child: Text("Khác")),
                           ],
                           onChanged: (value) => setState(() => gender = value),
                           dropdownColor: Colors.white,
@@ -265,81 +408,186 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) => (value == null || value.isEmpty)
+                          validator: (value) =>
+                          (value == null || value.isEmpty)
                               ? "Vui lòng chọn giới tính"
                               : null,
                         ),
                         const SizedBox(height: 20),
 
-                        // Chuyên môn
+                        // Chuyên môn (dropdown lấy từ API /skills)
                         _buildLabel("Chuyên môn"),
                         const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          value: major,
-                          items: const [
-                            DropdownMenuItem(
-                                value: "CNTT", child: Text("CNTT")),
-                            DropdownMenuItem(
-                                value: "Khác", child: Text("Khác")),
-                            DropdownMenuItem(
-                                value: "Kỹ sư phần mềm",
-                                child: Text("Kỹ sư phần mềm")),
-                            DropdownMenuItem(
-                                value: "Thiết kế đồ họa",
-                                child: Text("Thiết kế đồ họa")),
-                            DropdownMenuItem(
-                                value: "Giáo viên", child: Text("Giáo viên")),
-                            DropdownMenuItem(
-                                value: "Bác sĩ", child: Text("Bác sĩ")),
-                            DropdownMenuItem(
-                                value: "Kế toán", child: Text("Kế toán")),
-                          ],
-                          onChanged: (value) => setState(() => major = value),
-                          dropdownColor: Colors.white,
-                          decoration: InputDecoration(
-                            hintText: "Chọn chuyên môn",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? "Vui lòng chọn chuyên môn"
-                              : null,
+                        skillsAsync.when(
+                          data: (skills) {
+                            return DropdownButtonFormField<String>(
+                              value: major, // skill_id
+                              isExpanded: true,
+                              menuMaxHeight: 320,
+                              items: skills.map((s) {
+                                return DropdownMenuItem<String>(
+                                  value: s.id,
+                                  child: Text(
+                                    s.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) => setState(() => major = value),
+                              dropdownColor: Colors.white,
+                              decoration: InputDecoration(
+                                hintText: "Chọn chuyên môn",
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              validator: (value) =>
+                              (value == null || value.isEmpty)
+                                  ? "Vui lòng chọn chuyên môn"
+                                  : null,
+                            );
+                          },
+                          loading: () => const LinearProgressIndicator(),
+                          error: (e, _) => Text('Lỗi tải kỹ năng: $e'),
                         ),
                         const SizedBox(height: 20),
 
-                        // Địa chỉ
+                        // Địa chỉ: Tỉnh/TP -> Quận/Huyện -> Xã/Phường
                         _buildLabel("Địa chỉ"),
                         const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          value: address,
-                          items: const [
-                            DropdownMenuItem(
-                                value: "Hà Nội", child: Text("Hà Nội")),
-                            DropdownMenuItem(
-                                value: "Hải Dương", child: Text("Hải Dương")),
-                            DropdownMenuItem(
-                                value: "Khác", child: Text("Khác")),
-                          ],
-                          onChanged: (value) => setState(() => address = value),
-                          dropdownColor: Colors.white,
-                          decoration: InputDecoration(
-                            hintText: "Chọn địa chỉ",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+
+                        // --- Tỉnh/Thành phố ---
+                        provinces.when(
+                          data: (items) => DropdownButtonFormField<String>(
+                            value: provinceSel,
+                            isExpanded: true,
+                            items: items
+                                .map((r) => DropdownMenuItem(
+                              value: r.id,
+                              child: Text(r.name),
+                            ))
+                                .toList(),
+                            dropdownColor: Colors.white,
+                            onChanged: (val) {
+                              ref.read(selectedProvinceIdProvider.notifier).state = val;
+                              ref.read(selectedDistrictIdProvider.notifier).state = null;
+                              ref.read(selectedWardIdProvider.notifier).state = null;
+                            },
+                            decoration: InputDecoration(
+                              hintText: "Chọn Tỉnh/Thành phố",
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 14),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? "Vui lòng chọn Tỉnh/Thành phố"
+                                : null,
+                          ),
+                          loading: () => const LinearProgressIndicator(),
+                          error: (e, _) => Text('Lỗi tải Tỉnh/Thành: $e'),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // --- Quận/Huyện ---
+                        districts.when(
+                          data: (items) => DropdownButtonFormField<String>(
+                            value: districtSel,
+                            isExpanded: true,
+                            items: items
+                                .map((r) => DropdownMenuItem(
+                              value: r.id,
+                              child: Text(r.name),
+                            ))
+                                .toList(),
+                            dropdownColor: Colors.white,
+                            onChanged: provinceSel == null
+                                ? null
+                                : (val) {
+                              ref.read(selectedDistrictIdProvider.notifier).state = val;
+                              ref.read(selectedWardIdProvider.notifier).state = null;
+                            },
+                            decoration: InputDecoration(
+                              hintText: "Chọn Quận/Huyện",
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 14),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            validator: (v) {
+                              if (provinceSel != null && (v == null || v.isEmpty)) {
+                                return "Vui lòng chọn Quận/Huyện";
+                              }
+                              return null;
+                            },
+                          ),
+                          loading: () => const LinearProgressIndicator(),
+                          error: (e, _) => Text('Lỗi tải Quận/Huyện: $e'),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // --- Xã/Phường ---
+                        wards.when(
+                          data: (items) => DropdownButtonFormField<String>(
+                            value: wardSel,
+                            isExpanded: true,
+                            items: items
+                                .map((r) => DropdownMenuItem(
+                              value: r.id,
+                              child: Text(r.name),
+                            ))
+                                .toList(),
+                            dropdownColor: Colors.white,
+                            onChanged: districtSel == null
+                                ? null
+                                : (val) {
+                              ref.read(selectedWardIdProvider.notifier).state = val;
+                            },
+                            decoration: InputDecoration(
+                              hintText: "Chọn Xã/Phường",
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 14),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            validator: (v) {
+                              if (districtSel != null && (v == null || v.isEmpty)) {
+                                return "Vui lòng chọn Xã/Phường";
+                              }
+                              return null;
+                            },
+                          ),
+                          loading: () => const LinearProgressIndicator(),
+                          error: (e, _) => Text('Lỗi tải Xã/Phường: $e'),
+                        ),
+
+                        // (Tuỳ chọn) Preview địa chỉ đầy đủ
+                        fullAddressAsync.when(
+                          data: (text) => text == null
+                              ? const SizedBox.shrink()
+                              : Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              "Địa chỉ: $text",
+                              style: const TextStyle(
+                                color: Colors.black54,
+                              ),
                             ),
                           ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? "Vui lòng chọn địa chỉ"
-                              : null,
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
                         ),
+
                         const SizedBox(height: 34),
 
                         // Nút Tiếp theo
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: state.loading ? null : _onSubmit,
+                            onPressed: (state.loading || _checkingUnique) ? null : _onSubmit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D1B4C),
                               foregroundColor: Colors.white,
@@ -348,27 +596,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: state.loading
+                            child: (state.loading || _checkingUnique)
                                 ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                                 : const Text("Tiếp theo"),
                           ),
                         ),
                         const SizedBox(height: 12),
 
-                        // Nút Hủy
+                        // Nút Hủy -> reset & quay về LoginPage, clear stack
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
                             onPressed: state.loading
                                 ? null
-                                : () => Navigator.pop(context),
+                                : () {
+                              _resetForm();
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginPage(),
+                                ),
+                                    (route) => false,
+                              );
+                            },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF0D1B4C),
                               side: const BorderSide(color: Color(0xFF0D1B4C)),
