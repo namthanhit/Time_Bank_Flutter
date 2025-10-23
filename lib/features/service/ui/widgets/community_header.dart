@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'service_create_page.dart';
 
-class CommunityHeader extends StatelessWidget {
+class CommunityHeader extends StatefulWidget {
   final bool isMyTab;
   final Function(String?)? onFilterChanged;
   final Function(String)? onSearchChanged;
@@ -12,6 +12,19 @@ class CommunityHeader extends StatelessWidget {
     this.onFilterChanged,
     this.onSearchChanged,
   });
+
+  @override
+  State<CommunityHeader> createState() => _CommunityHeaderState();
+}
+
+class _CommunityHeaderState extends State<CommunityHeader> {
+  late String _selectedFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFilter = widget.isMyTab ? 'Yêu cầu của tôi' : 'Tất cả mọi người';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,17 +97,17 @@ class CommunityHeader extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // Section Title
+          // Section Title (icon + label reflect selected filter)
           Row(
             children: [
               Icon(
-                Icons.people,
+                _iconForFilter(_selectedFilter),
                 color: Color(0xFF003E77),
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                isMyTab ? 'Yêu cầu của tôi' : 'Tất cả mọi người',
+                _displayLabelForFilter(_selectedFilter),
                 style: TextStyle(
                   color: Color(0xFF003E77),
                   fontSize: 16,
@@ -117,7 +130,7 @@ class CommunityHeader extends StatelessWidget {
                     border: Border.all(color: Colors.grey[300]!),
                   ),
                   child: TextField(
-                    onChanged: onSearchChanged,
+                    onChanged: widget.onSearchChanged,
                     //textAlign: TextAlign.center,
                     textAlignVertical: TextAlignVertical.center,
                     decoration: InputDecoration(
@@ -241,16 +254,47 @@ class CommunityHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterOption(IconData icon, String label) {
+  Widget _buildFilterOption(IconData icon, String label,
+      [String? filterValue]) {
     return Builder(builder: (BuildContext context) {
       return ListTile(
         leading: Icon(icon, color: Color(0xFF003E77)),
         title: Text(label),
         onTap: () {
           Navigator.of(context).pop();
-          // TODO: Apply filter
+          final value = filterValue ?? label;
+          setState(() {
+            // update local selected filter
+            _selectedFilter = value;
+          });
+          // propagate to parent if provided
+          if (widget.onFilterChanged != null) {
+            widget.onFilterChanged!(value);
+          }
         },
       );
     });
+  }
+
+  IconData _iconForFilter(String filter) {
+    switch (filter) {
+      case 'Bạn bè':
+        return Icons.group;
+      case 'Gần đây':
+        return Icons.access_time;
+      case 'Của tôi':
+        return Icons.person;
+      case 'Mọi người':
+      case 'Tất cả':
+      case 'Tất cả mọi người':
+      default:
+        return Icons.people;
+    }
+  }
+
+  String _displayLabelForFilter(String filter) {
+    // normalize some labels to match the UI expectation
+    if (filter == 'Tất cả' || filter == 'Mọi người') return 'Tất cả mọi người';
+    return filter;
   }
 }

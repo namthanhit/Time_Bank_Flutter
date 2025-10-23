@@ -13,6 +13,8 @@ class ServicePage extends StatefulWidget {
 
 class _ServicePageState extends State<ServicePage> {
   String _query = '';
+  String? _communityFilter;
+  String? _myFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +118,8 @@ class _ServicePageState extends State<ServicePage> {
                     children: [
                       CommunityHeader(
                         isMyTab: false,
-                        onFilterChanged: (f) => setState(() {}),
+                        onFilterChanged: (f) =>
+                            setState(() => _communityFilter = f),
                         onSearchChanged: (searchText) =>
                             setState(() => _query = searchText),
                       ),
@@ -124,6 +127,7 @@ class _ServicePageState extends State<ServicePage> {
                         child: ServiceListContainer(
                           query: _query,
                           filter: null,
+                          socialFilter: _communityFilter,
                         ),
                       ),
                     ],
@@ -133,7 +137,7 @@ class _ServicePageState extends State<ServicePage> {
                     children: [
                       CommunityHeader(
                         isMyTab: true,
-                        onFilterChanged: (f) => setState(() {}),
+                        onFilterChanged: (f) => setState(() => _myFilter = f),
                         onSearchChanged: (searchText) =>
                             setState(() => _query = searchText),
                       ),
@@ -141,6 +145,7 @@ class _ServicePageState extends State<ServicePage> {
                         child: ServiceListContainer(
                           query: _query,
                           filter: null,
+                          socialFilter: _myFilter,
                           userId: 11, // ID của user hiện tại
                           isMyServiceTab: true,
                         ),

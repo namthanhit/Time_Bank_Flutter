@@ -14,6 +14,12 @@ class MockServiceRepository implements ServiceRepository {
   // Current user ID (người dùng hiện tại)
   static const int currentUserId = 11;
 
+  // Mock friends list (user IDs that are friends with current user)
+  // In a real app this would come from the social graph / API
+  static final List<int> mockFriendUserIds = [10, 14];
+
+  static bool isFriend(int userId) => mockFriendUserIds.contains(userId);
+
   // Listeners để notify khi có thay đổi
   static final List<VoidCallback> _changeListeners = [];
 

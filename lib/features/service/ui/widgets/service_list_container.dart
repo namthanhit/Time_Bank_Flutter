@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
+import '../../data/mock_service_repository.dart';
 import 'service_card.dart';
 import '../../data/model/service_filter.dart';
 
@@ -11,6 +12,7 @@ class ServiceListContainer extends ConsumerWidget {
   final int? userId;
   final String? query;
   final ServiceFilter? filter;
+  final String? socialFilter;
   final bool isMyServiceTab;
 
   const ServiceListContainer({
@@ -18,6 +20,7 @@ class ServiceListContainer extends ConsumerWidget {
     this.userId,
     this.query,
     this.filter,
+    this.socialFilter,
     this.isMyServiceTab = false,
   });
 
@@ -113,6 +116,21 @@ class ServiceListContainer extends ConsumerWidget {
 
         // start from all services
         var filteredList = services;
+
+        // apply social filter (e.g., 'Bạn bè') if provided
+        if (socialFilter != null) {
+          if (socialFilter == 'Bạn bè') {
+            // only include services provided by friends
+            filteredList = filteredList
+                .where((s) => MockServiceRepository.isFriend(s.userId))
+                .toList();
+          } else if (socialFilter == 'Của tôi') {
+            filteredList = filteredList
+                .where((s) => s.userId == MockServiceRepository.currentUserId)
+                .toList();
+          }
+          // other socialFilter values can be implemented later
+        }
 
         // apply query if present
         final filtered = (query == null || query!.trim().isEmpty)
