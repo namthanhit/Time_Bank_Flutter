@@ -6,6 +6,7 @@ import '../domain/models/message.dart';
 import '../domain/models/thread.dart';
 import '../domain/repositories/chat_repository.dart';
 import '../data/firebase_chat_repository.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 // Repo provider
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -56,13 +57,48 @@ final sendImageProvider = FutureProvider.family.autoDispose<void, ({String threa
 });
 
 // Presence
-final startPresenceProvider = FutureProvider<void>((ref) {
-  final repo = ref.watch(chatRepositoryProvider);
-  final myUid = ref.watch(currentUidProvider);
-  return repo.startPresence(myUid);
+// final startPresenceProvider = FutureProvider<void>((ref) {
+//   final repo = ref.watch(chatRepositoryProvider);
+//   final myUid = ref.watch(currentUidProvider);
+//   return repo.startPresence(myUid);
+// });
+//
+// final presenceProvider = StreamProvider.family<bool, String>((ref, uid) {
+//   final repo = ref.watch(chatRepositoryProvider);
+//   return repo.watchPresence(uid);
+// });
+
+final startPresenceProvider = Provider<void>((ref) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
+
+  final db = FirebaseDatabase.instance;
+  final userRef = db.ref('status/$uid');
+  final connectedRef = db.ref('.info/connected');
+
+  // Khi disconnect khỏi RTDB, set offline
+  userRef.onDisconnect().set({
+    'state': 'offline',
+    'last_changed': ServerValue.timestamp,
+  });
+
+  // Khi connected = true -> set online
+  connectedRef.onValue.listen((event) {
+    final connected = event.snapshot.value == true;
+    if (connected) {
+      userRef.set({
+        'state': 'online',
+        'last_changed': ServerValue.timestamp,
+      });
+    }
+  });
 });
 
+/// Stream online/offline cho 1 uid (true = online)
 final presenceProvider = StreamProvider.family<bool, String>((ref, uid) {
-  final repo = ref.watch(chatRepositoryProvider);
-  return repo.watchPresence(uid);
+  final db = FirebaseDatabase.instance;
+  // đọc state: 'online' / 'offline'
+  return db.ref('status/$uid/state').onValue.map(
+        (e) => e.snapshot.value == 'online',
+  );
 });
