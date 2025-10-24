@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/models/message.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -28,6 +29,7 @@ class MessageBubble extends StatelessWidget {
       children: [
         Row(
           mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end, // Đảm bảo căn chỉnh avatar với bubble
           children: [
             if (!isMe) ...[
               Padding(
@@ -74,13 +76,28 @@ class MessageBubble extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.6,
+                    maxHeight: MediaQuery.of(context).size.height * 0.4, // Giới hạn chiều cao cho ảnh
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      message.mediaUrl!,
+                    child: CachedNetworkImage(
+                      imageUrl: message.mediaUrl!,
                       fit: BoxFit.cover,
-                      // Bạn có thể thêm placeholder/skeleton tuỳ ý
+                      // Placeholder hiển thị khi ảnh đang tải
+                      placeholder: (context, url) => Container(
+                        alignment: Alignment.center,
+                        color: Colors.grey[200],
+                        child: CircularProgressIndicator(
+                          color: isMe ? Colors.white : Theme.of(context).primaryColor,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      // Widget hiển thị khi có lỗi tải ảnh
+                      errorWidget: (context, url, error) => Container(
+                        alignment: Alignment.center,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),

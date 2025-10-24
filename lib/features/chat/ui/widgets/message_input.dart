@@ -3,7 +3,14 @@ import 'package:flutter/material.dart';
 class MessageInput extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
-  const MessageInput({Key? key, required this.controller, required this.onSend}) : super(key: key);
+  final VoidCallback onAttach; // <-- 1. THÊM DÒNG NÀY
+
+  const MessageInput({
+    Key? key,
+    required this.controller,
+    required this.onSend,
+    required this.onAttach, // <-- 2. THÊM VÀO CONSTRUCTOR
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +19,10 @@ class MessageInput extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.attachment, color: Color(0xFF9AA7B2))),
+          IconButton(
+            onPressed: onAttach, // <-- 3. SỬA DÒNG NÀY (thay vì () {})
+            icon: const Icon(Icons.attachment, color: Color(0xFF9AA7B2)),
+          ),
           Expanded(
             child: Container(
               decoration: BoxDecoration(

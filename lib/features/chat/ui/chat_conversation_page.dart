@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../providers/chat_providers.dart';
-import 'widgets/message_bubble.dart';
 import '../domain/models/thread.dart';
-import '../domain/models/message.dart';
-import 'widgets/message_input.dart';
+import 'containers/conversation_container.dart';
 
 class ChatConversationPage extends ConsumerStatefulWidget {
-	final String name;      // tên fallback nếu Thread chưa có
+	final String name; // tên fallback nếu Thread chưa có
 	final String threadId;
 
 	const ChatConversationPage({
@@ -22,25 +19,9 @@ class ChatConversationPage extends ConsumerStatefulWidget {
 }
 
 class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
-	final TextEditingController _controller = TextEditingController();
+	// --- TOÀN BỘ LOGIC _send, _pickAndSendImage, _controller, dispose ĐÃ BỊ XÓA ---
 
-	Future<void> _send() async {
-		final text = _controller.text.trim();
-		if (text.isEmpty) return;
-		await ref.read(
-			sendTextProvider((threadId: widget.threadId, text: text)).future,
-		);
-		_controller.clear();
-		setState(() {});
-	}
-
-	@override
-	void dispose() {
-		_controller.dispose();
-		super.dispose();
-	}
-
-	/// Lấy thread hiện tại (nếu chưa có thì tạo thread tạm với name fallback)
+	/// Lấy thread hiện tại (vẫn cần cho AppBar)
 	Thread _selectThread(AsyncValue<List<Thread>> threadsAsync) {
 		return threadsAsync.maybeWhen(
 			data: (threads) {
@@ -52,7 +33,7 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 		);
 	}
 
-	/// Lấy uid của đối tác trong phòng DM (members có 2 người)
+	/// Lấy uid của đối tác (vẫn cần cho AppBar)
 	String? _peerUid(Thread thread, String myUid) {
 		if (thread.members.length != 2) return null;
 		return thread.members.firstWhere((u) => u != myUid, orElse: () => myUid);
@@ -60,12 +41,12 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 
 	@override
 	Widget build(BuildContext context) {
+		// --- Vẫn fetch data, nhưng CHỈ DÙNG CHO APPBAR ---
 		final myUid = ref.watch(currentUidProvider);
 		final threadsAsync = ref.watch(threadsProvider);
 		final thread = _selectThread(threadsAsync);
 		final peerUid = _peerUid(thread, myUid);
 
-		final messagesAsync = ref.watch(messagesProvider(widget.threadId));
 		final presenceAsync = (peerUid != null)
 				? ref.watch(presenceProvider(peerUid))
 				: const AsyncValue<bool>.data(false);
@@ -73,6 +54,7 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 
 		final title = thread.name?.isNotEmpty == true ? thread.name! : widget.name;
 		final initials = title.isNotEmpty ? title.trim().characters.first.toUpperCase() : '?';
+		// --- HẾT PHẦN LOGIC CHO APPBAR ---
 
 		return Scaffold(
 			backgroundColor: const Color(0xFFEFF4F8),
@@ -82,7 +64,7 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 				elevation: 0,
 				title: Row(
 					children: [
-						// Avatar chữ cái đầu (vì Thread chưa có avatar)
+						// Avatar chữ cái đầu
 						SizedBox(
 							width: 44,
 							height: 44,
@@ -94,7 +76,8 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 											backgroundColor: const Color(0xFFE9EEF2),
 											child: Text(
 												initials,
-												style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF334155)),
+												style: const TextStyle(
+														fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF334155)),
 											),
 										),
 									),
@@ -111,7 +94,10 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 													shape: BoxShape.circle,
 													border: Border.all(color: Colors.white, width: 2.5),
 													boxShadow: [
-														BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 2, offset: const Offset(0, 1)),
+														BoxShadow(
+																color: Colors.black.withOpacity(0.14),
+																blurRadius: 2,
+																offset: const Offset(0, 1)),
 													],
 												),
 											),
@@ -128,7 +114,8 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 								Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
 								Text(
 									isPeerOnline ? 'Online' : 'Offline',
-									style: TextStyle(fontSize: 12, color: isPeerOnline ? Colors.green : Colors.grey.shade600),
+									style: TextStyle(
+											fontSize: 12, color: isPeerOnline ? Colors.green : Colors.grey.shade600),
 								),
 							],
 						),
@@ -140,56 +127,10 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 					IconButton(onPressed: null, icon: Icon(Icons.more_vert)),
 				],
 			),
-			body: Column(
-				children: [
-					Expanded(
-						child: messagesAsync.when(
-							data: (messages) {
-								// messagesProvider trả về desc theo createdAt; dùng reverse + ListView.reverse
-								final List<Message> list = messages;
-								return ListView.builder(
-									reverse: true,
-									padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-									itemCount: list.length,
-									itemBuilder: (context, i) {
-										final m = list[i];
-										final isMe = m.senderId == myUid;
-										return MessageBubble(
-											message: m,
-											isMe: isMe,
-											// avatar có thể null; chấm online lấy theo peer
-											avatar: null,
-											online: !isMe && isPeerOnline,
-										);
-									},
-								);
-							},
-							loading: () => const Center(child: CircularProgressIndicator()),
-							error: (e, _) => Center(child: Text('Lỗi: $e')),
-						),
-					),
-					// Ô nhập tin nhắn
-					Padding(
-						padding: const EdgeInsets.only(bottom: 4),
-						child: Row(
-							children: [
-								Expanded(child: MessageInput(controller: _controller, onSend: _send)),
-								// Nút gửi ảnh (tuỳ bạn thêm picker → gọi sendImageProvider)
-								// IconButton(
-								//   icon: const Icon(Icons.image),
-								//   onPressed: () async {
-								//     final bytes = await pickImageBytes(); // tự cài đặt
-								//     if (bytes != null) {
-								//       await ref.read(sendImageProvider(
-								//         (threadId: widget.threadId, bytes: bytes, mime: 'image/jpeg'),
-								//       ).future);
-								//     }
-								//   },
-								// ),
-							],
-						),
-					),
-				],
+			// --- PHẦN BODY ĐƯỢC THAY THẾ HOÀN TOÀN ---
+			body: ConversationContainer(
+				threadId: widget.threadId,
+				fallbackName: widget.name, // Truyền fallbackName vào
 			),
 		);
 	}

@@ -28,12 +28,12 @@ class Message {
     return Message(
       id: doc.id,
       threadId: threadId,
-      senderId: d['senderId'] as String,
+      senderId: d['senderId'] as String? ?? '',
       type: (d['type'] == 'image') ? MessageType.image : MessageType.text,
       text: d['text'] as String?,
       mediaUrl: d['mediaUrl'] as String?,
       mediaMime: d['mediaMime'] as String?,
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

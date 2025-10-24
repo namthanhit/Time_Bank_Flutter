@@ -9,7 +9,13 @@ import '../domain/models/thread.dart';
 // Widget appBar hội thoại: avatar chữ cái đầu, tên, trạng thái Online/Offline
 class _ChatConversationScaffold extends ConsumerWidget {
   final String threadId;
-  const _ChatConversationScaffold({Key? key, required this.threadId}) : super(key: key);
+  final String fallbackName;
+
+  const _ChatConversationScaffold({
+    Key? key,
+    required this.threadId,
+    required this.fallbackName,
+  }) : super(key: key);
 
   Thread _selectThread(AsyncValue<List<Thread>> threadsAsync, String threadId, String fallbackName) {
     return threadsAsync.maybeWhen(
@@ -30,7 +36,9 @@ class _ChatConversationScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final myUid = ref.watch(currentUidProvider);
     final threadsAsync = ref.watch(threadsProvider);
-    final thread = _selectThread(threadsAsync, threadId, 'Chat');
+
+    // 1. ĐÃ SỬA: Xóa "widget."
+    final thread = _selectThread(threadsAsync, threadId, fallbackName);
 
     final peerUid = _peerUid(thread, myUid);
     final presenceAsync = (peerUid != null)
@@ -38,7 +46,8 @@ class _ChatConversationScaffold extends ConsumerWidget {
         : const AsyncValue<bool>.data(false);
     final isPeerOnline = presenceAsync.asData?.value ?? false;
 
-    final title = (thread.name?.isNotEmpty ?? false) ? thread.name! : 'Chat';
+    // 2. ĐÃ SỬA: Xóa "widget."
+    final title = (thread.name?.isNotEmpty ?? false) ? thread.name! : fallbackName;
     final initials = title.isNotEmpty ? title.trim().characters.first.toUpperCase() : '?';
 
     return Scaffold(
@@ -107,7 +116,11 @@ class _ChatConversationScaffold extends ConsumerWidget {
           ],
         ),
       ),
-      body: ConversationContainer(threadId: threadId),
+      body: ConversationContainer(
+        threadId: threadId,
+        // 3. ĐÃ SỬA: Xóa "widget."
+        fallbackName: fallbackName, // <-- Truyền fallbackName vào
+      ),
     );
   }
 }
@@ -149,10 +162,14 @@ class ChatListPage extends StatelessWidget {
           ),
           Expanded(
             child: ChatListContainer(
-              onThreadTap: (threadId) {
+              // Giả định rằng ChatListContainer trả về (threadId, threadName)
+              onThreadTap: (threadId, threadName) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => _ChatConversationScaffold(threadId: threadId),
+                    builder: (_) => _ChatConversationScaffold(
+                      threadId: threadId,
+                      fallbackName: threadName,
+                    ),
                   ),
                 );
               },
