@@ -3,6 +3,7 @@ import '../features/home/ui/home_page.dart';
 import 'navigation/bottom_nav_bar.dart';
 import 'navigation/nav_item_data.dart';
 import '../features/qr/ui/qr_page.dart';
+import '../features/settings/ui/settings_page.dart';
 import '../common/ui/stub_page.dart';
 import '../features/chat/ui/chat_list_page.dart';
 
@@ -21,7 +22,7 @@ class _AppShellState extends State<AppShell> {
     const HomePage(),
     const StubPage(label: 'Dịch vụ'),
     const ChatListPage(),
-    const StubPage(label: 'Cài đặt'),
+    const SettingsPage(),
   ];
 
   // Nav items CÓ QR ở giữa (emphasize)
