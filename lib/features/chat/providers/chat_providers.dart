@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:typed_data'; // <-- 1. THÊM IMPORT NÀY
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -43,29 +43,43 @@ final ensureDmThreadProvider = FutureProvider.family<String, String>((ref, peerU
   return repo.ensureDmThread(myUid, peerUid);
 });
 
-final sendTextProvider = FutureProvider.family.autoDispose<void, ({String threadId, String text})>((ref, args) async {
+// <-- 2. SỬA LẠI 'sendTextProvider'
+final sendTextProvider = FutureProvider.family.autoDispose<void, ({
+String threadId,
+String text,
+String localId // <-- THÊM localId
+})>((ref, args) async {
   final repo = ref.watch(chatRepositoryProvider);
   final myUid = ref.watch(currentUidProvider);
-  await repo.sendText(threadId: args.threadId, text: args.text, senderId: myUid);
+
+  // Truyền localId vào repository
+  await repo.sendText(
+    threadId: args.threadId,
+    text: args.text,
+    senderId: myUid,
+    localId: args.localId, // <-- TRUYỀN localId
+  );
 });
 
 /// Upload ảnh lên Firebase Storage + gửi message type=image
+// <-- 3. SỬA LẠI 'sendImageProvider'
 final sendImageProvider = FutureProvider.family.autoDispose<void, ({
 String threadId,
-List<int> bytes,
+Uint8List bytes, // <-- ĐỔI SANG Uint8List
 String mime,
+String localId // <-- THÊM localId
 })>((ref, args) async {
   final myUid = ref.watch(currentUidProvider);
   final firestore = FirebaseFirestore.instance;
   final storage = fs.FirebaseStorage.instance;
 
   // Tạo path: chat_images/{threadId}/{uid}/{timestamp}.jpg
-  final ts = DateTime.now().millisecondsSinceEpoch;
-  final path = 'chat_images/${args.threadId}/$myUid/$ts.jpg';
+  // (Sử dụng localId làm tên file để tránh trùng lặp nếu retry)
+  final path = 'chat_images/${args.threadId}/$myUid/${args.localId}.jpg';
 
   // Upload lên Storage
   final task = await storage.ref(path).putData(
-    Uint8List.fromList(args.bytes),
+    args.bytes, // <-- Bỏ Uint8List.fromList()
     fs.SettableMetadata(contentType: args.mime),
   );
   final url = await task.ref.getDownloadURL();
@@ -82,6 +96,7 @@ String mime,
       'mediaUrl': url,
       'mediaMime': args.mime,
       'createdAt': FieldValue.serverTimestamp(),
+      'localId': args.localId, // <-- 4. THÊM localId VÀO FIRESTORE
     });
     tx.update(roomRef, {
       'updatedAt': FieldValue.serverTimestamp(),
@@ -90,6 +105,7 @@ String mime,
         'type': 'image',
         'senderId': myUid,
         'at': FieldValue.serverTimestamp(),
+        'localId': args.localId, // <-- (Nên thêm cả ở đây)
       },
     });
   });

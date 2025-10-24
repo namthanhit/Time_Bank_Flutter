@@ -68,25 +68,31 @@ class FirebaseChatRepository implements ChatRepository {
     required String threadId,
     required String text,
     required String senderId,
+    required String localId, // <-- THÊM DÒNG NÀY
   }) async {
-    final msgRef = _fs.collection('rooms/$threadId/messages').doc();
-    final roomRef = _fs.collection('rooms').doc(threadId);
-    await _fs.runTransaction((tx) async {
+    // Lấy code transaction từ 'sendImageProvider'
+    final firestore = FirebaseFirestore.instance;
+    final roomRef = firestore.collection('rooms').doc(threadId);
+    final msgRef = roomRef.collection('messages').doc();
+
+    await firestore.runTransaction((tx) async {
       tx.set(msgRef, {
+        'threadId': threadId,
         'senderId': senderId,
         'type': 'text',
         'text': text,
         'createdAt': FieldValue.serverTimestamp(),
-        'readBy': {senderId: FieldValue.serverTimestamp()},
+        'localId': localId, // <-- LƯU localId VÀO FIRESTORE
       });
       tx.update(roomRef, {
+        'updatedAt': FieldValue.serverTimestamp(),
         'lastMessage': {
           'text': text,
           'type': 'text',
           'senderId': senderId,
           'at': FieldValue.serverTimestamp(),
+          'localId': localId, // <-- (Nên thêm cả ở đây)
         },
-        'updatedAt': FieldValue.serverTimestamp(),
       });
     });
   }

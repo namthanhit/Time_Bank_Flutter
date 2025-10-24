@@ -8,7 +8,12 @@ abstract class ChatRepository {
 
   // Messages
   Stream<List<Message>> watchMessages(String threadId, {int limit});
-  Future<void> sendText({required String threadId, required String text, required String senderId});
+  Future<void> sendText({
+    required String threadId,
+    required String text,
+    required String senderId,
+    required String localId, // <-- THÊM DÒNG NÀY
+  });
   Future<void> sendImage({required String threadId, required List<int> bytes, required String senderId, String mime});
 
   // Presence (online/offline)
