@@ -63,18 +63,18 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
     final allApplicants = MockServiceRepository.mockApplicants;
     final serviceApplicants =
         allApplicants.where((a) => a['serviceId'] == widget.serviceId).toList();
-    print(
-        '🔍 PendingApplicantsWidget build for serviceId: ${widget.serviceId}');
-    print('📊 Total applicants: ${allApplicants.length}');
-    print('📊 Applicants for this service: ${serviceApplicants.length}');
+    // print(
+    //     '🔍 PendingApplicantsWidget build for serviceId: ${widget.serviceId}');
+    // print('📊 Total applicants: ${allApplicants.length}');
+    // print('📊 Applicants for this service: ${serviceApplicants.length}');
 
     // Lọc ứng viên pending của service cụ thể
     final servicePendingApplicants = MockServiceRepository.mockApplicants
         .where((a) =>
             a['status'] == 'pending' && a['serviceId'] == widget.serviceId)
         .toList();
-    print(
-        '📊 Pending applicants for this service: ${servicePendingApplicants.length}');
+    // print(
+    //     '📊 Pending applicants for this service: ${servicePendingApplicants.length}');
 
     // Debug: In ra chi tiết từng applicant
     for (var applicant in servicePendingApplicants) {
