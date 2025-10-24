@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers.dart';
+import '../providers/providers.dart';
 import 'widgets/account_header.dart';
 import 'widgets/settings_item.dart';
 import 'change_password_page.dart';
