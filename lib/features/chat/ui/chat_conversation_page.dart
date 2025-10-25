@@ -34,6 +34,7 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 	}
 
 	/// Lấy uid của đối tác (vẫn cần cho AppBar)
+	// Hàm này yêu cầu "String myUid" (không thể null)
 	String? _peerUid(Thread thread, String myUid) {
 		if (thread.members.length != 2) return null;
 		return thread.members.firstWhere((u) => u != myUid, orElse: () => myUid);
@@ -42,9 +43,28 @@ class _ChatConversationPageState extends ConsumerState<ChatConversationPage> {
 	@override
 	Widget build(BuildContext context) {
 		// --- Vẫn fetch data, nhưng CHỈ DÙNG CHO APPBAR ---
+
+		// DÒNG 44: myUid bây giờ là "String?"
 		final myUid = ref.watch(currentUidProvider);
+
+		// ==========================================================
+		// === SỬA LỖI Ở ĐÂY ===
+		// Thêm kiểm tra null. Nếu user đã logout (myUid == null),
+		// widget này sắp bị hủy, hiển thị loading để tránh crash.
+		if (myUid == null) {
+			return const Scaffold(
+				body: Center(
+					child: CircularProgressIndicator(),
+				),
+			);
+		}
+		// ==========================================================
+
 		final threadsAsync = ref.watch(threadsProvider);
 		final thread = _selectThread(threadsAsync);
+
+		// Bây giờ "myUid" đã được đảm bảo là "String" (không null)
+		// nên hàm này sẽ an toàn
 		final peerUid = _peerUid(thread, myUid);
 
 		final presenceAsync = (peerUid != null)

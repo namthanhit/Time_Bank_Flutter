@@ -1,4 +1,4 @@
-import 'dart:typed_data'; // <-- 1. THÊM IMPORT NÀY
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -16,19 +16,35 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return FirebaseChatRepository();
 });
 
-final currentUidProvider = Provider<String>((ref) {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) throw StateError('Not signed in');
-  return user.uid;
+// -----------------------------------------------------------------
+// SỬA 1: Thay đổi provider này để trả về String? (nullable)
+// -----------------------------------------------------------------
+final currentUidProvider = Provider<String?>((ref) {
+  // Chỉ trả về uid, hoặc null nếu đã logout. SẼ KHÔNG BAO GIỜ CRASH.
+  return FirebaseAuth.instance.currentUser?.uid;
 });
+// -----------------------------------------------------------------
+
 
 // ===================== STREAMS =====================
 
+// -----------------------------------------------------------------
+// SỬA 2: Xử lý trường hợp uid là null
+// -----------------------------------------------------------------
 final threadsProvider = StreamProvider<List<Thread>>((ref) {
   final repo = ref.watch(chatRepositoryProvider);
-  final uid = ref.watch(currentUidProvider);
+  final uid = ref.watch(currentUidProvider); // <-- uid bây giờ là String?
+
+  // Nếu uid là null (đã logout), trả về 1 stream rỗng
+  if (uid == null) {
+    return Stream.value([]);
+  }
+
+  // Nếu uid không null, tiếp tục như cũ
   return repo.watchThreads(uid);
 });
+// -----------------------------------------------------------------
+
 
 final messagesProvider = StreamProvider.family<List<Message>, String>((ref, threadId) {
   final repo = ref.watch(chatRepositoryProvider);
@@ -37,54 +53,65 @@ final messagesProvider = StreamProvider.family<List<Message>, String>((ref, thre
 
 // ===================== ACTIONS =====================
 
+// -----------------------------------------------------------------
+// SỬA 3: Xử lý uid là null cho các "Actions"
+// (Các provider này chỉ được gọi khi đã login, nên ta có thể văng lỗi)
+// -----------------------------------------------------------------
 final ensureDmThreadProvider = FutureProvider.family<String, String>((ref, peerUid) {
   final repo = ref.watch(chatRepositoryProvider);
-  final myUid = ref.watch(currentUidProvider);
+  final myUid = ref.watch(currentUidProvider); // <-- uid là String?
+
+  // Văng lỗi rõ ràng nếu bị gọi sai thời điểm
+  if (myUid == null) {
+    throw StateError('User must be logged in to ensure DM thread');
+  }
+
   return repo.ensureDmThread(myUid, peerUid);
 });
 
-// <-- 2. SỬA LẠI 'sendTextProvider'
 final sendTextProvider = FutureProvider.family.autoDispose<void, ({
 String threadId,
 String text,
-String localId // <-- THÊM localId
+String localId
 })>((ref, args) async {
   final repo = ref.watch(chatRepositoryProvider);
-  final myUid = ref.watch(currentUidProvider);
+  final myUid = ref.watch(currentUidProvider); // <-- uid là String?
 
-  // Truyền localId vào repository
+  if (myUid == null) {
+    throw StateError('User must be logged in to send text');
+  }
+
   await repo.sendText(
     threadId: args.threadId,
     text: args.text,
     senderId: myUid,
-    localId: args.localId, // <-- TRUYỀN localId
+    localId: args.localId,
   );
 });
 
-/// Upload ảnh lên Firebase Storage + gửi message type=image
-// <-- 3. SỬA LẠI 'sendImageProvider'
 final sendImageProvider = FutureProvider.family.autoDispose<void, ({
 String threadId,
-Uint8List bytes, // <-- ĐỔI SANG Uint8List
+Uint8List bytes,
 String mime,
-String localId // <-- THÊM localId
+String localId
 })>((ref, args) async {
-  final myUid = ref.watch(currentUidProvider);
+  final myUid = ref.watch(currentUidProvider); // <-- uid là String?
+
+  if (myUid == null) {
+    throw StateError('User must be logged in to send image');
+  }
+
   final firestore = FirebaseFirestore.instance;
   final storage = fs.FirebaseStorage.instance;
 
-  // Tạo path: chat_images/{threadId}/{uid}/{timestamp}.jpg
-  // (Sử dụng localId làm tên file để tránh trùng lặp nếu retry)
   final path = 'chat_images/${args.threadId}/$myUid/${args.localId}.jpg';
 
-  // Upload lên Storage
   final task = await storage.ref(path).putData(
-    args.bytes, // <-- Bỏ Uint8List.fromList()
+    args.bytes,
     fs.SettableMetadata(contentType: args.mime),
   );
   final url = await task.ref.getDownloadURL();
 
-  // Ghi message vào Firestore
   final roomRef = firestore.collection('rooms').doc(args.threadId);
   final msgRef = roomRef.collection('messages').doc();
 
@@ -96,7 +123,7 @@ String localId // <-- THÊM localId
       'mediaUrl': url,
       'mediaMime': args.mime,
       'createdAt': FieldValue.serverTimestamp(),
-      'localId': args.localId, // <-- 4. THÊM localId VÀO FIRESTORE
+      'localId': args.localId,
     });
     tx.update(roomRef, {
       'updatedAt': FieldValue.serverTimestamp(),
@@ -105,7 +132,7 @@ String localId // <-- THÊM localId
         'type': 'image',
         'senderId': myUid,
         'at': FieldValue.serverTimestamp(),
-        'localId': args.localId, // <-- (Nên thêm cả ở đây)
+        'localId': args.localId,
       },
     });
   });
@@ -115,8 +142,11 @@ String localId // <-- THÊM localId
 
 /// Khởi tạo trạng thái online/offline (Realtime Database)
 final startPresenceProvider = Provider<void>((ref) {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return;
+  // -----------------------------------------------------------------
+  // SỬA 4: Dùng provider đã sửa
+  // -----------------------------------------------------------------
+  final uid = ref.watch(currentUidProvider); // <-- Lấy từ provider
+  if (uid == null) return; // Đã tự động xử lý null
 
   final db = FirebaseDatabase.instance;
   final userRef = db.ref('status/$uid');

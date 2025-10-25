@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:io';
-import 'dart:typed_data'; // <-- THÊM IMPORT NÀY
+// import 'dart:io'; // <-- Import này dường như không cần thiết
+import 'dart:typed_data';
 
 import '../../providers/chat_providers.dart';
 import '../../domain/models/message.dart';
-import '../../domain/models/thread.dart'; // <-- 1. SỬA LỖI THIẾU IMPORT
+import '../../domain/models/thread.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
 
@@ -36,15 +36,22 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
 
+    // === SỬA 1: KIỂM TRA NULL ===
     final myUid = ref.read(currentUidProvider);
+    if (myUid == null) {
+      debugPrint('🔥 Send error: User is null');
+      return; // Đã logout, không gửi
+    }
+    // =============================
+
     final tempId = _uuid.v4();
 
     final tempMessage = Message(
       id: tempId,
-      threadId: widget.threadId, // <-- 2. SỬA LỖI THIẾU threadId
+      threadId: widget.threadId,
       localId: tempId,
       text: text,
-      senderId: myUid,
+      senderId: myUid, // <-- Bây giờ đã an toàn (không null)
       createdAt: DateTime.now(),
       type: MessageType.text,
       status: MessageStatus.pending,
@@ -103,16 +110,23 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
       final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
       if (picked == null) return;
 
+      // === SỬA 2: KIỂM TRA NULL ===
       final myUid = ref.read(currentUidProvider);
+      if (myUid == null) {
+        debugPrint('🔥 Send image error: User is null');
+        return; // Đã logout, không gửi
+      }
+      // =============================
+
       final tempId = _uuid.v4();
-      final Uint8List bytes = await picked.readAsBytes(); // Lấy ra Uint8List
+      final Uint8List bytes = await picked.readAsBytes();
       final mime = picked.path.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
       final tempMessage = Message(
         id: tempId,
-        threadId: widget.threadId, // <-- 2. SỬA LỖI THIẾU threadId
+        threadId: widget.threadId,
         localId: tempId,
-        senderId: myUid,
+        senderId: myUid, // <-- Bây giờ đã an toàn (không null)
         createdAt: DateTime.now(),
         type: MessageType.image,
         mediaUrl: picked.path,
@@ -154,6 +168,7 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
     );
   }
 
+  // Hàm này yêu cầu "String myUid" (không thể null)
   String? _peerUid(Thread thread, String myUid) {
     if (thread.members.length != 2) return null;
     return thread.members.firstWhere((u) => u != myUid, orElse: () => myUid);
@@ -161,9 +176,19 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
 
   @override
   Widget build(BuildContext context) {
-    final myUid = ref.watch(currentUidProvider);
+    // === SỬA 3: KIỂM TRA NULL ===
+    final myUid = ref.watch(currentUidProvider); // <-- myUid là String?
+
+    // Nếu đã logout (myUid == null), hiển thị loading để chờ bị hủy
+    if (myUid == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    // =============================
+
     final threadsAsync = ref.watch(threadsProvider);
     final thread = _selectThread(threadsAsync);
+
+    // Bây giờ myUid đã được đảm bảo là "String" (không null)
     final peerUid = _peerUid(thread, myUid);
     final isPeerOnline =
     (peerUid != null) ? (ref.watch(presenceProvider(peerUid)).asData?.value ?? false) : false;
@@ -199,7 +224,7 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
                   itemCount: allMessages.length,
                   itemBuilder: (context, i) {
                     final m = allMessages[i];
-                    final isMe = m.senderId == myUid;
+                    final isMe = m.senderId == myUid; // <-- An toàn
 
                     return MessageBubble(
                       message: m,

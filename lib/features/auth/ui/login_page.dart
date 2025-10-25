@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // <-- Không cần nữa
 
 import '../providers/auth_providers.dart';
 import '../providers/auth_state.dart';
 import '../domain/validators.dart';
 import '../../Onboarding/ui/signup_page.dart';
-import '../../chat/providers/chat_providers.dart'; // để bật presence
+// import '../../chat/providers/chat_providers.dart'; // <-- Không cần nữa
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -23,11 +23,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pwdFocus = FocusNode();
   bool _obscure = true;
 
-  // Provider AuthController
-  final authControllerProvider =
-  StateNotifierProvider<AuthController, AuthState>(
-        (ref) => AuthController(ref.read(authRepoProvider)),
-  );
+  // ------------------------------------------------------------------
+  // 1. XÓA BỎ HOÀN TOÀN local "authControllerProvider" (dòng 30-33)
+  // ------------------------------------------------------------------
 
   @override
   void dispose() {
@@ -46,23 +44,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  Future<void> _firebaseSignIn(String? firebaseToken) async {
-    final auth = FirebaseAuth.instance;
-    try {
-      if (firebaseToken != null && firebaseToken.isNotEmpty) {
-        // Nếu đang đăng nhập user khác -> đăng xuất
-        if (auth.currentUser != null) {
-          await auth.signOut();
-        }
-        await auth.signInWithCustomToken(firebaseToken);
-      } else {
-        // fallback: đăng nhập ẩn danh (không khuyến nghị)
-        await auth.signInAnonymously();
-      }
-    } catch (e) {
-      debugPrint('Firebase login error: $e');
-    }
-  }
+  // ------------------------------------------------------------------
+  // 2. XÓA BỎ HOÀN TOÀN hàm "_firebaseSignIn" (dòng 53-70)
+  // (Chúng ta đã chuyển nó vào AuthController)
+  // ------------------------------------------------------------------
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
@@ -72,6 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final pwd = _pwdCtrl.text;
     final device = await _deviceModel();
 
+    // Hàm này giờ sẽ gọi provider "global"
     await ref
         .read(authControllerProvider.notifier)
         .signIn(phone, pwd, deviceInfo: device);
@@ -79,33 +65,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Giờ sẽ watch provider "global"
     final state = ref.watch(authControllerProvider);
     final isLoading = state.loading;
 
-    // Lắng nghe thay đổi state để điều hướng / xử lý firebase token
+    // Lắng nghe thay đổi state (CHỈ ĐỂ HIỂN THỊ LỖI)
     ref.listen<AuthState>(authControllerProvider, (prev, next) async {
-      if (prev?.authenticated != true && next.authenticated) {
-        // Đăng nhập Firebase
-        await _firebaseSignIn(next.firebaseToken);
 
-        // Bật presence cho user này
-        // ignore: unused_result
-        ref.read(startPresenceProvider);
+      // 3. XÓA BỎ TOÀN BỘ logic "if (next.authenticated)"
+      // (AuthController đã xử lý)
 
-        if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
-      }
-
-      if (next.error != null && next.error!.isNotEmpty) {
+      // Chỉ giữ lại logic xử lý lỗi
+      if (next.error != null && (prev?.error != next.error)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!)),
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     });
 
     return Scaffold(
       body: Container(
+        // ... (Toàn bộ code UI của bạn giữ nguyên)
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],

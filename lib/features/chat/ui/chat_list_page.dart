@@ -27,6 +27,7 @@ class _ChatConversationScaffold extends ConsumerWidget {
     );
   }
 
+  // Hàm này yêu cầu "String myUid" (không thể null)
   String? _peerUid(Thread thread, String myUid) {
     if (thread.members.length != 2) return null;
     return thread.members.firstWhere((u) => u != myUid, orElse: () => myUid);
@@ -34,19 +35,36 @@ class _ChatConversationScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // DÒNG 43: myUid bây giờ là "String?"
     final myUid = ref.watch(currentUidProvider);
+
+    // ==========================================================
+    // === SỬA LỖI Ở ĐÂY ===
+    // Thêm kiểm tra null. Nếu user đã logout (myUid == null),
+    // widget này sắp bị hủy, hiển thị loading để tránh crash.
+    if (myUid == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    // ==========================================================
+
     final threadsAsync = ref.watch(threadsProvider);
 
-    // 1. ĐÃ SỬA: Xóa "widget."
+    // Đã xóa "widget."
     final thread = _selectThread(threadsAsync, threadId, fallbackName);
 
+    // Bây giờ "myUid" đã được đảm bảo là "String" (không null)
+    // nên hàm này sẽ an toàn
     final peerUid = _peerUid(thread, myUid);
     final presenceAsync = (peerUid != null)
         ? ref.watch(presenceProvider(peerUid!))
         : const AsyncValue<bool>.data(false);
     final isPeerOnline = presenceAsync.asData?.value ?? false;
 
-    // 2. ĐÃ SỬA: Xóa "widget."
+    // Đã xóa "widget."
     final title = (thread.name?.isNotEmpty ?? false) ? thread.name! : fallbackName;
     final initials = title.isNotEmpty ? title.trim().characters.first.toUpperCase() : '?';
 
@@ -118,7 +136,7 @@ class _ChatConversationScaffold extends ConsumerWidget {
       ),
       body: ConversationContainer(
         threadId: threadId,
-        // 3. ĐÃ SỬA: Xóa "widget."
+        // Đã xóa "widget."
         fallbackName: fallbackName, // <-- Truyền fallbackName vào
       ),
     );
