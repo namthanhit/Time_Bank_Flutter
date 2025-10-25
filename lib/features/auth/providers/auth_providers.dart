@@ -47,6 +47,8 @@ final authedApiClientProvider = Provider<AuthApiClient>((ref) {
 
 /// Auth controller
 final authControllerProvider =
-StateNotifierProvider<AuthController, AuthState>((ref) {
-  return AuthController(ref.read(authRepoProvider));
+StateNotifierProvider<AuthController, AuthState>((ref) { // <-- "ref" ở đây
+
+  // 1. TRUYỀN "ref" VÀO HÀM TẠO
+  return AuthController(ref, ref.read(authRepoProvider));
 });

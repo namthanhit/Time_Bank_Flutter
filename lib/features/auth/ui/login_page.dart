@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // <-- Không cần nữa
 
 import '../providers/auth_providers.dart';
 import '../providers/auth_state.dart';
 import '../domain/validators.dart';
 import '../../Onboarding/ui/signup_page.dart';
+// import '../../chat/providers/chat_providers.dart'; // <-- Không cần nữa
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -20,11 +22,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pwdCtrl = TextEditingController();
   final _pwdFocus = FocusNode();
   bool _obscure = true;
-  final authControllerProvider =
-  StateNotifierProvider<AuthController, AuthState>(
-        (ref) => AuthController(ref.read(authRepoProvider)),
-  );
 
+  // ------------------------------------------------------------------
+  // 1. XÓA BỎ HOÀN TOÀN local "authControllerProvider" (dòng 30-33)
+  // ------------------------------------------------------------------
 
   @override
   void dispose() {
@@ -43,6 +44,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  // ------------------------------------------------------------------
+  // 2. XÓA BỎ HOÀN TOÀN hàm "_firebaseSignIn" (dòng 53-70)
+  // (Chúng ta đã chuyển nó vào AuthController)
+  // ------------------------------------------------------------------
+
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -51,31 +57,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final pwd = _pwdCtrl.text;
     final device = await _deviceModel();
 
-    await ref.read(authControllerProvider.notifier)
+    // Hàm này giờ sẽ gọi provider "global"
+    await ref
+        .read(authControllerProvider.notifier)
         .signIn(phone, pwd, deviceInfo: device);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Giờ sẽ watch provider "global"
     final state = ref.watch(authControllerProvider);
     final isLoading = state.loading;
 
-    // Lắng nghe thay đổi state để điều hướng / show lỗi
-    ref.listen<AuthState>(authControllerProvider, (prev, next) {
-      if (prev?.authenticated != true && next.authenticated) {
-        if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
-      }
-      if (next.error != null && next.error!.isNotEmpty) {
+    // Lắng nghe thay đổi state (CHỈ ĐỂ HIỂN THỊ LỖI)
+    ref.listen<AuthState>(authControllerProvider, (prev, next) async {
+
+      // 3. XÓA BỎ TOÀN BỘ logic "if (next.authenticated)"
+      // (AuthController đã xử lý)
+
+      // Chỉ giữ lại logic xử lý lỗi
+      if (next.error != null && (prev?.error != next.error)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!)),
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     });
 
     return Scaffold(
       body: Container(
+        // ... (Toàn bộ code UI của bạn giữ nguyên)
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
@@ -203,11 +217,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
-                            onPressed: isLoading
-                                ? null
-                                : () {
-                              // TODO: Forgot password
-                            },
+                            onPressed: isLoading ? null : () {},
                             child: const Text(
                               "Quên mật khẩu?",
                               style: TextStyle(

@@ -4,7 +4,7 @@ import '../../providers/chat_providers.dart';
 import '../widgets/chat_list.dart';
 
 class ChatListContainer extends ConsumerWidget {
-  final void Function(String threadId) onThreadTap;
+  final void Function(String threadId, String threadName) onThreadTap;
   const ChatListContainer({Key? key, required this.onThreadTap}) : super(key: key);
 
   @override
@@ -13,7 +13,8 @@ class ChatListContainer extends ConsumerWidget {
     return threadsAsync.when(
       data: (threads) => ChatList(
         threads: threads,
-        onTap: (t) => onThreadTap(t.id),
+        // SỬA LỖI Ở DÒNG DƯỚI ĐÂY:
+        onTap: (t) => onThreadTap(t.id, t.name ?? 'Chat'), // Truyền cả id và tên
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, st) => Center(child: Text('Lỗi tải danh sách: $e')),
