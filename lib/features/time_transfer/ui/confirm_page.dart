@@ -1,57 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
+import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
+import 'package:time_bank_flutter/features/time_transfer/domain/models/transfer_result.dart';
 import 'package:time_bank_flutter/features/time_transfer/ui/widgets/confirm_info_card.dart';
 import 'package:time_bank_flutter/features/time_transfer/ui/widgets/confirm_warning_box.dart';
 import 'package:time_bank_flutter/features/time_transfer/ui/widgets/confirm_action_buttons.dart';
 import 'package:time_bank_flutter/features/time_transfer/ui/widgets/pin_verification_page.dart';
 import 'package:time_bank_flutter/features/time_transfer/ui/widgets/transfer_success_page.dart';
-import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
 
 class ConfirmPage extends ConsumerWidget {
   const ConfirmPage({super.key});
+
+  String _formatDuration(Duration d) {
+    final hh = d.inHours.toString().padLeft(2, '0');
+    final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hh:$mm:$ss';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const colorPrimary = Color(0xFF003E77);
 
-    Future<void> onRequestOtp() async {
-      final notifier = ref.read(transactionFormProvider.notifier);
-      // Tell provider to send OTP; provider will use current preview transaction id
-      await notifier.sendOtp();
-      if (!context.mounted) return;
-      // show pin dialog and await result. The dialog will call the provided
-      // onSubmit, which should return true if the OTP is valid.
-      final result = await showDialog<bool>(
+    final formState = ref.watch(transactionFormProvider);
+    final notifier = ref.read(transactionFormProvider.notifier);
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final recipient = formState.lookup.value;
+
+    ref.listen<AsyncValue<TransferResult?>>(
+      transactionFormProvider.select((s) => s.execute),
+          (previous, next) {
+        if (!next.isLoading && !next.hasError && next.hasValue && next.value != null) {
+
+          final result = next.value!;
+
+
+          if(Navigator.of(context).canPop()) {
+            Navigator.pop(context);
+          }
+
+          ref.invalidate(accountBalanceProvider);
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TransferSuccessPage(
+                result: result,
+                recipientName: recipient?.fullName ?? 'Người nhận không xác định',
+                senderName: userProfile?.fullName ?? 'Bạn',
+                recipientPhone: formState.toPhone, // Truyền SĐT
+              ),
+            ),
+          );
+          notifier.reset();
+        }
+      },
+    );
+
+    Future<void> onContinue() async {
+      await showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (_) => PinVerificationDialog(
-          onSubmit: (otp) async {
-            // perform confirm and return success flag
-            await notifier.confirmWithOtp(otp);
-            final state = ref.read(transactionFormProvider);
-            final res = state.result.value;
-            return res?.success ?? false;
+          onSubmit: (pin) {
+            return notifier.executeTransfer(pin);
           },
         ),
       );
-
-      if (result == true && context.mounted) {
-        final currentUiData = ref.read(transactionUiDataProvider);
-        if (currentUiData != null) {
-          // Use push instead of pushReplacement so user can pop (or swipe back on iOS)
-          // to return to the previous screen and edit the transfer if needed.
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => TransferSuccessPage(data: currentUiData)),
-          );
-        } else {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        }
-      }
     }
 
-    final uiData = ref.watch(transactionUiDataProvider);
+    final Map<String, dynamic> uiData = {
+      'senderName': userProfile?.fullName ?? 'Bạn',
+      'senderAccount': userProfile?.phone ?? '...',
+      'recipientName': recipient?.fullName ?? '...',
+      'recipientAccount': formState.toPhone,
+      'amountFormatted': _formatDuration(formState.amount),
+      'note': formState.note.isEmpty ? '(Không có nội dung)' : formState.note,
+      'timestamp': DateTime.now(),
+      'fee': 'Miễn phí',
+      'senderAvatarUrl': userProfile?.avatarUrl, // Lấy avatar người gửi
+      'receiverAvatarUrl': null,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -74,21 +104,14 @@ class ConfirmPage extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (uiData != null)
-              ConfirmInfoCard(data: uiData)
-            else
-              const SizedBox.shrink(),
+            ConfirmInfoCard(data: uiData),
             const SizedBox(height: 16),
-            const ConfirmWarningBox(),
+            const ConfirmWarningBox(), // Giữ nguyên
             const SizedBox(height: 24),
-            if (uiData != null)
-              ConfirmActionButtons(
-                data: uiData,
-                onRequestOtp: onRequestOtp,
-                onBack: () => Navigator.pop(context),
-              )
-            else
-              const SizedBox.shrink(),
+            ConfirmActionButtons(
+              onContinue: onContinue, // Dùng hàm mới
+              onBack: () => Navigator.pop(context),
+            ),
           ],
         ),
       ),

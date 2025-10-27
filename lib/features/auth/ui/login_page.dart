@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-// import 'package:firebase_auth/firebase_auth.dart'; // <-- Không cần nữa
 
 import '../providers/auth_providers.dart';
 import '../providers/auth_state.dart';
 import '../domain/validators.dart';
 import '../../Onboarding/ui/signup_page.dart';
-// import '../../chat/providers/chat_providers.dart'; // <-- Không cần nữa
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});

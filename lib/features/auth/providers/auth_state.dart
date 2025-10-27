@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 1. Thêm import Firebase
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../data/auth_repository.dart';
-import '../../chat/providers/chat_providers.dart'; // 2. Thêm import chat provider
+import '../../chat/providers/chat_providers.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 @immutable
@@ -12,12 +12,10 @@ class AuthState {
   final bool authenticated;
   final String? error;
 
-  // bổ sung các trường cần cho client
   final String? accessToken;
   final String? refreshToken;
   final String? firebaseToken;
 
-  // thông tin user tối thiểu (tuỳ backend)
   final String? userId;
   final String? phone;
   final String? fullName;
@@ -66,9 +64,7 @@ class AuthState {
 }
 
 class AuthController extends StateNotifier<AuthState> {
-  // 3. SỬA HÀM TẠO
-  // Nhận 'ref' TRƯỚC, 'repo' SAU
-  // (để khớp với file auth_providers.dart)
+
   AuthController(this._ref, this.repo) : super(AuthState.initial());
   final Ref _ref;
   final AuthRepository repo;
@@ -102,7 +98,6 @@ class AuthController extends StateNotifier<AuthState> {
     return null;
   }
 
-  // 4. THÊM HÀM _firebaseSignIn VÀO ĐÂY
   Future<void> _firebaseSignIn(String? firebaseToken) async {
     final auth = FirebaseAuth.instance;
     try {
@@ -131,25 +126,19 @@ class AuthController extends StateNotifier<AuthState> {
       final firebaseToken = _pick<String>(res, 'firebase_token');
       final user          = _pickUser(res);
 
-      // BƯỚC 1: Đăng nhập Firebase (currentUser giờ là User B)
       await _firebaseSignIn(firebaseToken);
 
-      // BƯỚC 2: (FIX LỖI) Invalidate các provider đã bị cache "null"
-      // Phải làm điều này SAU KHI _firebaseSignIn
-      // VÀ TRƯỚC KHI gọi các provider khác
-      _ref.invalidate(currentUidProvider); // <-- Bắt buộc
-      _ref.invalidate(threadsProvider);    // <-- Bắt buộc
-      _ref.invalidate(messagesProvider);   // <-- (Cho an toàn)
 
-      // BƯỚC 3: Bây giờ mới gọi provider phụ thuộc (presence)
-      // (Nó sẽ read() currentUidProvider mới, đã có UID B)
-      // ignore: unused_result
+      _ref.invalidate(currentUidProvider);
+      _ref.invalidate(threadsProvider);
+      _ref.invalidate(messagesProvider);
+
+
       _ref.read(startPresenceProvider);
 
-      // BƯỚC 4: Cập nhật state để AuthWrapper điều hướng
       state = state.copyWith(
         loading: false,
-        authenticated: true, // <-- AuthWrapper sẽ bắt state này
+        authenticated: true,
         error: null,
         accessToken: accessToken,
         refreshToken: refreshToken,
@@ -175,35 +164,48 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> init() async {
+
+    state = state.copyWith(loading: true);
+
+    final isSignedIn = await repo.isSignedIn();
+
+    if (isSignedIn) {
+
+      try {
+        await signOut();
+      } catch (e) {
+        debugPrint("Lỗi init/signOut: $e");
+      } finally {
+        state = AuthState.initial().copyWith(loading: false);
+      }
+    } else {
+      state = AuthState.initial().copyWith(loading: false);
+    }
+  }
+
   Future<void> signOut() async {
     state = state.copyWith(loading: true);
 
-    // BƯỚC 1: Lấy UID của user HIỆN TẠI (trước khi logout)
     final String? currentUid = _ref.read(currentUidProvider);
 
     try {
-      // BƯỚC 2: Cập nhật trạng thái "offline" thủ công (RẤT QUAN TRỌNG)
       if (currentUid != null) {
         final db = FirebaseDatabase.instance;
         final userRef = db.ref('status/$currentUid');
 
-        // Ghi đè trạng thái 'offline'
         await userRef.set({
           'state': 'offline',
           'last_changed': ServerValue.timestamp,
         });
 
-        // Hủy bỏ onDisconnect() đã đăng ký trước đó
         await userRef.onDisconnect().cancel();
       }
 
-      // BƯỚC 3: Đăng xuất khỏi Firebase
       await FirebaseAuth.instance.signOut();
 
-      // BƯỚC 4: Đăng xuất khỏi backend (NestJS)
       await repo.signOut();
 
-      // BƯỚC 5: Invalidate (dọn dẹp state Riverpod)
       _ref.invalidate(startPresenceProvider);
       _ref.invalidate(currentUidProvider);
       _ref.invalidate(threadsProvider);
@@ -212,7 +214,6 @@ class AuthController extends StateNotifier<AuthState> {
     } catch (e) {
       debugPrint("Logout error: $e");
     } finally {
-      // BƯỚC 6: Reset state để AuthWrapper điều hướng
       state = AuthState.initial();
     }
   }

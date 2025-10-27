@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/transaction_ui_data.dart';
 
 class ConfirmActionButtons extends StatelessWidget {
-  final TransactionUiData data;
-  final VoidCallback onRequestOtp;
+  final VoidCallback onContinue;
   final VoidCallback? onBack;
 
   const ConfirmActionButtons(
-      {super.key, required this.data, required this.onRequestOtp, this.onBack});
+      {super.key, required this.onContinue, this.onBack});
 
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
     final colorLightBlue =
-        const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
+    const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
 
     return Row(
       children: [
-        // Nút "Quay lại" (nhỏ hơn)
         Expanded(
           flex: 1,
           child: Container(
@@ -35,6 +32,12 @@ class ConfirmActionButtons extends StatelessWidget {
               ],
             ),
             child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
               onPressed: () {
                 if (onBack != null) {
                   onBack!();
@@ -53,16 +56,13 @@ class ConfirmActionButtons extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(width: 12),
-
-        // Nút "Tiếp tục" (lớn hơn)
         Expanded(
           flex: 2,
           child: Container(
             height: 46,
             decoration: BoxDecoration(
-              color: colorLightBlue,
+              color: colorLightBlue, // Giữ màu xanh nhạt
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -81,9 +81,7 @@ class ConfirmActionButtons extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              onPressed: () {
-                onRequestOtp();
-              },
+              onPressed: onContinue,
               child: const Text(
                 'Tiếp tục',
                 style: TextStyle(
