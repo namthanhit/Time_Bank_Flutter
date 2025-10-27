@@ -17,11 +17,6 @@ class AuthRepository {
   String? _access; // giữ trong RAM
   String? get accessToken => _access;
 
-  /// Đăng nhập hệ thống:
-  /// - Gọi API /auth/login
-  /// - Lưu refresh token vào secure storage
-  /// - Ghi access token vào RAM
-  /// - TRẢ VỀ NGUYÊN payload từ server (có cả firebase_token)
   Future<Map<String, dynamic>> signIn({
     required String phone,
     required String password,
@@ -39,10 +34,10 @@ class AuthRepository {
     if (refresh != null) {
       await storage.write(key: _kRefresh, value: refresh);
     }
-    // data có thể chứa: user, access_token, refresh_token, expires_in, firebase_token
     return data;
   }
 
+  /// Đăng xuất...
   Future<void> signOut() async {
     final r = await storage.read(key: _kRefresh);
     if (r != null) {
@@ -54,24 +49,23 @@ class AuthRepository {
     await storage.delete(key: _kRefresh);
   }
 
+  /// Kiểm tra đăng nhập...
   Future<bool> isSignedIn() async =>
       (await storage.read(key: _kRefresh)) != null;
 
-  // tránh refresh song song
-  Future<String?>? _refreshing;
 
-  Future<String?> refreshIfPossible({String? deviceInfo}) {
+  Future<Map<String, dynamic>?>? _refreshing;
+
+  Future<Map<String, dynamic>?> refreshIfPossible({String? deviceInfo}) {
     _refreshing ??= _refreshInternal(deviceInfo: deviceInfo);
     return _refreshing!.whenComplete(() => _refreshing = null);
   }
 
-  /// Làm mới access/refresh token từ refresh token lưu trong secure storage.
-  /// Trả về access token mới (hoặc null nếu refresh thất bại).
-  Future<String?> _refreshInternal({String? deviceInfo}) async {
+  Future<Map<String, dynamic>?> _refreshInternal({String? deviceInfo}) async {
     final r = await storage.read(key: _kRefresh);
     if (r == null) return null;
     try {
-      final data = await api.refresh(r, deviceInfo: deviceInfo);
+      final data = await api.refresh(r, deviceInfo: deviceInfo); // data chứa mọi thứ
       final newAccess = data['access_token'] as String?;
       final newRefresh = data['refresh_token'] as String?;
 
@@ -79,16 +73,14 @@ class AuthRepository {
       if (newRefresh != null) {
         await storage.write(key: _kRefresh, value: newRefresh);
       }
-
-      // Nếu bạn muốn dùng firebase_token mới (nếu server trả),
-      // có thể đọc data['firebase_token'] ở nơi gọi hàm này.
-      return newAccess;
+      return data;
     } catch (_) {
       _access = null;
       await storage.delete(key: _kRefresh);
       return null;
     }
   }
+
 
   void setAccess(String? token) => _access = token;
 }

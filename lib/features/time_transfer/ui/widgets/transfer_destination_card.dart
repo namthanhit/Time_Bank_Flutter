@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/models/transaction_input.dart';
-import '../../domain/models/saved_account.dart';
+import 'package:time_bank_flutter/features/time_transfer/domain/models/recipient_info.dart';
 import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
-import 'saved_accounts_bottomsheet.dart';
 import 'time_picker_dialog.dart';
 
+
 class TransferDestinationCard extends ConsumerStatefulWidget {
-  final ValueChanged<TransactionInput>? onChanged;
-  final Duration accountBalance;
-  final ValueNotifier<bool> showErrorsNotifier;
-  final TransactionInput? value; // giá trị hiện tại được truyền từ container
+  final String phone;
+  final Duration amount;
+  final String note;
+  final AsyncValue<RecipientInfo?> lookupState;
+  final Function(String) onPhoneChanged;
+  final Function(String) onPhoneSubmitted;
+  final Function(Duration) onAmountChanged;
+  final Function(String) onNoteChanged;
+  final VoidCallback onLookupPressed;
 
   const TransferDestinationCard({
     super.key,
-    required this.accountBalance,
-    required this.showErrorsNotifier,
-    this.onChanged,
-    this.value,
+    required this.phone,
+    required this.amount,
+    required this.note,
+    required this.lookupState,
+    required this.onPhoneChanged,
+    required this.onPhoneSubmitted,
+    required this.onAmountChanged,
+    required this.onNoteChanged,
+    required this.onLookupPressed,
   });
 
   @override
@@ -27,81 +37,75 @@ class TransferDestinationCard extends ConsumerStatefulWidget {
 class _TransferDestinationCardState extends ConsumerState<TransferDestinationCard> {
   final TextEditingController accountController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
+  final TextEditingController noteController = TextEditingController(); // MỚI
   final FocusNode accountFocus = FocusNode();
-  Duration selectedTime = Duration.zero;
+
+  bool _isSyncingNote = false;
 
   final Color colorPrimary = const Color(0xFF003E77);
-  bool _listenerAttached = false;
-  // Khi widget được cập nhật bởi parent (container) chúng ta không muốn
-  // phát lại event onChanged (tránh vòng lặp). Dùng flag này để tạm ẩn emit.
-  bool _suppressEmit = false;
-
-  // Validation
-  bool get isAccountEmpty => accountController.text.trim().isEmpty;
-  bool get isNameEmpty => nameController.text.trim().isEmpty;
-  bool get isTimeEmpty => selectedTime == Duration.zero;
 
   @override
   void initState() {
     super.initState();
+    accountController.text = widget.phone;
+    noteController.text = widget.note;
+    _updateNameController(widget.lookupState);
+
     accountController.addListener(_onAccountChanged);
-    // Khi parent ban đầu truyền value, áp dụng vào controllers ngay lập tức
-    final incoming = widget.value;
-    if (incoming != null) {
-      accountController.text = incoming.recipientAccount;
-      nameController.text = incoming.recipientName;
-      selectedTime = incoming.amount;
+    noteController.addListener(_onNoteChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant TransferDestinationCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.phone != oldWidget.phone && widget.phone != accountController.text) {
+      accountController.text = widget.phone;
+    }
+
+    if (widget.note != oldWidget.note && widget.note != noteController.text) {
+      _isSyncingNote = true;      // <-- 1. Bật cờ
+      noteController.text = widget.note; // <-- 2. Gây ra listener
+      _isSyncingNote = false;     // <-- 3. Tắt cờ
+    }
+
+    if (widget.lookupState != oldWidget.lookupState) {
+      _updateNameController(widget.lookupState);
+    }
+  }
+
+  void _updateNameController(AsyncValue<RecipientInfo?> lookupState) {
+    final newName = lookupState.when(
+      data: (recipient) => recipient?.fullName ?? '',
+      loading: () => 'Đang tra cứu...',
+      error: (e, s) => 'Không tìm thấy',
+    );
+    if (nameController.text != newName) {
+      nameController.text = newName;
     }
   }
 
   @override
   void dispose() {
     accountController.removeListener(_onAccountChanged);
+    noteController.removeListener(_onNoteChanged);
     accountController.dispose();
     nameController.dispose();
+    noteController.dispose();
     accountFocus.dispose();
     super.dispose();
   }
 
-  void _onAccountChanged() async {
-    final input = accountController.text.trim();
-    if (input.isEmpty) return;
-
-    // Chỉ phát event khi người dùng thay đổi, không phát khi parent cập nhật giá trị
-    if (_suppressEmit) return;
-    _emitData();
+  void _onAccountChanged() {
+    widget.onPhoneChanged(accountController.text);
   }
 
-  void _emitData() {
-    if (_suppressEmit) return;
-    widget.onChanged?.call(TransactionInput(
-      recipientName: nameController.text,
-      recipientAccount: accountController.text,
-      amount: selectedTime,
-      note: '',
-    ));
-    // Không cập nhật controllers ở đây nữa — parent/TransferPage sẽ set lại
-    // giá trị bằng cách tái tạo widget với `value` và chúng ta chỉ dùng
-    // flag _suppressEmit khi parent cập nhật controllers từ bên ngoài.
+
+  void _onNoteChanged() {
+    if (_isSyncingNote) return; // <-- KIỂM TRA CỜ
+    widget.onNoteChanged(noteController.text);
   }
 
-  Future<void> _openSavedAccounts() async {
-    final savedAccount = await showModalBottomSheet<SavedAccount>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => const SavedAccountsBottomSheet(),
-    );
-    if (savedAccount != null) {
-      setState(() {
-        accountController.text = savedAccount.number;
-        nameController.text = savedAccount.name;
-        _emitData();
-      });
-    }
-  }
 
   Future<void> _openTimePicker() async {
     final Duration? picked = await showDialog<Duration>(
@@ -109,10 +113,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
       builder: (_) => const TimePickerDialogCustom(),
     );
     if (picked != null) {
-      setState(() {
-        selectedTime = picked;
-        _emitData();
-      });
+      widget.onAmountChanged(picked);
     }
   }
 
@@ -125,89 +126,51 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
   @override
   Widget build(BuildContext context) {
-    if (!_listenerAttached) {
-      _listenerAttached = true;
-      // Lắng nghe provider để reset form khi TransactionFormNotifier.reset() được gọi
-      ref.listen<TransactionFormState>(transactionFormProvider, (previous, next) {
-          final wasNonEmpty = previous != null && (
-            previous.recipient != null ||
-            (previous.note).isNotEmpty ||
-            previous.amount != Duration.zero ||
-            previous.preview.value != null
-          );
-          final isReset = (next.recipient == null) && (next.note.isEmpty) && (next.amount == Duration.zero) && (next.preview.value == null);
-        if (wasNonEmpty && isReset) {
-          if (mounted) {
-            setState(() {
-              accountController.clear();
-              nameController.clear();
-              selectedTime = Duration.zero;
-            });
-            FocusScope.of(context).requestFocus(accountFocus);
-          }
-        }
-      });
-    }
 
-    // Nếu parent truyền `value` mới, cập nhật controllers nhưng không phát onChanged
-    final incoming = widget.value;
-    if (incoming != null) {
-      if (accountController.text != incoming.recipientAccount || nameController.text != incoming.recipientName || selectedTime != incoming.amount) {
-        _suppressEmit = true;
-        accountController.text = incoming.recipientAccount;
-        nameController.text = incoming.recipientName;
-        selectedTime = incoming.amount;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _suppressEmit = false;
-        });
-      }
-    }
+    // Lấy số dư thật (để check)
+    final balanceAsync = ref.watch(accountBalanceProvider);
+    final balance = balanceAsync.value?.secs ?? 0;
+    final enough = widget.amount.inSeconds <= balance;
 
-    final balance = widget.accountBalance;
-    final enough = selectedTime <= balance;
-
-    return ValueListenableBuilder<bool>(
-      valueListenable: widget.showErrorsNotifier,
-      builder: (context, showErrors, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Chuyển đến',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-            ),
-            const SizedBox(height: 16),
-            _buildInputBox(
-              title: 'Số tài khoản',
-              hint: 'Nhập số tài khoản',
-              controller: accountController,
-              icon: Icons.person_outline,
-              onIconTap: _openSavedAccounts,
-              showError: showErrors && isAccountEmpty,
-              errorText: 'Số tài khoản không được để trống',
-              focusNode: accountFocus,
-            ),
-            const SizedBox(height: 20),
-            _buildInputBox(
-              title: 'Tên người nhận',
-              hint: 'Nhập tên người nhận',
-              controller: nameController,
-              showError: showErrors && isNameEmpty,
-              errorText: 'Tên người nhận không được để trống',
-            ),
-            const SizedBox(height: 20),
-            _buildTimeBox(balance, enough, showErrors && isTimeEmpty),
-            const SizedBox(height: 20),
-            _buildInputBox(
-              title: 'Nội dung chuyển',
-              hint: '',
-              controller: TextEditingController(text: 'LE THANH NAM chuyển: ${_formatDuration(selectedTime)}'),
-              maxLines: 2,
-              readOnly: true,
-            )
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Chuyển đến',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+        ),
+        const SizedBox(height: 16),
+        _buildInputBox(
+          title: 'Số tài khoản',
+          hint: 'Nhập số tài khoản (SĐT)',
+          controller: accountController,
+          icon: Icons.person_search_outlined,
+          onIconTap: widget.onLookupPressed,
+          onSubmitted: widget.onPhoneSubmitted,
+          focusNode: accountFocus,
+          keyboardType: TextInputType.phone,
+          errorText: widget.lookupState.hasError && !widget.lookupState.isLoading
+              ? widget.lookupState.error.toString()
+              : null,
+        ),
+        const SizedBox(height: 20),
+        _buildInputBox(
+          title: 'Tên người nhận',
+          hint: 'Tên hiển thị sau khi tra cứu',
+          controller: nameController,
+          readOnly: true,
+          isLoading: widget.lookupState.isLoading,
+        ),
+        const SizedBox(height: 20),
+        _buildTimeBox(enough),
+        const SizedBox(height: 20),
+        _buildInputBox(
+          title: 'Nội dung chuyển',
+          hint: 'Thêm nội dung (không bắt buộc)',
+          controller: noteController,
+          maxLines: 2,
+        )
+      ],
     );
   }
 
@@ -217,13 +180,17 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
     required TextEditingController controller,
     IconData? icon,
     VoidCallback? onIconTap,
+    Function(String)? onSubmitted,
     int maxLines = 1,
     bool readOnly = false,
-    bool showError = false,
-    String errorText = '',
+    bool isLoading = false,
+    String? errorText,
+    TextInputType? keyboardType,
     FocusNode? focusNode,
   }) {
     const colorPrimary = Color(0xFF003E77);
+    final bool showError = errorText != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -232,6 +199,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: showError ? Colors.red : Colors.transparent), // MỚI
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withAlpha((0.08 * 255).toInt()),
@@ -256,7 +224,9 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
                       focusNode: focusNode,
                       maxLines: maxLines,
                       readOnly: readOnly,
-                      onChanged: (_) => _emitData(),
+                      keyboardType: keyboardType,
+                      onSubmitted: onSubmitted, // MỚI
+                      // XOÁ: onChanged (đã chuyển lên addListener)
                       decoration: InputDecoration(
                         hintText: hint,
                         hintStyle: const TextStyle(color: Colors.black38),
@@ -266,7 +236,13 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
                       ),
                     ),
                   ),
-                  if (icon != null)
+                  if (isLoading)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else if (icon != null)
                     GestureDetector(
                       onTap: onIconTap,
                       child: Icon(icon, color: colorPrimary, size: 22),
@@ -288,8 +264,9 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
     );
   }
 
-  Widget _buildTimeBox(Duration balance, bool enough, bool showError) {
+  Widget _buildTimeBox(bool enough) {
     const colorPrimary = Color(0xFF003E77);
+    final bool showError = widget.amount == Duration.zero;
 
     return GestureDetector(
       onTap: _openTimePicker,
@@ -298,6 +275,9 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: (enough && !showError) ? Colors.transparent : Colors.red
+          ),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withAlpha((0.08 * 255).toInt()),
@@ -318,16 +298,16 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
               children: [
                 Expanded(
                   child: Text(
-                    _formatDuration(selectedTime),
+                    _formatDuration(widget.amount),
                     style: TextStyle(
                       fontSize: 16,
-                      color: enough && !showError ? colorPrimary : Colors.red,
+                      color: (enough && !showError) ? colorPrimary : Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Icon(Icons.access_time,
-                    color: enough && !showError ? colorPrimary : Colors.red,
+                    color: (enough && !showError) ? colorPrimary : Colors.red,
                     size: 22),
               ],
             ),
@@ -335,11 +315,11 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
               const Padding(
                 padding: EdgeInsets.only(top: 4),
                 child: Text(
-                  'Thời gian của bạn không đủ để thanh toán',
+                  'Số dư của bạn không đủ',
                   style: TextStyle(color: Colors.red, fontSize: 13),
                 ),
               ),
-            if (showError && selectedTime == Duration.zero)
+            if (showError && widget.amount == Duration.zero)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
                 child: Text(

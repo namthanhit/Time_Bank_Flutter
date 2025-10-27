@@ -1,55 +1,94 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/models/recipient.dart';
-import '../domain/models/transaction_request.dart';
-import '../domain/models/transaction_preview.dart';
-import '../domain/models/transaction_result.dart';
+import '../domain/models/recipient_info.dart';
+import '../domain/models/check_request.dart';
+import '../domain/models/create_transfer_request.dart';
+import '../domain/models/transfer_result.dart';
+import '../domain/models/wallet_balance.dart';
 import '../domain/repositories/transaction_repository.dart';
-import '../data/mock_transaction_repository.dart';
-import '../domain/models/transaction_ui_data.dart';
-import '../domain/models/saved_account.dart';
+import '../domain/repositories/wallet_repository.dart';
+import '../data/api_transaction_repository.dart';
+import '../data/api_wallet_repository.dart';
+import '../../auth/providers/auth_providers.dart';
 
-// Repository binding: swap to HttpTransactionRepository when backend ready
-final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  return MockTransactionRepository();
+
+// --- PROVIDERS ---
+
+// (1) WalletRepository
+final walletRepositoryProvider = Provider<WalletRepository>((ref) {
+  // SỬA LẠI: Dùng authedApiClientProvider
+  final authedApi = ref.watch(authedApiClientProvider);
+  return ApiWalletRepository(authedApi);
 });
 
-/// Form state kept in a StateNotifier
+// (2) TransactionRepository
+final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
+  // SỬA LẠI: Dùng authedApiClientProvider
+  final authedApi = ref.watch(authedApiClientProvider);
+  return ApiTransactionRepository(authedApi);
+});
+
+// (3) Provider số dư
+final accountBalanceProvider = FutureProvider<WalletBalance>((ref) {
+  // 1. Lắng nghe trạng thái xác thực
+  final isAuthenticated = ref.watch(authControllerProvider.select((s) => s.authenticated));
+
+  // 2. Nếu chưa đăng nhập, ném lỗi
+  if (!isAuthenticated) {
+    throw Exception('Chưa đăng nhập');
+  }
+
+  // 3. (Giữ nguyên) Lấy repo và gọi API
+  //    (Sẽ chạy lại khi isAuthenticated = true)
+  final repo = ref.watch(walletRepositoryProvider);
+  return repo.getMyWallet();
+});
+
+// (4) Provider tên người gửi (lấy từ auth provider)
+final senderNameProvider = Provider<String>((ref) {
+  final userProfileAsync = ref.watch(userProfileProvider);
+  return userProfileAsync.when(
+    data: (profile) => profile.fullName,
+    loading: () => 'Đang tải...',
+    error: (e, st) => 'Bạn', // Tên dự phòng
+  );
+});
+
+// --- STATE NOTIFIER (Giữ nguyên như cũ) ---
+
 class TransactionFormState {
-  final Recipient? recipient;
+  // ... (giữ nguyên)
+  final String toPhone;
   final Duration amount;
   final String note;
-  final DateTime? scheduledAt;
-  final AsyncValue<TransactionPreview?> preview; // null = no preview yet
-  final bool sendingOtp;
-  final AsyncValue<TransactionResult?> result; // result after confirm
+  final AsyncValue<RecipientInfo?> lookup;
+  final AsyncValue<bool> check;
+  final AsyncValue<TransferResult?> execute;
 
   TransactionFormState({
-    this.recipient,
+    this.toPhone = '',
     this.amount = const Duration(),
     this.note = '',
-    this.scheduledAt,
-    this.preview = const AsyncValue.data(null),
-    this.sendingOtp = false,
-    this.result = const AsyncValue.data(null),
+    this.lookup = const AsyncValue.data(null),
+    this.check = const AsyncValue.data(false),
+    this.execute = const AsyncValue.data(null),
   });
 
   TransactionFormState copyWith({
-    Recipient? recipient,
+    String? toPhone,
     Duration? amount,
     String? note,
-    DateTime? scheduledAt,
-    AsyncValue<TransactionPreview?>? preview,
-    bool? sendingOtp,
-    AsyncValue<TransactionResult?>? result,
+    AsyncValue<RecipientInfo?>? lookup,
+    AsyncValue<bool>? check,
+    AsyncValue<TransferResult?>? execute,
   }) {
+    // ... (logic copyWith giữ nguyên)
     return TransactionFormState(
-      recipient: recipient ?? this.recipient,
+      toPhone: toPhone ?? this.toPhone,
       amount: amount ?? this.amount,
       note: note ?? this.note,
-      scheduledAt: scheduledAt ?? this.scheduledAt,
-      preview: preview ?? this.preview,
-      sendingOtp: sendingOtp ?? this.sendingOtp,
-      result: result ?? this.result,
+      lookup: lookup ?? this.lookup,
+      check: check ?? this.check,
+      execute: execute ?? this.execute,
     );
   }
 }
@@ -58,124 +97,100 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   final Ref ref;
   TransactionFormNotifier(this.ref) : super(TransactionFormState());
 
-  void setRecipient(Recipient r) => state = state.copyWith(recipient: r);
+  // ... (Tất cả logic (lookup, check, execute) giữ nguyên)
 
-  void setAmount(Duration d) => state = state.copyWith(amount: d);
+  void setToPhone(String phone) => state = state.copyWith(toPhone: phone, lookup: const AsyncValue.data(null), check: const AsyncValue.data(false));
+  void setAmount(Duration d) => state = state.copyWith(amount: d, check: const AsyncValue.data(false));
+  void setNote(String note) => state = state.copyWith(note: note, check: const AsyncValue.data(false));
 
-  void setNote(String note) => state = state.copyWith(note: note);
+  Future<void> lookupRecipient() async {
+    if (state.toPhone.isEmpty) return;
+    state = state.copyWith(lookup: const AsyncValue.loading());
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      final recipient = await repo.lookupRecipient(state.toPhone);
+      state = state.copyWith(lookup: AsyncValue.data(recipient));
+      _updateDefaultNote(recipient.fullName);
+    } catch (e, st) {
+      state = state.copyWith(lookup: AsyncValue.error(e, st));
+    }
+  }
 
-  void setScheduledAt(DateTime dt) => state = state.copyWith(scheduledAt: dt);
-
-  /// Build a default note using the repository and set it on the form state.
-  Future<void> setNoteFromSender(String senderName) async {
-    final repo = ref.read(transactionRepositoryProvider);
-    final recipient = state.recipient;
+  Future<void> submitCheck() async {
+    final recipient = state.lookup.value;
     if (recipient == null) return;
-    final formattedAmount = (() {
-      final d = state.amount;
-      final hh = d.inHours.toString().padLeft(2, '0');
-      final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
-      final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
-      return '$hh:$mm:$ss';
-    })();
 
-    final note = repo.buildDefaultNote(senderName, recipient.name, formattedAmount);
+    final req = CheckRequest(
+      toPhone: state.toPhone,
+      secs: state.amount.inSeconds,
+    );
+
+    state = state.copyWith(check: const AsyncValue.loading());
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      await repo.checkTransaction(req);
+      state = state.copyWith(check: const AsyncValue.data(true));
+    } catch (e, st) {
+      state = state.copyWith(check: AsyncValue.error(e, st));
+    }
+  }
+
+  Future<void> executeTransfer(String pin) async {
+    print('NOTIFIER: executeTransfer called with PIN.'); // <-- THÊM
+    final recipient = state.lookup.value;
+    if (recipient == null || !state.check.hasValue || !state.check.value!) {
+      print('NOTIFIER: Pre-conditions failed. Aborting.'); // <-- THÊM
+      return;
+    }
+
+    final req = CreateTransferRequest(
+      toPhone: state.toPhone,
+      secs: state.amount.inSeconds,
+      note: state.note.isEmpty ? null : state.note,
+      pin: pin,
+    );
+
+    state = state.copyWith(execute: const AsyncValue.loading());
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      print('NOTIFIER: Calling repository executeTransfer...'); // <-- THÊM
+      final result = await repo.executeTransfer(req);
+      print('NOTIFIER: Repository call successful. Result: ${result.id}'); // <-- THÊM
+      // Chỉ set state data nếu widget còn mounted (an toàn hơn)
+      if (mounted) {
+        state = state.copyWith(execute: AsyncValue.data(result));
+      }
+    } catch (e, st) {
+      print('NOTIFIER: Repository call failed: $e'); // <-- THÊM
+      // Chỉ set state error nếu widget còn mounted
+      if (mounted) {
+        state = state.copyWith(execute: AsyncValue.error(e, st));
+      }
+      // Quan trọng: Ném lại lỗi để PinVerificationDialog bắt được
+      throw e;
+    }
+  }
+
+  void _updateDefaultNote(String recipientName) {
+    final repo = ref.read(transactionRepositoryProvider);
+    final senderName = ref.read(senderNameProvider);
+    final d = state.amount;
+    final hh = d.inHours.toString().padLeft(2, '0');
+    final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
+    final formattedAmount = '$hh:$mm:$ss';
+
+    final note = repo.buildDefaultNote(senderName, recipientName, formattedAmount);
     state = state.copyWith(note: note);
   }
 
-  /// Create preview via repository
-  Future<void> submitPreview() async {
-    final repo = ref.read(transactionRepositoryProvider);
-    final recipient = state.recipient;
-    if (recipient == null) {
-      state = state.copyWith(preview: AsyncValue.error('Vui lòng nhập thông tin người nhận', StackTrace.current));
-      return;
-    }
-    final req = TransactionRequest(
-      recipient: recipient,
-      amount: state.amount,
-      note: state.note,
-      scheduledAt: state.scheduledAt,
-    );
-    state = state.copyWith(preview: const AsyncValue.loading());
-    try {
-      final preview = await repo.createPreview(req);
-      state = state.copyWith(preview: AsyncValue.data(preview));
-    } catch (e, st) {
-      state = state.copyWith(preview: AsyncValue.error(e, st));
-    }
-  }
-
-  /// Send OTP for current preview transactionId
-  Future<void> sendOtp() async {
-    final repo = ref.read(transactionRepositoryProvider);
-    final preview = state.preview.value;
-    if (preview == null) {
-      return;
-    }
-    state = state.copyWith(sendingOtp: true);
-    try {
-      await repo.sendOtp(preview.transactionId);
-    } catch (e) {
-      // for mock we ignore
-    } finally {
-      state = state.copyWith(sendingOtp: false);
-    }
-  }
-
-  /// Verify OTP and finalize
-  Future<void> confirmWithOtp(String otp) async {
-    final repo = ref.read(transactionRepositoryProvider);
-    final preview = state.preview.value;
-    if (preview == null) return;
-    state = state.copyWith(result: const AsyncValue.loading());
-    try {
-      final res = await repo.confirmWithOtp(preview.transactionId, otp);
-      state = state.copyWith(result: AsyncValue.data(res));
-    } catch (e, st) {
-      state = state.copyWith(result: AsyncValue.error(e, st));
-    }
-  }
-
-  /// Reset state (after success)
   void reset() {
     state = TransactionFormState();
   }
 }
 
-final transactionFormProvider = StateNotifierProvider<TransactionFormNotifier, TransactionFormState>(
+// (5) Cung cấp Notifier (giữ nguyên)
+final transactionFormProvider =
+StateNotifierProvider<TransactionFormNotifier, TransactionFormState>(
       (ref) => TransactionFormNotifier(ref),
 );
-
-/// UI-level mapping from form state + preview -> TransactionUiData
-final transactionUiDataProvider = Provider<TransactionUiData?>((ref) {
-  final state = ref.watch(transactionFormProvider);
-  final preview = state.preview.value;
-  if (preview == null) return null;
-  return TransactionUiData(
-    recipientName: preview.recipientName,
-    recipientAccount: preview.recipientAccount,
-    timeAmount: preview.displayAmount,
-    fee: preview.feeDisplay,
-    transactionId: preview.transactionId,
-    note: state.note,
-  );
-});
-
-/// Provide saved accounts from repository (mock or http)
-final savedAccountsProvider = FutureProvider<List<SavedAccount>>((ref) async {
-  final repo = ref.read(transactionRepositoryProvider);
-  return repo.getSavedAccounts();
-});
-
-/// Current account balance for the sender. Can be made mutable with StateProvider when needed.
-final accountBalanceProvider = Provider<Duration>((ref) {
-  // default mock balance: 10h45m
-  return const Duration(hours: 10, minutes: 45);
-});
-
-/// Mock sender name provider — replace with real profile provider later.
-final senderNameProvider = Provider<String>((ref) {
-  return 'LE THANH NAM';
-});
-

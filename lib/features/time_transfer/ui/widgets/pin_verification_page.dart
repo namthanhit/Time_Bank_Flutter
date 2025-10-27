@@ -1,10 +1,9 @@
-// no timer/async needed here anymore
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 class PinVerificationDialog extends StatefulWidget {
-  /// onSubmit should return true when the OTP is valid.
-  final Future<bool> Function(String otp)? onSubmit;
+
+  final Future<void> Function(String pin)? onSubmit;
 
   const PinVerificationDialog({super.key, this.onSubmit});
 
@@ -15,7 +14,8 @@ class PinVerificationDialog extends StatefulWidget {
 class _PinVerificationDialogState extends State<PinVerificationDialog> {
   final TextEditingController _controller = TextEditingController();
   bool _isSubmitting = false;
-  bool _hasError = false;
+
+  String _errorMessage = '';
 
   @override
   void dispose() {
@@ -26,7 +26,8 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
-  final double sheetHeight = MediaQuery.of(context).size.height * 0.55;
+    final double sheetHeight = MediaQuery.of(context).size.height * 0.55;
+    final bool hasError = _errorMessage.isNotEmpty && !_isSubmitting;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -53,9 +54,8 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
               ),
               const SizedBox(height: 36),
 
-              // 🔹 Các ô nhập mã PIN — gần nhau hơn
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10), // Đẩy ô PIN vào giữa một chút
                 child: PinCodeTextField(
                   appContext: context,
                   length: 6,
@@ -64,8 +64,8 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
                   animationType: AnimationType.fade,
                   obscureText: true,
                   obscuringWidget: Container(
-                    width: 30,
-                    height: 30,
+                    width: 15,
+                    height: 15,
                     decoration: const BoxDecoration(
                       color: colorPrimary,
                       shape: BoxShape.circle,
@@ -77,32 +77,52 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
                     fieldWidth: 30,
                     activeColor: colorPrimary,
                     selectedColor: colorPrimary,
-                    inactiveColor: Colors.grey.shade300, // 🔹 Các ô tròn gần nhau hơn
+                    inactiveColor: hasError ? Colors.red : Colors.grey.shade300,
                   ),
-                  onChanged: (_) {},
+                  onChanged: (_) {
+                    if (hasError) {
+                      setState(() {
+                        _errorMessage = '';
+                      });
+                    }
+                  },
                   onCompleted: (value) async {
+                    if (_isSubmitting) return;
+
+                    print('PIN DIALOG: onCompleted called with value: $value');
                     setState(() {
                       _isSubmitting = true;
-                      _hasError = false;
+                      _errorMessage = '';
                     });
 
                     bool success = false;
+                    String errorMsg = '';
+
                     try {
-                      success = await (widget.onSubmit?.call(value) ?? Future.value(false));
-                    } catch (_) {
+                      print('PIN DIALOG: Calling widget.onSubmit...');
+                      await widget.onSubmit?.call(value);
+                      print('PIN DIALOG: widget.onSubmit finished successfully.');
+                      success = true;
+
+
+                    } catch (e) {
+                      print('PIN DIALOG: Error caught: $e');
                       success = false;
+                      errorMsg = (e is Exception)
+                          ? e.toString().replaceFirst("Exception: ", "")
+                          : 'Lỗi không xác định';
                     }
 
-                    if (!mounted) return;
-                    setState(() {
-                      _isSubmitting = false;
-                    });
 
-                    if (success) {
-                      Navigator.of(context).pop(true);
-                    } else {
+                    if (!mounted) {
+                      print('PIN DIALOG: Widget unmounted after await, skipping UI updates.');
+                      return;
+                    }
+
+                    if (!success) {
                       setState(() {
-                        _hasError = true;
+                        _isSubmitting = false;
+                        _errorMessage = errorMsg;
                       });
                       _controller.clear();
                     }
@@ -116,10 +136,10 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
               ] else ...[
                 const SizedBox(height: 24),
                 Text(
-                  _hasError ? 'Nhập sai mã PIN' : 'Vui lòng nhập mã PIN để xác thực giao dịch',
+                  hasError ? _errorMessage : 'Vui lòng nhập mã PIN để xác thực giao dịch',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: _hasError ? Colors.red : Colors.black87,
+                    color: hasError ? Colors.red : Colors.black87,
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                   ),
