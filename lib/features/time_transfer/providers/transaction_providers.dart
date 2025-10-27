@@ -189,8 +189,7 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   }
 }
 
-// (5) Cung cấp Notifier (giữ nguyên)
 final transactionFormProvider =
-StateNotifierProvider<TransactionFormNotifier, TransactionFormState>(
+AutoDisposeStateNotifierProvider<TransactionFormNotifier, TransactionFormState>(
       (ref) => TransactionFormNotifier(ref),
 );

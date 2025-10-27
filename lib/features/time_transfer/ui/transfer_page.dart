@@ -116,6 +116,7 @@ class TransferPage extends ConsumerWidget {
               onAmountChanged: notifier.setAmount,
               onNoteChanged: notifier.setNote,
               onLookupPressed: notifier.lookupRecipient,
+              showFieldErrors: formState.check.hasError,
             ),
             const SizedBox(height: 32),
 
