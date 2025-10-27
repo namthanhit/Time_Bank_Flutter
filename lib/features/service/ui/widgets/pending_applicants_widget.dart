@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../data/mock_service_repository.dart';
+
 class PendingApplicantsWidget extends StatefulWidget {
-  final int serviceId;
+  final String serviceId;
 
   const PendingApplicantsWidget({
     super.key,
@@ -36,7 +37,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
   }
 
   void _onDataChanged() {
-    print('📢 PendingApplicantsWidget received data change notification');
+    debugPrint('📢 PendingApplicantsWidget received data change notification');
     if (mounted) {
       setState(() {});
     }
@@ -60,9 +61,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
   @override
   Widget build(BuildContext context) {
     // Debug logging
-    final allApplicants = MockServiceRepository.mockApplicants;
-    final serviceApplicants =
-        allApplicants.where((a) => a['serviceId'] == widget.serviceId).toList();
+    // access applicants via MockServiceRepository.mockApplicants when needed
     // print(
     //     '🔍 PendingApplicantsWidget build for serviceId: ${widget.serviceId}');
     // print('📊 Total applicants: ${allApplicants.length}');
@@ -71,14 +70,15 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
     // Lọc ứng viên pending của service cụ thể
     final servicePendingApplicants = MockServiceRepository.mockApplicants
         .where((a) =>
-            a['status'] == 'pending' && a['serviceId'] == widget.serviceId)
+            a['status'] == 'pending' &&
+            a['serviceId'].toString() == widget.serviceId)
         .toList();
     // print(
     //     '📊 Pending applicants for this service: ${servicePendingApplicants.length}');
 
     // Debug: In ra chi tiết từng applicant
     for (var applicant in servicePendingApplicants) {
-      print(
+      debugPrint(
           '👤 Applicant: ${applicant['name']}, Status: ${applicant['status']}, ServiceId: ${applicant['serviceId']}');
     }
 
@@ -91,7 +91,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
           specialization.contains(_searchQuery.toLowerCase());
     }).toList();
 
-    print('🔍 Filtered applicants: ${filteredApplicants.length}');
+    debugPrint('🔍 Filtered applicants: ${filteredApplicants.length}');
 
     return Column(
       children: [
@@ -146,12 +146,12 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
         Expanded(
           child: Builder(
             builder: (context) {
-              print(
+              debugPrint(
                   '🎯 UI Decision: filteredApplicants.isEmpty = ${filteredApplicants.isEmpty}');
-              print('🎯 Search query: "$_searchQuery"');
+              debugPrint('🎯 Search query: "$_searchQuery"');
 
               if (filteredApplicants.isEmpty) {
-                print('📺 Showing empty state');
+                debugPrint('📺 Showing empty state');
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -177,13 +177,13 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
                   ),
                 );
               } else {
-                print(
+                debugPrint(
                     '📺 Showing ListView with ${filteredApplicants.length} items');
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: filteredApplicants.length,
                   itemBuilder: (context, index) {
-                    print(
+                    debugPrint(
                         '🏗️ Building card for applicant ${index}: ${filteredApplicants[index]['name']}');
                     return _buildApplicantCard(
                         context, filteredApplicants[index]);
@@ -435,7 +435,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
       BuildContext context, Map<String, dynamic> applicant) {
     // Lấy thông tin service từ serviceId
     final service =
-        MockServiceRepository.getServiceById(applicant['serviceId'] ?? 0);
+        MockServiceRepository.getServiceById(applicant['serviceId']);
     final serviceName = service?.title ?? 'Chưa có thông tin';
     final duration = service != null
         ? MockServiceRepository.formatDuration(service.minSlotMinutes)

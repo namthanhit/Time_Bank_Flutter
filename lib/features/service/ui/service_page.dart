@@ -146,7 +146,7 @@ class _ServicePageState extends State<ServicePage> {
                           query: _query,
                           filter: null,
                           socialFilter: _myFilter,
-                          userId: 11, // ID của user hiện tại
+                          userId: '11', // ID của user hiện tại (string)
                           isMyServiceTab: true,
                         ),
                       ),

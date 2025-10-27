@@ -3,7 +3,7 @@ import 'widgets/community_service_detail_page.dart';
 import 'widgets/my_service_detail_page.dart';
 
 class ServiceDetailPage extends StatelessWidget {
-  final int serviceId;
+  final String serviceId;
   final bool isMyService;
 
   const ServiceDetailPage({

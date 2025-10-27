@@ -7,7 +7,7 @@ import 'service_detail_header.dart';
 import '../../domain/models/service.dart';
 
 class CommunityServiceDetailPage extends ConsumerStatefulWidget {
-  final int serviceId;
+  final String serviceId;
 
   const CommunityServiceDetailPage({
     super.key,
@@ -43,26 +43,26 @@ class _CommunityServiceDetailPageState
   // Load trạng thái ứng tuyển từ MockServiceRepository
   void _loadApplicationStatus() {
     final status = MockServiceRepository.getApplicationStatus(widget.serviceId);
-   // print(
-     //   '🔍 Loading status for serviceId ${widget.serviceId}: $status'); // Debug
+    // print(
+    //   '🔍 Loading status for serviceId ${widget.serviceId}: $status'); // Debug
     setState(() {
       switch (status) {
         case 'pending':
           _requestState = 1;
-         // print('📤 Set to pending state (1)');
+          // print('📤 Set to pending state (1)');
           break;
         case 'approved':
           _requestState = 3; // approved state
-         // print('✅ Set to approved state (3)');
+          // print('✅ Set to approved state (3)');
           break;
         case 'cancelled':
           _requestState = 2; // cancelled state (hiển thị "Đã hủy")
-         // print('❌ Set to cancelled state (2)');
+          // print('❌ Set to cancelled state (2)');
           break;
         case 'none':
         default:
           _requestState = 0; // not requested (hiển thị "Chấp nhận công việc")
-          //print('⚪ Set to not requested state (0)');
+        //print('⚪ Set to not requested state (0)');
       }
     });
   }
@@ -74,16 +74,7 @@ class _CommunityServiceDetailPageState
     _loadApplicationStatus();
   }
 
-  // Hàm reset toàn bộ trạng thái (chỉ dùng cho mục đích test)
-  Future<void> _resetAllStates() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // 🔥 Xóa toàn bộ dữ liệu đã lưu
-    setState(() {
-      _requestState = 0;
-      _isFavorited = false;
-    });
-    debugPrint('✅ Đã reset toàn bộ SharedPreferences (test).');
-  }
+  // (test helper removed) If you need a reset helper keep it in test/debug-only code.
 
   @override
   void dispose() {
@@ -132,8 +123,8 @@ class _CommunityServiceDetailPageState
         default:
           _requestState = 0;
       }
-     // print(
-        //  '📱 Loaded from MockServiceRepository: $applicationStatus -> $_requestState');
+      // print(
+      //  '📱 Loaded from MockServiceRepository: $applicationStatus -> $_requestState');
 
       // Không fallback sang SharedPreferences nữa, vì MockServiceRepository là source of truth
     });
@@ -151,7 +142,7 @@ class _CommunityServiceDetailPageState
 
   @override
   Widget build(BuildContext context) {
-   // print('🔄 Building UI with _requestState: $_requestState'); // Debug
+    // print('🔄 Building UI with _requestState: $_requestState'); // Debug
     final serviceAsync = ref.watch(serviceByIdProvider(widget.serviceId));
 
     return Scaffold(
@@ -542,7 +533,7 @@ class _CommunityServiceDetailPageState
   }
 
   Widget _buildActionRow(Service service) {
-   // print('🔧 Building action row with _requestState: $_requestState'); // Debug
+    // print('🔧 Building action row with _requestState: $_requestState'); // Debug
 
     // Đã được duyệt
     if (_requestState == 3) {
@@ -923,20 +914,12 @@ class _CommunityServiceDetailPageState
   void _cancelRequest() {
     //print('🗑️ Cancelling request for serviceId: ${widget.serviceId}');
 
-    // Debug: kiểm tra applicants trước khi xóa
-    final applicantsBefore = MockServiceRepository.mockApplicants
-        .where((a) => a['serviceId'] == widget.serviceId)
-        .toList();
-    //print('📋 Applicants before cancellation: ${applicantsBefore.length}');
+    // Debug: (applicants info available via MockServiceRepository.mockApplicants)
 
     // Hủy yêu cầu qua MockServiceRepository
     MockServiceRepository.cancelApplication(widget.serviceId);
 
-    // Debug: kiểm tra applicants sau khi xóa
-    final applicantsAfter = MockServiceRepository.mockApplicants
-        .where((a) => a['serviceId'] == widget.serviceId)
-        .toList();
-    //print('📋 Applicants after cancellation: ${applicantsAfter.length}');
+    // Debug: (applicants info available via MockServiceRepository.mockApplicants)
 
     setState(() {
       _requestState = 2;

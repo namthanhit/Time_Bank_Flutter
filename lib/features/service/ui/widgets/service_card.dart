@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/service.dart';
+import '../../data/mock_service_repository.dart';
 import '../../ui/service_detail_page.dart';
 
 class ServiceCard extends StatelessWidget {
@@ -31,6 +32,11 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Define chip sizing used in this card so height/width are consistent
+    const double chipWidth = 60.0;
+    const double chipHeight = 16.0;
+    final bool hasMultipleSkills =
+        (service.skillIds?.length ?? (service.skillId != null ? 1 : 0)) > 1;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -268,7 +274,9 @@ class ServiceCard extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 14),
+                // Reduce vertical gap when card shows multi-line specialization
+                // so avatar/name and title/time don't look too far apart.
+                SizedBox(height: hasMultipleSkills ? 6 : 14),
 
                 // Title + Job type (bên cạnh nhau)
                 Row(
@@ -286,7 +294,20 @@ class ServiceCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _buildSpecializationTag(service.providerSpecialization),
+                    // Use fixed chipWidth/chipHeight so chips look uniform.
+                    SizedBox(
+                      width: chipWidth,
+                      child: _buildSpecializationTag(
+                        context,
+                        MockServiceRepository.skillNamesAsString(
+                            service.skillIds ??
+                                (service.skillId != null
+                                    ? [service.skillId!]
+                                    : null)),
+                        chipWidth: chipWidth,
+                        chipHeight: chipHeight,
+                      ),
+                    ),
                   ],
                 ),
 
@@ -369,7 +390,8 @@ class ServiceCard extends StatelessWidget {
     return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:00';
   }
 
-  Widget _buildSpecializationTag(String? specialization) {
+  Widget _buildSpecializationTag(BuildContext context, String? specialization,
+      {double chipWidth = 96.0, double chipHeight = 28.0}) {
     if (specialization == null || specialization.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -381,7 +403,7 @@ class ServiceCard extends StatelessWidget {
         child: const Text(
           'Khác',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             color: Color(0xFF003E77),
           ),
         ),
@@ -406,7 +428,7 @@ class ServiceCard extends StatelessWidget {
         child: const Text(
           'Khác',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             color: Color(0xFF000000),
           ),
         ),
@@ -415,18 +437,25 @@ class ServiceCard extends StatelessWidget {
 
     // Nếu chỉ có 1 thẻ, hiển thị bình thường
     if (tags.length == 1) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE0DC06),
-          borderRadius: BorderRadius.circular(5),
-          // border: Border.all(color: const Color(0xFF003E77)),
-        ),
-        child: Text(
-          tags[0],
-          style: const TextStyle(
-            fontSize: 8,
-            color: Color(0xFF000000),
+      return SizedBox(
+        width: chipWidth,
+        height: chipHeight,
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0DC06),
+            borderRadius: BorderRadius.circular(5),
+            // border: Border.all(color: const Color(0xFF003E77)),
+          ),
+          child: Text(
+            tags[0],
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF000000),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       );
@@ -436,42 +465,59 @@ class ServiceCard extends StatelessWidget {
     // SỬ DỤNG IntrinsicWidth ĐỂ BUỘC CÁC CON CÓ CHIỀU RỘNG BẰNG NHAU
     return IntrinsicWidth(
       child: Column(
-        // THAY ĐỔI crossAxisAlignment THÀNH stretch
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Thẻ đầu tiên
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0DC06),
-              borderRadius: BorderRadius.circular(5),
-              // border: Border.all(color: const Color(0xFF003E77)),
-            ),
-            child: Text(
-              tags[0],
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 8,
-                color: Color(0xFF000000),
+          SizedBox(
+            width: chipWidth,
+            height: chipHeight,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0DC06),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                tags[0],
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF000000),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 2),
-          // Thẻ "...+số"
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFFE0DC06),
-              borderRadius: BorderRadius.circular(5),
-              // border: Border.all(color: Colors.grey.withOpacity(0.6)),
-            ),
-            child: Text(
-              '...+${tags.length - 1}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 8,
-                color: Color(0xFF000000),
-                fontStyle: FontStyle.italic,
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => ServiceDetailPage(
+                  serviceId: service.id,
+                  isMyService: isMyService,
+                ),
+              ));
+            },
+            child: SizedBox(
+              width: chipWidth,
+              height: chipHeight,
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0DC06),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '...+${tags.length - 1}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF000000),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ),
             ),
           ),

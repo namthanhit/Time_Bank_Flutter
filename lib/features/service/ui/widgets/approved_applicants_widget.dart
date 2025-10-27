@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_service_repository.dart';
 
 class ApprovedApplicantsWidget extends StatefulWidget {
-  final int serviceId;
+  final String serviceId;
 
   const ApprovedApplicantsWidget({
     super.key,
@@ -60,24 +60,19 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
   @override
   Widget build(BuildContext context) {
     // Debug logging
-    final allApplicants = MockServiceRepository.mockApplicants;
-    final serviceApplicants =
-        allApplicants.where((a) => a['serviceId'] == widget.serviceId).toList();
+    // Use MockServiceRepository.mockApplicants directly when needed
     //print(
     //  '🔍 ApprovedApplicantsWidget build for serviceId: ${widget.serviceId}');
     // print('📊 Total applicants: ${allApplicants.length}');
     //print('📊 Applicants for this service: ${serviceApplicants.length}');
 
-    // Debug: In ra chi tiết từng applicant của service này
-    for (var applicant in serviceApplicants) {
-      // print(
-      //  '👤 Applicant: ${applicant['name']}, Status: ${applicant['status']}, RequestType: ${applicant['requestType']}, ServiceId: ${applicant['serviceId']}');
-    }
+    // Debug: applicants available via MockServiceRepository.mockApplicants
 
     // Lọc ứng viên approved của service cụ thể
     final serviceApprovedApplicants = MockServiceRepository.mockApplicants
         .where((a) =>
-            a['status'] == 'approved' && a['serviceId'] == widget.serviceId)
+            a['status'] == 'approved' &&
+            a['serviceId'].toString() == widget.serviceId)
         .toList();
 
     // print(
@@ -189,9 +184,7 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                     try {
                       return _buildApplicantCard(
                           context, filteredApplicants[index]);
-                    } catch (e, stackTrace) {
-                      // print('❌ Error building approved card: $e');
-                      // print('📍 Stack trace: $stackTrace');
+                    } catch (e) {
                       return Container(
                         height: 80,
                         margin: const EdgeInsets.only(bottom: 12),
@@ -698,7 +691,7 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
               title,
               style: const TextStyle(
                 fontSize: 16,
-               // fontWeight: FontWeight.w600,
+                // fontWeight: FontWeight.w600,
                 color: Color(0xFF003E77),
               ),
             ),

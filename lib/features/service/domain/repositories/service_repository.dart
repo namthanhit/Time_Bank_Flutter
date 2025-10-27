@@ -6,9 +6,9 @@ abstract class ServiceRepository {
   /// Lấy danh sách dịch vụ đang public
   Future<List<Service>> fetchPublicServices();
 
-  /// Lấy chi tiết dịch vụ theo ID
-  Future<Service?> fetchServiceById(int id);
+  /// Lấy chi tiết dịch vụ theo ID (accepts int or String)
+  Future<Service?> fetchServiceById(Object id);
 
-  /// Lấy danh sách dịch vụ của 1 user cụ thể
-  Future<List<Service>> fetchServicesByUser(int userId);
+  /// Lấy danh sách dịch vụ của 1 user cụ thể (accepts int or String)
+  Future<List<Service>> fetchServicesByUser(Object userId);
 }

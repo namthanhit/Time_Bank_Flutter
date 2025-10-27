@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
 import '../../domain/models/service.dart';
+import '../../data/mock_service_repository.dart';
 import '../service_applicants_page.dart';
 
 // Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
 // - Hiển thị header riêng (icon người gần title)
 // - Hiển thị progress/status của dịch vụ
-// - Hiển thị một box nổi chứa: mô tả dịch vụ và ảnh (nếu có) — không dùng viền, chỉ dùng shadow để "nổi"
+// - Hiển thị một box nổi chứa: mô  loại bỏ ở bản này theo chỉ thtả dịch vụ và ảnh (nếu có) — không dùng viền, chỉ dùng shadow để "nổi"
 // - Nút 'Xem chi tiết ứng viên' có icon thùng rác (trash) theo yêu cầu
-// Lưu ý: chức năng hủy yêu cầu đã được loại bỏ ở bản này theo chỉ thị.
+// Lưu ý: chức năng hủy yêu cầu đã đượcị.
 
 class MyServiceDetailPage extends ConsumerStatefulWidget {
-  final int serviceId;
+  final String serviceId;
 
   const MyServiceDetailPage({
     super.key,
@@ -70,7 +71,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
         height: double.infinity,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          //borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: serviceAsync.when(
           data: (service) {
@@ -316,8 +317,11 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildSpecializationInline(Service service) {
+    final specializationsList = MockServiceRepository.getSkillNamesFromIds(
+        service.skillIds ??
+            (service.skillId != null ? [service.skillId!] : null));
     final specializations =
-        service.providerSpecialization?.split(',') ?? ['Chưa có'];
+        specializationsList.isNotEmpty ? specializationsList : ['Chưa có'];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -336,27 +340,43 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           style: TextStyle(fontSize: 16, color: Colors.grey[800]),
         ),
         Expanded(
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: specializations
-                .map((spec) => Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0DC06),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        spec.trim(),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF000000),
+          child: LayoutBuilder(builder: (context, constraints) {
+            final double maxChipWidth = 72;
+            final double chipWidth =
+                (constraints.maxWidth / 3).clamp(40, maxChipWidth);
+
+            return Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: specializations
+                  .map((spec) => ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: chipWidth),
+                        child: SizedBox(
+                          height: 20,
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 0),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE0DC06),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              spec.trim(),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF000000),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ))
-                .toList(),
-          ),
+                      ))
+                  .toList(),
+            );
+          }),
         ),
       ],
     );

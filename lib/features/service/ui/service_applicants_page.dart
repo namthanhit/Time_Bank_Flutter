@@ -3,7 +3,7 @@ import 'widgets/pending_applicants_widget.dart';
 import 'widgets/approved_applicants_widget.dart';
 
 class ServiceApplicantsPage extends StatefulWidget {
-  final int serviceId;
+  final String serviceId;
   final String serviceTitle;
 
   const ServiceApplicantsPage({

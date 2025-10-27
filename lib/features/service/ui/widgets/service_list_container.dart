@@ -9,7 +9,7 @@ import '../../data/model/service_filter.dart';
 class ServiceListContainer extends ConsumerWidget {
   /// If [userId] is provided, the widget will show services for that user.
   /// Otherwise it shows public services.
-  final int? userId;
+  final String? userId;
   final String? query;
   final ServiceFilter? filter;
   final String? socialFilter;
@@ -140,7 +140,8 @@ class ServiceListContainer extends ConsumerWidget {
                 final title = normalize(s.title);
                 final desc = normalize(s.description ?? '');
                 final provider = normalize(s.providerName ?? '');
-                final type = normalize(s.providerSpecialization ?? '');
+                final type = normalize(MockServiceRepository.skillNamesAsString(
+                    s.skillIds ?? (s.skillId != null ? [s.skillId!] : null)));
                 return title.contains(q) ||
                     desc.contains(q) ||
                     provider.contains(q) ||
