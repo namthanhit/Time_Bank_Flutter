@@ -46,7 +46,7 @@ class ConfirmInfoCard extends StatelessWidget {
           // Người chuyển
           _buildUserSection(
             title: 'Người chuyển',
-            name: senderName,
+            name: senderName.toUpperCase(),
             number: senderNumber,
             avatarUrl: senderAvatarUrl, // Tạm giữ
           ),
@@ -55,7 +55,7 @@ class ConfirmInfoCard extends StatelessWidget {
           // Người nhận
           _buildUserSection(
             title: 'Người nhận',
-            name: receiverName,
+            name: receiverName.toUpperCase(),
             number: receiverNumber,
             avatarUrl: senderAvatarUrl, // Tạm giữ
           ),

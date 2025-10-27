@@ -173,14 +173,17 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
 
   void _updateDefaultNote(String recipientName) {
     final repo = ref.read(transactionRepositoryProvider);
-    final senderName = ref.read(senderNameProvider);
+    final senderName = ref.read(senderNameProvider).toUpperCase();
+
+    final upperRecipientName = recipientName.toUpperCase();
+
     final d = state.amount;
     final hh = d.inHours.toString().padLeft(2, '0');
     final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
     final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
     final formattedAmount = '$hh:$mm:$ss';
 
-    final note = repo.buildDefaultNote(senderName, recipientName, formattedAmount);
+    final note = repo.buildDefaultNote(senderName, upperRecipientName, formattedAmount);
     state = state.copyWith(note: note);
   }
 

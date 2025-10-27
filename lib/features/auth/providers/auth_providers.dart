@@ -53,8 +53,11 @@ final authedApiClientProvider = Provider<AuthApiClient>((ref) {
 /// Auth controller
 final authControllerProvider =
 StateNotifierProvider<AuthController, AuthState>((ref) {
+
   final controller = AuthController(ref, ref.read(authRepoProvider));
-  controller.init();
+
+  controller.signOut().catchError((e) {});
+
   return controller;
 });
 

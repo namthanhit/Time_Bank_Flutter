@@ -79,7 +79,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
   void _updateNameController(AsyncValue<RecipientInfo?> lookupState) {
     final newName = lookupState.when(
-      data: (recipient) => recipient?.fullName ?? '',
+      data: (recipient) => recipient?.fullName.toUpperCase() ?? '',
       loading: () => 'Đang tra cứu...',
       error: (e, s) => 'Không tìm thấy',
     );

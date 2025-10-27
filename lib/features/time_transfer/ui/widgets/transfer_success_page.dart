@@ -193,7 +193,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                               child: Column(
                                 children: [
                                   Text(
-                                    widget.recipientName,
+                                    widget.recipientName.toUpperCase(),
                                     style: const TextStyle(
                                       fontSize: 18,
                                       color: colorPrimary,
@@ -208,7 +208,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                                   ),
                                   const SizedBox(height: 18),
                                   Text(
-                                    '${widget.senderName} chuyển khoản',
+                                    '${widget.senderName.toUpperCase()} chuyển khoản',
                                     style: const TextStyle(
                                       color: Colors.black,
                                       fontSize: 16,
