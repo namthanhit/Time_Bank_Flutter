@@ -90,10 +90,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
     return WillPopScope(
       onWillPop: () async {
         ref.read(transactionFormProvider.notifier).reset();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TransferPage()),
-        );
+        Navigator.of(context).pop();
         return false;
       },
       child: Scaffold(
@@ -105,10 +102,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
               ref.read(transactionFormProvider.notifier).reset();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const TransferPage()),
-              );
+              Navigator.of(context).pop();
             },
           ),
         ),
@@ -237,6 +231,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                                     icon: Icons.home_outlined,
                                     label: "Trang chủ",
                                     onTap: () {
+                                      ref.read(transactionFormProvider.notifier).reset();
                                       Navigator.of(context).pushAndRemoveUntil(
                                         MaterialPageRoute(
                                             builder: (_) => const AppShell()),
@@ -284,11 +279,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                         ),
                         onPressed: () {
                           ref.read(transactionFormProvider.notifier).reset();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const TransferPage()),
-                          );
+                          Navigator.of(context).pop();
                         },
                         child: const Text(
                           "Thực hiện giao dịch khác",

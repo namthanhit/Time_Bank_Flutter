@@ -19,7 +19,6 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
 
   @override
   void dispose() {
-    _controller.dispose();
     super.dispose();
   }
 

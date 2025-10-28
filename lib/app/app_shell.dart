@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import '../features/home/ui/home_page.dart';
 import 'navigation/bottom_nav_bar.dart';
 import 'navigation/nav_item_data.dart';
-import '../features/qr/ui/qr_page.dart';
+import '../features/qr/ui/qr_scanner_page.dart';
 import '../features/settings/ui/settings_page.dart';
 import '../common/ui/stub_page.dart';
 import '../features/chat/ui/chat_list_page.dart';
+
+// THÊM IMPORT NÀY
+import '../features/time_transfer/ui/transfer_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -41,9 +44,29 @@ class _AppShellState extends State<AppShell> {
   void _onNavTap(int i) {
     final item = _navItems[i];
     if (item.emphasize) {
+      // --- BẮT ĐẦU SỬA ---
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const QrPage(), fullscreenDialog: true),
+        MaterialPageRoute(
+          // 'pageContext' là context của chính trang QrScannerPage
+          builder: (pageContext) => QrScannerPage(
+
+            // Định nghĩa hàm callback 'onScanSuccess'
+            onScanSuccess: (scannedPhone) {
+              // Khi quét xong, dùng 'pageContext' để
+              // thay thế trang scan bằng trang transfer
+              Navigator.of(pageContext).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => TransferPage(
+                    prefilledPhoneNumber: scannedPhone,
+                  ),
+                ),
+              );
+            },
+          ),
+          fullscreenDialog: true,
+        ),
       );
+      // --- HẾT SỬA ---
       return;
     }
     final to = _navToPage(i);

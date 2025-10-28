@@ -17,6 +17,7 @@ class TransferDestinationCard extends ConsumerStatefulWidget {
   final Function(String) onNoteChanged;
   final VoidCallback onLookupPressed;
   final bool showFieldErrors;
+  final VoidCallback? onQrPressed;
 
   const TransferDestinationCard({
     super.key,
@@ -30,6 +31,7 @@ class TransferDestinationCard extends ConsumerStatefulWidget {
     required this.onNoteChanged,
     required this.onLookupPressed,
     required this.showFieldErrors,
+    required this.onQrPressed,
   });
 
   @override
@@ -43,6 +45,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
   final FocusNode accountFocus = FocusNode();
 
   bool _isSyncingNote = false;
+  bool _isSyncingAccount = false;
 
   final Color colorPrimary = const Color(0xFF003E77);
 
@@ -63,7 +66,9 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
     if (widget.phone != oldWidget.phone &&
         widget.phone != accountController.text) {
+      _isSyncingAccount = true;
       accountController.text = widget.phone;
+      _isSyncingAccount = false;
     }
 
     if (widget.note != oldWidget.note && widget.note != noteController.text) {
@@ -100,6 +105,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
   }
 
   void _onAccountChanged() {
+    if (_isSyncingAccount) return;
     final currentText = accountController.text;
     widget.onPhoneChanged(currentText);
     if (currentText.length == 10) {
@@ -110,7 +116,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
 
   void _onNoteChanged() {
-    if (_isSyncingNote) return; // <-- KIỂM TRA CỜ
+    if (_isSyncingNote) return;
     widget.onNoteChanged(noteController.text);
   }
 
@@ -151,6 +157,8 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
           title: 'Số tài khoản',
           hint: 'Nhập số tài khoản (SĐT)',
           controller: accountController,
+          onQrIconTap: widget.onQrPressed, // Hàm callback
+          qrIcon: Icons.qr_code_scanner,
           icon: Icons.person_search_outlined,
           onIconTap: widget.onLookupPressed,
           onSubmitted: widget.onPhoneSubmitted,
@@ -188,6 +196,8 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
     required TextEditingController controller,
     IconData? icon,
     VoidCallback? onIconTap,
+    IconData? qrIcon,
+    VoidCallback? onQrIconTap,
     Function(String)? onSubmitted,
     int maxLines = 1,
     bool readOnly = false,

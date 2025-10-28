@@ -8,6 +8,7 @@ class UserProfile {
   final String status;
   final String? avatarUrl;
   final UserDetail? userDetail;
+  final String? qrCode;
 
   UserProfile({
     required this.id,
@@ -18,6 +19,7 @@ class UserProfile {
     required this.status,
     this.avatarUrl,
     this.userDetail,
+    this.qrCode,
   });
 
 
@@ -37,6 +39,7 @@ class UserProfile {
       userDetail: json['userDetail'] != null
           ? UserDetail.fromJson(json['userDetail'])
           : null,
+      qrCode: json['qr_code'] as String?,
     );
   }
 }
