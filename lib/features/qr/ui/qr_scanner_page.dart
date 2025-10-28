@@ -61,7 +61,6 @@ class _QrScannerPageState extends State<QrScannerPage> {
           const SnackBar(content: Text('Không tìm thấy mã QR trong ảnh.')),
         );
       }
-      // `onDetect` sẽ tự động được gọi nếu thành công
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -89,8 +88,8 @@ class _QrScannerPageState extends State<QrScannerPage> {
                 Color(0xFF0D1B4C),
                 Color(0xFF0F58A1)
               ],
-              begin: Alignment.centerLeft, // Bắt đầu gradient
-              end: Alignment.centerRight,   // Kết thúc gradient
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
           ),
         ),
@@ -128,16 +127,12 @@ class _QrScannerPageState extends State<QrScannerPage> {
               }
             },
           ),
-
-          // Lớp Overlay (UI giống trong ảnh)
           _buildScannerOverlay(),
         ],
       ),
     );
   }
 
-  // Toàn bộ phần _buildScannerOverlay và _buildOverlayButton
-  // giữ y hệt, không cần thay đổi.
 
   /// Widget này vẽ UI đè lên camera
   Widget _buildScannerOverlay() {

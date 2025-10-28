@@ -10,40 +10,27 @@ import '../domain/models/thread.dart';
 import '../domain/repositories/chat_repository.dart';
 import '../data/firebase_chat_repository.dart';
 
-// ===================== REPOSITORY & USER =====================
-
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return FirebaseChatRepository();
 });
 
-// -----------------------------------------------------------------
-// SỬA 1: Thay đổi provider này để trả về String? (nullable)
-// -----------------------------------------------------------------
+
 final currentUidProvider = Provider<String?>((ref) {
-  // Chỉ trả về uid, hoặc null nếu đã logout. SẼ KHÔNG BAO GIỜ CRASH.
   return FirebaseAuth.instance.currentUser?.uid;
 });
-// -----------------------------------------------------------------
 
-
-// ===================== STREAMS =====================
-
-// -----------------------------------------------------------------
-// SỬA 2: Xử lý trường hợp uid là null
-// -----------------------------------------------------------------
 final threadsProvider = StreamProvider<List<Thread>>((ref) {
   final repo = ref.watch(chatRepositoryProvider);
-  final uid = ref.watch(currentUidProvider); // <-- uid bây giờ là String?
+  final uid = ref.watch(currentUidProvider);
 
-  // Nếu uid là null (đã logout), trả về 1 stream rỗng
+
   if (uid == null) {
     return Stream.value([]);
   }
 
-  // Nếu uid không null, tiếp tục như cũ
+
   return repo.watchThreads(uid);
 });
-// -----------------------------------------------------------------
 
 
 final messagesProvider = StreamProvider.family<List<Message>, String>((ref, threadId) {
@@ -51,17 +38,10 @@ final messagesProvider = StreamProvider.family<List<Message>, String>((ref, thre
   return repo.watchMessages(threadId, limit: 30);
 });
 
-// ===================== ACTIONS =====================
-
-// -----------------------------------------------------------------
-// SỬA 3: Xử lý uid là null cho các "Actions"
-// (Các provider này chỉ được gọi khi đã login, nên ta có thể văng lỗi)
-// -----------------------------------------------------------------
 final ensureDmThreadProvider = FutureProvider.family<String, String>((ref, peerUid) {
   final repo = ref.watch(chatRepositoryProvider);
-  final myUid = ref.watch(currentUidProvider); // <-- uid là String?
+  final myUid = ref.watch(currentUidProvider);
 
-  // Văng lỗi rõ ràng nếu bị gọi sai thời điểm
   if (myUid == null) {
     throw StateError('User must be logged in to ensure DM thread');
   }
@@ -95,7 +75,7 @@ Uint8List bytes,
 String mime,
 String localId
 })>((ref, args) async {
-  final myUid = ref.watch(currentUidProvider); // <-- uid là String?
+  final myUid = ref.watch(currentUidProvider);
 
   if (myUid == null) {
     throw StateError('User must be logged in to send image');
@@ -138,27 +118,21 @@ String localId
   });
 });
 
-// ===================== PRESENCE =====================
-
 /// Khởi tạo trạng thái online/offline (Realtime Database)
 final startPresenceProvider = Provider<void>((ref) {
-  // -----------------------------------------------------------------
-  // SỬA 4: Dùng provider đã sửa
-  // -----------------------------------------------------------------
-  final uid = ref.watch(currentUidProvider); // <-- Lấy từ provider
-  if (uid == null) return; // Đã tự động xử lý null
+
+  final uid = ref.watch(currentUidProvider);
+  if (uid == null) return;
 
   final db = FirebaseDatabase.instance;
   final userRef = db.ref('status/$uid');
   final connectedRef = db.ref('.info/connected');
 
-  // Khi disconnect → set offline
   userRef.onDisconnect().set({
     'state': 'offline',
     'last_changed': ServerValue.timestamp,
   });
 
-  // Khi connect → set online
   connectedRef.onValue.listen((event) {
     final connected = event.snapshot.value == true;
     if (connected) {

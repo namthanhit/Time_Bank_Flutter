@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'containers/chat_list_container.dart';
 import 'containers/conversation_container.dart';
 import '../providers/chat_providers.dart';
 import '../domain/models/thread.dart';
 
-// Widget appBar hội thoại: avatar chữ cái đầu, tên, trạng thái Online/Offline
 class _ChatConversationScaffold extends ConsumerWidget {
   final String threadId;
   final String fallbackName;
@@ -27,7 +25,6 @@ class _ChatConversationScaffold extends ConsumerWidget {
     );
   }
 
-  // Hàm này yêu cầu "String myUid" (không thể null)
   String? _peerUid(Thread thread, String myUid) {
     if (thread.members.length != 2) return null;
     return thread.members.firstWhere((u) => u != myUid, orElse: () => myUid);
@@ -35,13 +32,7 @@ class _ChatConversationScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // DÒNG 43: myUid bây giờ là "String?"
     final myUid = ref.watch(currentUidProvider);
-
-    // ==========================================================
-    // === SỬA LỖI Ở ĐÂY ===
-    // Thêm kiểm tra null. Nếu user đã logout (myUid == null),
-    // widget này sắp bị hủy, hiển thị loading để tránh crash.
     if (myUid == null) {
       return const Scaffold(
         body: Center(
@@ -49,22 +40,17 @@ class _ChatConversationScaffold extends ConsumerWidget {
         ),
       );
     }
-    // ==========================================================
 
     final threadsAsync = ref.watch(threadsProvider);
 
-    // Đã xóa "widget."
     final thread = _selectThread(threadsAsync, threadId, fallbackName);
 
-    // Bây giờ "myUid" đã được đảm bảo là "String" (không null)
-    // nên hàm này sẽ an toàn
     final peerUid = _peerUid(thread, myUid);
     final presenceAsync = (peerUid != null)
         ? ref.watch(presenceProvider(peerUid!))
         : const AsyncValue<bool>.data(false);
     final isPeerOnline = presenceAsync.asData?.value ?? false;
 
-    // Đã xóa "widget."
     final title = (thread.name?.isNotEmpty ?? false) ? thread.name! : fallbackName;
     final initials = title.isNotEmpty ? title.trim().characters.first.toUpperCase() : '?';
 
@@ -136,8 +122,7 @@ class _ChatConversationScaffold extends ConsumerWidget {
       ),
       body: ConversationContainer(
         threadId: threadId,
-        // Đã xóa "widget."
-        fallbackName: fallbackName, // <-- Truyền fallbackName vào
+        fallbackName: fallbackName,
       ),
     );
   }
@@ -180,7 +165,6 @@ class ChatListPage extends StatelessWidget {
           ),
           Expanded(
             child: ChatListContainer(
-              // Giả định rằng ChatListContainer trả về (threadId, threadName)
               onThreadTap: (threadId, threadName) {
                 Navigator.of(context).push(
                   MaterialPageRoute(

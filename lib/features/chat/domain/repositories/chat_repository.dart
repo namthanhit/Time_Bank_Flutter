@@ -3,7 +3,7 @@ import '../models/thread.dart';
 
 abstract class ChatRepository {
   // Threads
-  Stream<List<Thread>> watchThreads(String myUid); // danh sách room có mình
+  Stream<List<Thread>> watchThreads(String myUid);
   Future<String> ensureDmThread(String uidA, String uidB);
 
   // Messages
@@ -12,7 +12,7 @@ abstract class ChatRepository {
     required String threadId,
     required String text,
     required String senderId,
-    required String localId, // <-- THÊM DÒNG NÀY
+    required String localId,
   });
   Future<void> sendImage({required String threadId, required List<int> bytes, required String senderId, String mime});
 

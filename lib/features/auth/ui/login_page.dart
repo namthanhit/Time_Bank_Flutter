@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-
 import '../providers/auth_providers.dart';
 import '../providers/auth_state.dart';
 import '../domain/validators.dart';
@@ -21,10 +20,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pwdFocus = FocusNode();
   bool _obscure = true;
 
-  // ------------------------------------------------------------------
-  // 1. XÓA BỎ HOÀN TOÀN local "authControllerProvider" (dòng 30-33)
-  // ------------------------------------------------------------------
-
   @override
   void dispose() {
     _phoneCtrl.dispose();
@@ -42,10 +37,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  // ------------------------------------------------------------------
-  // 2. XÓA BỎ HOÀN TOÀN hàm "_firebaseSignIn" (dòng 53-70)
-  // (Chúng ta đã chuyển nó vào AuthController)
-  // ------------------------------------------------------------------
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
@@ -55,7 +46,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final pwd = _pwdCtrl.text;
     final device = await _deviceModel();
 
-    // Hàm này giờ sẽ gọi provider "global"
     await ref
         .read(authControllerProvider.notifier)
         .signIn(phone, pwd, deviceInfo: device);
@@ -63,17 +53,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Giờ sẽ watch provider "global"
     final state = ref.watch(authControllerProvider);
     final isLoading = state.loading;
 
-    // Lắng nghe thay đổi state (CHỈ ĐỂ HIỂN THỊ LỖI)
     ref.listen<AuthState>(authControllerProvider, (prev, next) async {
 
-      // 3. XÓA BỎ TOÀN BỘ logic "if (next.authenticated)"
-      // (AuthController đã xử lý)
-
-      // Chỉ giữ lại logic xử lý lỗi
       if (next.error != null && (prev?.error != next.error)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +71,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     return Scaffold(
       body: Container(
-        // ... (Toàn bộ code UI của bạn giữ nguyên)
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],

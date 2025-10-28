@@ -1,8 +1,6 @@
-// lib/features/onboarding/providers/region_providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/onboarding_repository.dart';
 import 'onboarding_providers.dart';
-import '../domain/models/models.dart'; // phải export Region trong models.dart
+import '../domain/models/models.dart';
 
 /// ----- Selections (id) -----
 
@@ -112,20 +110,15 @@ final fullAddressTextProvider = FutureProvider<String?>((ref) async {
   return parts.join(', ');
 });
 
-/// ----- Convenience: reset chain khi đổi selection trên UI -----
-/// Gọi các hàm này trong onChanged của Dropdown là đủ.
-/// (Có thể không dùng nếu bạn đã reset trong UI rồi)
 
 void selectProvince(WidgetRef ref, String? provinceId) {
   ref.read(selectedProvinceIdProvider.notifier).state = provinceId;
-  // Reset dưới
   ref.read(selectedDistrictIdProvider.notifier).state = null;
   ref.read(selectedWardIdProvider.notifier).state = null;
 }
 
 void selectDistrict(WidgetRef ref, String? districtId) {
   ref.read(selectedDistrictIdProvider.notifier).state = districtId;
-  // Reset dưới
   ref.read(selectedWardIdProvider.notifier).state = null;
 }
 

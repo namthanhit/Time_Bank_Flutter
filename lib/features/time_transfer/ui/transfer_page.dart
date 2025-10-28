@@ -1,4 +1,3 @@
-// lib/features/time_transfer/ui/transfer_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
@@ -7,56 +6,43 @@ import 'widgets/source_time_card.dart';
 import 'widgets/transfer_action_buttons.dart';
 import 'widgets/transfer_destination_card.dart';
 import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
-// 1. IMPORT TRANG QR SCANNER
 import 'package:time_bank_flutter/features/qr/ui/qr_scanner_page.dart';
 
-// 2. CHUYỂN TỪ ConsumerWidget SANG ConsumerStatefulWidget
 class TransferPage extends ConsumerStatefulWidget {
-  // 3. THÊM THAM SỐ NÀY ĐỂ NHẬN SĐT
+
   final String? prefilledPhoneNumber;
 
-  // 4. THÊM VÀO CONSTRUCTOR
   const TransferPage({super.key, this.prefilledPhoneNumber});
 
   @override
   ConsumerState<TransferPage> createState() => _TransferPageState();
 }
 
-// 5. TẠO CLASS STATE (thay cho hàm build gốc)
+
 class _TransferPageState extends ConsumerState<TransferPage> {
 
-  // 6. DÙNG initState ĐỂ CẬP NHẬT SĐT VÀO PROVIDER
   @override
   void initState() {
     super.initState();
 
-    // Lấy SĐT được truyền vào
     final prefilledPhone = widget.prefilledPhoneNumber;
 
     if (prefilledPhone != null && prefilledPhone.isNotEmpty) {
-      // Dùng postFrameCallback để đảm bảo build xong
-      // mới gọi notifier, tránh lỗi
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // 'ref' có sẵn trong ConsumerState
         final notifier = ref.read(transactionFormProvider.notifier);
 
-        // Cập nhật SĐT vào state
         notifier.setToPhone(prefilledPhone);
 
-        // Tự động tra cứu SĐT đó luôn
         notifier.lookupRecipient();
       });
     }
   }
 
-  /// 7. HÀM ĐỂ MỞ TRANG QUÉT MÃ QR (như đã làm)
   void _openQrScanner(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (pageContext) => QrScannerPage(
           onScanSuccess: (scannedPhone) {
-            // Khi quét xong, thay thế trang scan
-            // bằng một trang Transfer MỚI với SĐT mới
             Navigator.of(pageContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => TransferPage(
@@ -70,12 +56,10 @@ class _TransferPageState extends ConsumerState<TransferPage> {
     );
   }
 
-  // 8. DI CHUYỂN TOÀN BỘ CODE TRONG HÀM BUILD CŨ VÀO ĐÂY
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
 
-    // 'ref' đã có sẵn, không cần tham số 'WidgetRef ref'
     final formState = ref.watch(transactionFormProvider);
     final notifier = ref.read(transactionFormProvider.notifier);
     final balanceAsync = ref.watch(accountBalanceProvider);
@@ -140,7 +124,6 @@ class _TransferPageState extends ConsumerState<TransferPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        // ... (code AppBar y hệt)
         backgroundColor: colorPrimary,
         elevation: 0,
         leading: IconButton(
@@ -179,12 +162,6 @@ class _TransferPageState extends ConsumerState<TransferPage> {
               onNoteChanged: notifier.setNote,
               onLookupPressed: notifier.lookupRecipient,
               showFieldErrors: formState.check.hasError,
-              // 9. THÊM NÚT QR VÀO ĐÂY (GIẢ SỬ)
-              // (Tôi đoán là widget này có tham số để thêm icon)
-              // (Nếu không có, ông phải sửa 'TransferDestinationCard')
-              //
-              // NẾU `TransferDestinationCard` không hỗ trợ, ông có
-              // thể bọc nó trong 1 Column và thêm nút QR bên cạnh
               onQrPressed: () => _openQrScanner(context),
             ),
             const SizedBox(height: 32),

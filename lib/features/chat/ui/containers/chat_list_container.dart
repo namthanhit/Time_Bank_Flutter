@@ -13,8 +13,7 @@ class ChatListContainer extends ConsumerWidget {
     return threadsAsync.when(
       data: (threads) => ChatList(
         threads: threads,
-        // SỬA LỖI Ở DÒNG DƯỚI ĐÂY:
-        onTap: (t) => onThreadTap(t.id, t.name ?? 'Chat'), // Truyền cả id và tên
+        onTap: (t) => onThreadTap(t.id, t.name ?? 'Chat'),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, st) => Center(child: Text('Lỗi tải danh sách: $e')),

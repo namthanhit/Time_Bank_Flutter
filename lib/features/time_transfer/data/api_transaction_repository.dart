@@ -43,16 +43,16 @@ class ApiTransactionRepository implements TransactionRepository {
 
   @override
   Future<TransferResult> executeTransfer(CreateTransferRequest request) async {
-    print('REPOSITORY: executeTransfer called.'); // <-- THÊM
-    print('REPOSITORY: Sending POST /transfers with data: ${request.toMap()}'); // <-- THÊM
+    print('REPOSITORY: executeTransfer called.');
+    print('REPOSITORY: Sending POST /transfers with data: ${request.toMap()}');
     final res = await _api.post(
       '/transfers',
       body: request.toMap(),
     );
-    print('REPOSITORY: Received response status: ${res.statusCode}'); // <-- THÊM
+    print('REPOSITORY: Received response status: ${res.statusCode}');
     _ensureOK(res);
     final body = json.decode(utf8.decode(res.bodyBytes));
-    print('REPOSITORY: Response body parsed.'); // <-- THÊM
+    print('REPOSITORY: Response body parsed.');
     return TransferResult.fromJson(body['transfer']);
   }
 

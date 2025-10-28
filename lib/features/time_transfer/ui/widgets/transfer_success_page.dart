@@ -71,7 +71,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
 
 
   String _formatDuration(int totalSeconds) {
-    if (totalSeconds < 0) totalSeconds = 0; // Đảm bảo không âm
+    if (totalSeconds < 0) totalSeconds = 0;
     final d = Duration(seconds: totalSeconds);
     final hh = d.inHours.toString().padLeft(2, '0');
     final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
