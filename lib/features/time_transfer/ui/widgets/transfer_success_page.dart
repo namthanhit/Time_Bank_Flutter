@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:time_bank_flutter/features/time_transfer/ui/transfer_page.dart';
-import 'package:time_bank_flutter/app/app_shell.dart';
 import 'package:time_bank_flutter/features/time_transfer/domain/models/transfer_result.dart';
 import '../../providers/transaction_providers.dart';
 
@@ -231,12 +229,11 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                                     icon: Icons.home_outlined,
                                     label: "Trang chủ",
                                     onTap: () {
-                                      ref.read(transactionFormProvider.notifier).reset();
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                            builder: (_) => const AppShell()),
-                                            (route) => false,
-                                      );
+                                      ref
+                                          .read(transactionFormProvider.notifier)
+                                          .reset();
+                                      Navigator.of(context)
+                                          .popUntil((route) => route.isFirst);
                                     }),
                                 _ActionButton(
                                     icon: Icons.download_outlined,
