@@ -6,8 +6,6 @@ import '../features/qr/ui/qr_scanner_page.dart';
 import '../features/settings/ui/settings_page.dart';
 import '../common/ui/stub_page.dart';
 import '../features/chat/ui/chat_list_page.dart';
-
-// THÊM IMPORT NÀY
 import '../features/time_transfer/ui/transfer_page.dart';
 
 class AppShell extends StatefulWidget {
@@ -18,9 +16,8 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   static const _brand = Color(0xFF003E77);
-  int _currentPageIndex = 0; // index theo pages (KHÔNG có QR)
+  int _currentPageIndex = 0;
 
-  // Pages KHÔNG chứa QR
   late final List<Widget> _pages = [
     const HomePage(),
     const StubPage(label: 'Dịch vụ'),
@@ -28,32 +25,25 @@ class _AppShellState extends State<AppShell> {
     const SettingsPage(),
   ];
 
-  // Nav items CÓ QR ở giữa (emphasize)
   static const List<NavItemData> _navItems = [
     NavItemData(icon: Icons.home_filled, label: 'Home'),
     NavItemData(icon: Icons.widgets_rounded, label: 'Services'),
-    NavItemData(icon: Icons.qr_code_scanner_rounded, label: '', emphasize: true), // action
+    NavItemData(icon: Icons.qr_code_scanner_rounded, label: '', emphasize: true),
     NavItemData(icon: Icons.chat_rounded, label: 'Chat'),
     NavItemData(icon: Icons.settings_rounded, label: 'Settings'),
   ];
 
-  // Map: navIndex -> pageIndex (QR ở index 2)
   int _navToPage(int i) => i > 2 ? i - 1 : i;
   int get _pageToNav => _currentPageIndex >= 2 ? _currentPageIndex + 1 : _currentPageIndex;
 
   void _onNavTap(int i) {
     final item = _navItems[i];
     if (item.emphasize) {
-      // --- BẮT ĐẦU SỬA ---
       Navigator.of(context).push(
         MaterialPageRoute(
-          // 'pageContext' là context của chính trang QrScannerPage
           builder: (pageContext) => QrScannerPage(
 
-            // Định nghĩa hàm callback 'onScanSuccess'
             onScanSuccess: (scannedPhone) {
-              // Khi quét xong, dùng 'pageContext' để
-              // thay thế trang scan bằng trang transfer
               Navigator.of(pageContext).pushReplacement(
                 MaterialPageRoute(
                   builder: (_) => TransferPage(
@@ -66,7 +56,6 @@ class _AppShellState extends State<AppShell> {
           fullscreenDialog: true,
         ),
       );
-      // --- HẾT SỬA ---
       return;
     }
     final to = _navToPage(i);
