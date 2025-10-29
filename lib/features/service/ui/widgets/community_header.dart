@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:time_bank_flutter/features/service/ui/four_service_applicants_page.dart';
 import 'service_create_page.dart';
 
 class CommunityHeader extends StatefulWidget {
@@ -89,10 +90,43 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           // 4 Icons Row
           Row(
             children: [
-              _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận'),
-              _buildStatusIcon('assets/icons/Folder_Open.png', 'Đã mở'),
-              _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện'),
-              _buildStatusIcon('assets/icons/Wavy_Check.png', 'Đánh giá'),
+              _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FourServiceApplicantsPage(
+                      serviceId: '1',
+                      serviceTitle: 'Chờ xác nhận',
+                      initialTabIndex: 0, // tab 1
+                    ),
+                  ),
+                );
+              }),
+              _buildStatusIcon('assets/icons/Folder_Open.png', 'Đã mở', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FourServiceApplicantsPage(
+                      serviceId: '3',
+                      serviceTitle: 'Đã mở',
+                      initialTabIndex: 2, // tab 2
+                    ),
+                  ),
+                );
+              }),
+              _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FourServiceApplicantsPage(
+                      serviceId: '4',
+                      serviceTitle: 'Đang thực hiện',
+                      initialTabIndex: 3, // tab 3
+                    ),
+                  ),
+                );
+              }),
+              _buildStatusIcon('assets/icons/Wavy_Check.png', 'Đánh giá', () {}),
             ],
           ),
           const SizedBox(height: 18),
@@ -167,64 +201,63 @@ class _CommunityHeaderState extends State<CommunityHeader> {
     );
   }
 
-  Widget _buildStatusIcon(String imagePath, String label) {
+  Widget _buildStatusIcon(String imagePath, String label, VoidCallback onTap) {
     return Expanded(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            // decoration: BoxDecoration(
-            //   color: Colors.grey[100],
-            //   borderRadius: BorderRadius.circular(8),
-            //   border: Border.all(color: Colors.grey[300]!),
-            // ),
-            child: Image.asset(
-              imagePath,
-              width: 40,
-              height: 40,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback to icons if image not found
-                IconData fallbackIcon;
-                switch (imagePath) {
-                  case 'assets/icons/pending.png':
-                    fallbackIcon = Icons.hourglass_empty;
-                    break;
-                  case 'assets/icons/Folder_Open.png':
-                    fallbackIcon = Icons.check_circle_outline;
-                    break;
-                  case 'assets/icons/File_Check.png':
-                    fallbackIcon = Icons.play_circle_outline;
-                    break;
-                  case 'assets/icons/Wavy_Check.png':
-                    fallbackIcon = Icons.star_outline;
-                    break;
-                  default:
-                    fallbackIcon = Icons.help_outline;
-                }
-                return Icon(
-                  fallbackIcon,
-                  color: Color(0xFF003E77),
-                  size: 20,
-                );
-              },
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              child: Image.asset(
+                imagePath,
+                width: 40,
+                height: 40,
+                errorBuilder: (context, error, stackTrace) {
+                  IconData fallbackIcon;
+                  switch (imagePath) {
+                    case 'assets/icons/pending.png':
+                      fallbackIcon = Icons.hourglass_empty;
+                      break;
+                    case 'assets/icons/Folder_Open.png':
+                      fallbackIcon = Icons.check_circle_outline;
+                      break;
+                    case 'assets/icons/File_Check.png':
+                      fallbackIcon = Icons.play_circle_outline;
+                      break;
+                    case 'assets/icons/Wavy_Check.png':
+                      fallbackIcon = Icons.star_outline;
+                      break;
+                    default:
+                      fallbackIcon = Icons.help_outline;
+                  }
+                  return Icon(
+                    fallbackIcon,
+                    color: const Color(0xFF003E77),
+                    size: 20,
+                  );
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
 
   void _showFilterDialog(BuildContext context) {
     showDialog(

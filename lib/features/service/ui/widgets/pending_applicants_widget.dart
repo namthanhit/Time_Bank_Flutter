@@ -3,10 +3,20 @@ import '../../data/mock_service_repository.dart';
 
 class PendingApplicantsWidget extends StatefulWidget {
   final String serviceId;
+  // Callback when an applicant is tapped. Parent can show details in a tab/page.
+  final ValueChanged<Map<String, dynamic>>? onApplicantTap;
+  // When false, hide the search bar and filter icon and don't filter the list.
+  final bool showSearchAndFilter;
+  // When true, show pending applicants across all jobs instead of filtering
+  // by a specific serviceId.
+  final bool showAllJobs;
 
   const PendingApplicantsWidget({
     super.key,
     required this.serviceId,
+    this.onApplicantTap,
+    this.showSearchAndFilter = true,
+    this.showAllJobs = false,
   });
 
   @override
@@ -67,12 +77,18 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
     // print('📊 Total applicants: ${allApplicants.length}');
     // print('📊 Applicants for this service: ${serviceApplicants.length}');
 
-    // Lọc ứng viên pending của service cụ thể
-    final servicePendingApplicants = MockServiceRepository.mockApplicants
-        .where((a) =>
-            a['status'] == 'pending' &&
-            a['serviceId'].toString() == widget.serviceId)
-        .toList();
+  // Lọc ứng viên pending. Nếu showAllJobs == true thì show tất cả các
+  // applicants có status 'pending' trên toàn bộ hệ thống; ngược lại chỉ
+  // hiển thị applicants của serviceId được truyền vào.
+  final servicePendingApplicants = widget.showAllJobs
+    ? MockServiceRepository.mockApplicants
+      .where((a) => a['status'] == 'pending')
+      .toList()
+    : MockServiceRepository.mockApplicants
+      .where((a) =>
+        a['status'] == 'pending' &&
+        a['serviceId'].toString() == widget.serviceId)
+      .toList();
     // print(
     //     '📊 Pending applicants for this service: ${servicePendingApplicants.length}');
 
@@ -82,65 +98,67 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
           '👤 Applicant: ${applicant['name']}, Status: ${applicant['status']}, ServiceId: ${applicant['serviceId']}');
     }
 
-    // Lọc theo tìm kiếm
-    final filteredApplicants = servicePendingApplicants.where((applicant) {
-      final name = applicant['name'].toString().toLowerCase();
-      final specialization =
-          applicant['specialization'].toString().toLowerCase();
-      return name.contains(_searchQuery.toLowerCase()) ||
-          specialization.contains(_searchQuery.toLowerCase());
-    }).toList();
+    // Lọc theo tìm kiếm (nếu showSearchAndFilter==true), ngược lại show tất cả
+    final filteredApplicants = widget.showSearchAndFilter
+        ? servicePendingApplicants.where((applicant) {
+            final name = applicant['name'].toString().toLowerCase();
+            final specialization =
+                applicant['specialization'].toString().toLowerCase();
+            return name.contains(_searchQuery.toLowerCase()) ||
+                specialization.contains(_searchQuery.toLowerCase());
+          }).toList()
+        : servicePendingApplicants.toList();
 
     debugPrint('🔍 Filtered applicants: ${filteredApplicants.length}');
 
     return Column(
       children: [
-        // Thanh tìm kiếm và icon lọc
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Tìm kiếm ứng viên đã duyệt...',
-                      hintStyle: TextStyle(
-                        fontSize: 14, // 👈 chữ nhỏ lại
-                        // color: Colors.grey,    // màu nhẹ hơn cho hint
+        // Thanh tìm kiếm và icon lọc (ẩn khi showSearchAndFilter == false)
+        if (widget.showSearchAndFilter)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'Tìm kiếm ứng viên đã duyệt...',
+                        hintStyle: TextStyle(
+                          fontSize: 14, // 👈 chữ nhỏ lại
+                        ),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey),
+                        border: InputBorder.none,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 9),
                       ),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 8, vertical: 9),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed: () {
-                  _showFilterDialog(context);
-                },
-                icon: const Icon(Icons.filter_alt_outlined,
-                    color: Color(0xFF003E77), size: 28),
-                tooltip: 'Lọc ứng viên',
-              ),
-            ],
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: () {
+                    _showFilterDialog(context);
+                  },
+                  icon: const Icon(Icons.filter_alt_outlined,
+                      color: Color(0xFF003E77), size: 28),
+                  tooltip: 'Lọc ứng viên',
+                ),
+              ],
+            ),
           ),
-        ),
 
         // Danh sách ứng viên
         Expanded(
@@ -242,7 +260,16 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
         : 'Yêu cầu chờ xét duyệt hủy dịch vụ';
 
     return GestureDetector(
-        onTap: () => _showApplicantDetailsModal(context, applicant),
+        onTap: () {
+          // If parent provided a handler, call it so parent can show details in a tab
+          if (widget.onApplicantTap != null) {
+            widget.onApplicantTap!(applicant);
+            return;
+          }
+
+          // Fallback to show modal if parent didn't handle it
+          _showApplicantDetailsModal(context, applicant);
+        },
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),

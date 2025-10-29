@@ -21,7 +21,7 @@ class _ServicePageState extends State<ServicePage> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: const Color(0xFF003E77),
           elevation: 0,
