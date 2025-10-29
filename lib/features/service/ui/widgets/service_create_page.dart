@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:time_bank_flutter/features/service/data/mock_service_repository.dart';
 import 'package:time_bank_flutter/features/service/domain/models/service.dart';
 // Note: The 'Service' model and 'MockServiceRepository' are no longer used
@@ -22,6 +26,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   final _durationController = TextEditingController();
   final _descriptionController = TextEditingController();
   int _participantsCount = 3;
+  // visibility options: 'Cá nhân' (private), 'Mọi người' (public), 'Bạn bè' (friends)
+  String _visibilityOption = 'Mọi người';
   // selected skills (store skill ids)
   List<String> _selectedSkillIds = [];
   // selected image urls (placeholder implementation)
@@ -453,7 +459,49 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
             ),
           ],
         ),
-        Icon(Icons.people_alt_outlined, color: Colors.blue.shade800, size: 28),
+        // Visibility selector (replaces the single icon)
+        Row(
+          children: [
+            Icon(Icons.people_alt_outlined,
+                color: Colors.blue.shade800, size: 26),
+            const SizedBox(width: 8),
+            PopupMenuButton<String>(
+              color: Colors.white,
+              initialValue: _visibilityOption,
+              onSelected: (val) {
+                setState(() {
+                  _visibilityOption = val;
+                });
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(value: 'Cá nhân', child: Text('Cá nhân')),
+                const PopupMenuItem(
+                    value: 'Mọi người', child: Text('Mọi người')),
+                const PopupMenuItem(value: 'Bạn bè', child: Text('Bạn bè')),
+              ],
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      _visibilityOption,
+                      style:
+                          TextStyle(color: Colors.grey.shade800, fontSize: 14),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_drop_down, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -467,15 +515,35 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           spacing: 12,
           runSpacing: 12,
           children: [
-            ..._selectedImages.map((url) => Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: NetworkImage(url),
-                      fit: BoxFit.cover,
-                    ),
+            // Support both remote URLs and local file paths returned by pickers.
+            ..._selectedImages.map((url) => ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 110,
+                    height: 110,
+                    color: Colors.grey.shade200,
+                    child: url.startsWith('http')
+                        ? Image.network(
+                            url,
+                            width: 110,
+                            height: 110,
+                            fit: BoxFit.cover,
+                            // Show a friendly placeholder if network load fails
+                            errorBuilder: (context, error, stackTrace) =>
+                                Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 40,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          )
+                        : Image.file(
+                            File(url),
+                            width: 110,
+                            height: 110,
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 )),
             GestureDetector(
@@ -640,7 +708,9 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         // `slot` represents personnel capacity (count). Creation UI currently
         // doesn't collect capacity, so default to 1.
         slot: 1,
-        visibility: 'public',
+    visibility: _visibilityOption == 'Cá nhân'
+      ? 'private'
+      : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public'),
         status: 'open',
         createdAt: DateTime.now(),
         providerName: null,
@@ -752,23 +822,86 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text('Camera'),
-              onTap: () {
+              onTap: () async {
                 Navigator.of(ctx).pop();
-                // TODO: integrate camera picker; for mock we push a placeholder URL
-                setState(() {
-                  _selectedImages.add('https://via.placeholder.com/200');
-                });
+                // Request camera permission
+                final status = await Permission.camera.request();
+                if (!status.isGranted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Quyền camera bị từ chối'),
+                  ));
+                  return;
+                }
+
+                try {
+                  final XFile? picked = await ImagePicker()
+                      .pickImage(source: ImageSource.camera, imageQuality: 85);
+                  if (picked != null) {
+                    setState(() => _selectedImages.add(picked.path));
+                  }
+                } catch (e) {
+                  // ignore errors from picker
+                  debugPrint('Camera pick error: $e');
+                }
               },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Thư viện'),
-              onTap: () {
+              onTap: () async {
                 Navigator.of(ctx).pop();
-                // TODO: integrate gallery picker; for mock add placeholder image
-                setState(() {
-                  _selectedImages.add('https://via.placeholder.com/200/cccccc');
-                });
+
+                // Request storage/photos permission in a robust way so it works
+                // across Android versions (pre- and post-API33) and iOS.
+                PermissionStatus status = PermissionStatus.denied;
+                if (Platform.isAndroid) {
+                  // Try legacy storage permission first (covers older Android)
+                  status = await Permission.storage.request();
+                  // If not granted, try the newer photos/media permission (Android 13+)
+                  if (!status.isGranted) {
+                    status = await Permission.photos.request();
+                  }
+                } else if (Platform.isIOS) {
+                  // On iOS we request photos; result might be .limited
+                  status = await Permission.photos.request();
+                } else {
+                  status = await Permission.storage.request();
+                }
+
+                // Treat .limited on iOS as allowed for picking
+                final allowed = status.isGranted || status.isLimited;
+                if (!allowed) {
+                  // If the user permanently denied permission we can prompt them
+                  // to open app settings so they can enable it manually.
+                  final open = await showDialog<bool>(
+                    context: context,
+                    builder: (dctx) => AlertDialog(
+                      title: const Text('Quyền bị từ chối'),
+                      content: const Text(
+                          'Ứng dụng cần quyền truy cập thư viện ảnh để chọn ảnh. Bạn có muốn mở Cài đặt để cấp quyền?'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.of(dctx).pop(false),
+                            child: const Text('Hủy')),
+                        TextButton(
+                            onPressed: () => Navigator.of(dctx).pop(true),
+                            child: const Text('Mở Cài đặt')),
+                      ],
+                    ),
+                  );
+                  if (open == true) openAppSettings();
+                  return;
+                }
+
+                try {
+                  final XFile? picked = await ImagePicker()
+                      .pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (picked != null) {
+                    setState(() => _selectedImages.add(picked.path));
+                  }
+                } catch (e) {
+                  debugPrint('Gallery pick error: $e');
+                }
               },
             ),
           ],
