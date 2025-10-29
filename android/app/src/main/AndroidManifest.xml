@@ -1,7 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.time_bank_flutter">
     <!-- Permissions for camera and media access -->
     <!-- CAMERA: required to capture photos/videos -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Declare camera as optional hardware feature so Play Store/build tools know camera is not required -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- READ/WRITE external storage for older Android versions -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
