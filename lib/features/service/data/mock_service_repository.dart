@@ -137,7 +137,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 240,
-      slot: 60,
+      slot: 6,
       visibility: 'public',
       status: 'open',
       ratingAvg: 4.8,
@@ -146,6 +146,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Nguyễn Hữu An',
       providerAvatar:
           'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400',
+      bookedSlots: 2,
       serviceImages: [
         'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500',
         'https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?w=500',
@@ -167,7 +168,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 180,
-      slot: 90,
+      slot: 3,
       visibility: 'public',
       status: 'open',
       ratingAvg: 4.6,
@@ -176,6 +177,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Trần Văn Minh',
       providerAvatar:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      bookedSlots: 1,
       serviceImages: [
         'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800',
         'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800',
@@ -196,7 +198,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 45,
-      slot: 45,
+      slot: 6,
       visibility: 'public',
       status: 'open',
       ratingAvg: 4.9,
@@ -205,6 +207,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Lê Thị Hồng',
       providerAvatar:
           'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+      bookedSlots: 4,
       serviceImages: [
         'https://suckhoedoisong.qltns.mediacdn.vn/324455921873985536/2022/9/28/tu-the-chien-binh-3-2-1664351573296410151956.jpg',
       ],
@@ -220,7 +223,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 120,
-      slot: 120,
+      slot: 1,
       visibility: 'public',
       status: 'open',
       ratingAvg: 4.7,
@@ -229,6 +232,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Pham Quang',
       providerAvatar:
           'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      bookedSlots: 1,
     ),
     // Community-only mock
     Service(
@@ -242,7 +246,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 270,
-      slot: 90,
+      slot: 6,
       visibility: 'public',
       status: 'open',
       ratingAvg: 4.5,
@@ -251,6 +255,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Ngô Thị Mai',
       providerAvatar:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      bookedSlots: 3,
       serviceImages: [
         'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500',
         'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500',
@@ -268,7 +273,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 60,
-      slot: 60,
+      slot: 5,
       visibility: 'hidden',
       status: 'open',
       ratingAvg: 4.4,
@@ -277,6 +282,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Trần Văn Minh',
       providerAvatar:
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      bookedSlots: 4,
       serviceImages: [
         'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500',
         'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500',
@@ -293,7 +299,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 60,
-      slot: 60,
+      slot: 3,
       visibility: 'hidden',
       status: 'open',
       ratingAvg: 4.4,
@@ -302,6 +308,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Trần Văn Minh',
       providerAvatar:
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      bookedSlots: 2,
     ),
     // Job test để sync giữa Community và My Service
     Service(
@@ -316,7 +323,7 @@ class MockServiceRepository implements ServiceRepository {
       place: '',
       preferredStart: null,
       time: 120,
-      slot: 120,
+      slot: 4,
       visibility: 'public', // Hiện ở Community
       status: 'open',
       ratingAvg: 4.6,
@@ -325,6 +332,7 @@ class MockServiceRepository implements ServiceRepository {
       providerName: 'Trần Văn Minh',
       providerAvatar:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      bookedSlots: 2,
       serviceImages: [
         'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=800',
       ],
@@ -581,6 +589,13 @@ class MockServiceRepository implements ServiceRepository {
         applicant['name'] == 'Trần Văn Minh');
 
     // Notify all listeners
+    _notifyListeners();
+  }
+
+  // Add a new service to mock data and notify listeners so UI can refresh
+  static void addService(Service service) {
+    final repo = MockServiceRepository();
+    repo._mockData.insert(0, service);
     _notifyListeners();
   }
 }

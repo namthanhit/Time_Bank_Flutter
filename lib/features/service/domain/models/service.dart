@@ -11,11 +11,21 @@ class Service {
   final String place;
   final DateTime? preferredStart;
   final int time; // total time in minutes
-  final int slot; // slot length in minutes (default 60)
+  // `slot` represents the number of personnel (capacity) for the service.
+  // Historically this project used confusing names: `slot` / `capacity` /
+  // `minSlotMinutes`. We're standardizing on:
+  // - `time`: duration in minutes
+  // - `slot`: personnel capacity (count)
+  final int slot;
   final String visibility; // e.g. 'public', 'friends', 'hidden'
   final String status; // e.g. 'open', 'matched', 'completed'
   final DateTime createdAt;
   final DateTime? updatedAt;
+
+  // Personnel counts: number of booked personnel.
+  // `slot` is the canonical personnel capacity (count). The legacy field
+  // `capacity` was removed because the API returns `slot` only.
+  final int? bookedSlots;
 
   // Optional UI-friendly fields (computed or joined from other endpoints)
   final double? ratingAvg;
@@ -48,11 +58,13 @@ class Service {
     this.providerAvatar,
     this.providerSpecialization,
     this.serviceImages,
+    this.bookedSlots,
     // legacy fields
     int? minSlotMinutes,
     bool? isPublic,
-  })  : time = time ?? minSlotMinutes ?? 0,
-        slot = slot ?? minSlotMinutes ?? 60,
+  })  : time = time ?? 0,
+        // prefer explicit `slot` (capacity). Default to 1 person if not provided.
+        slot = slot ?? 1,
         visibility = visibility ?? (isPublic == true ? 'public' : 'hidden'),
         status = status ?? 'open';
 
@@ -109,7 +121,14 @@ class Service {
       preferredStart: parseDateTime(json['preferred_start']),
       time: parseInt(
           json['time'], parseInt(json['secs'] ?? json['secs_booked'] ?? 0)),
-      slot: parseInt(json['slot'], 60),
+      // Parse capacity: prefer 'slot' (explicit), then 'capacity' legacy key.
+      slot: (() {
+        final parsedSlot = json['slot'];
+        if (parsedSlot != null) return parseInt(parsedSlot, 0);
+        final parsedCapacity = json['capacity'];
+        if (parsedCapacity != null) return parseInt(parsedCapacity, 0);
+        return 0;
+      })(),
       visibility: (json['visibility'] ?? 'public').toString(),
       status: (json['status'] ?? 'open').toString(),
       createdAt: parseDateTime(json['created_at']) ?? DateTime.now(),
@@ -125,6 +144,12 @@ class Service {
       providerName: json['provider_name'] as String?,
       providerAvatar: json['provider_avatar'] as String?,
       providerSpecialization: json['provider_specialization'] as String?,
+      // personnel fields
+      bookedSlots: json['booked_slots'] is int
+          ? json['booked_slots'] as int
+          : (json['booked_slots'] is String
+              ? int.tryParse(json['booked_slots'])
+              : null),
       serviceImages: images,
       // support legacy keys
       minSlotMinutes: json['min_slot_minutes'] is int
@@ -140,7 +165,11 @@ class Service {
   }
 
   // Backwards-compatible getters used by older UI code
-  int get minSlotMinutes => slot;
+  // `minSlotMinutes` historically was overloaded; in this codebase we
+  // treat `time` as the duration (minutes). Expose `minSlotMinutes` as
+  // an alias for duration so existing formatting code keeps working.
+  int get minSlotMinutes => time;
+
   bool get isPublic => visibility == 'public';
 
   // Backward-compatible accessor: return comma-joined providerSpecialization
