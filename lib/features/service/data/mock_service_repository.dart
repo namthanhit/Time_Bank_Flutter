@@ -6,6 +6,10 @@ class MockServiceRepository implements ServiceRepository {
   // Trạng thái ứng tuyển cho job (để sync giữa community và my service)
   static final Map<String, String> _applicationStatus = {
     // serviceId -> status: 'none', 'pending', 'approved', 'cancelled'
+    // Pre-seed some approved statuses so the "Đã nhận" tab can show
+    // services where the current user was approved by other providers.
+    '1': 'approved',
+    '3': 'approved',
   };
 
   // Lưu trạng thái trước khi cancel để restore khi reject cancel request
@@ -13,6 +17,8 @@ class MockServiceRepository implements ServiceRepository {
 
   // Current user ID (người dùng hiện tại)
   static const String currentUserId = '11';
+  // Current user display name used by mock applicants
+  static const String currentUserName = 'Trần Văn Minh';
 
   // Mock friends list (user IDs that are friends with current user)
   // In a real app this would come from the social graph / API
@@ -122,6 +128,35 @@ class MockServiceRepository implements ServiceRepository {
       'avatar':
           'https://cdn-media.sforum.vn/storage/app/media/thanhhuyen/h%C3%ACnh%20n%E1%BB%81n%20th%E1%BB%8F%20b%E1%BA%A3y%20m%C3%A0u/1.2/hinh-nen-tho-bay-mau-19.jpg',
       'serviceId': '6', // link tới service
+    },
+    // Mock approved applicants for the current user (mình được phê duyệt)
+    {
+      'id': '100',
+      'name': currentUserName,
+      'specialization': 'Dạy guitar / Hỗ trợ kỹ thuật',
+      'rating': 4.7,
+      'requestType': 'receive',
+      'requestTime': '10:00 20/10/2025',
+      'status': 'approved',
+      'statusText': 'Đã duyệt',
+      'statusColor': Colors.green,
+      'avatar':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      'serviceId': '1', // approved on service id 1 (owner != current user)
+    },
+    {
+      'id': '101',
+      'name': currentUserName,
+      'specialization': 'Hướng dẫn Yoga',
+      'rating': 4.8,
+      'requestType': 'receive',
+      'requestTime': '09:00 18/10/2025',
+      'status': 'approved',
+      'statusText': 'Đã duyệt',
+      'statusColor': Colors.green,
+      'avatar':
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+      'serviceId': '3', // approved on service id 3 (owner != current user)
     },
   ];
 
@@ -337,6 +372,155 @@ class MockServiceRepository implements ServiceRepository {
         'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=800',
       ],
     ),
+    // Services currently in progress
+    Service(
+      id: '9',
+      userId: '11', // belongs to current user
+      skillId: '6',
+      skillIds: ['6'],
+      title: '1:1 Coaching ',
+      description: 'Buổi coaching đang được triển khai theo lịch.',
+      regionCode: 'HCM',
+      place: '',
+      preferredStart: null,
+      time: 90,
+      slot: 2,
+      visibility: 'hidden',
+      status: 'in_progress',
+      ratingAvg: 4.9,
+      ratingCount: 8,
+      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      providerName: 'Trần Văn Minh',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      bookedSlots: 2,
+      serviceImages: [
+        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800',
+      ],
+    ),
+    Service(
+      id: '10',
+      userId: '11',
+      skillId: '3',
+      skillIds: ['3'],
+      title: 'Khóa Yoga ',
+      description: 'Lớp yoga đang diễn ra hàng tuần.',
+      regionCode: 'DN',
+      place: '',
+      preferredStart: null,
+      time: 60,
+      slot: 8,
+      visibility: 'public',
+      status: 'in_progress',
+      ratingAvg: 4.8,
+      ratingCount: 20,
+      createdAt: DateTime.now().subtract(const Duration(days: 4)),
+      providerName: 'Lê Thị Hồng',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+      bookedSlots: 6,
+      serviceImages: [
+        'https://images.unsplash.com/photo-1505765052052-6c7b6b4f0b0d?w=800',
+      ],
+    ),
+    // Cancelled demo services
+    Service(
+      id: '13',
+      userId: '11',
+      skillId: '2',
+      skillIds: ['2'],
+      title: 'Sửa laptop ',
+      description: 'Khách hàng yêu cầu hủy trước khi bắt đầu.',
+      regionCode: 'HCM',
+      place: '',
+      preferredStart: null,
+      time: 90,
+      slot: 2,
+      visibility: 'hidden',
+      status: 'cancelled',
+      ratingAvg: 4.2,
+      ratingCount: 3,
+      createdAt: DateTime.now().subtract(const Duration(days: 7)),
+      providerName: 'Trần Văn Minh',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      bookedSlots: 0,
+      serviceImages: [],
+    ),
+    Service(
+      id: '14',
+      userId: '11',
+      skillId: '4',
+      skillIds: ['4'],
+      title: 'Dịch thuật',
+      description: 'Yêu cầu bị hủy bởi chủ nhiệm.',
+      regionCode: 'HN',
+      place: '',
+      preferredStart: null,
+      time: 60,
+      slot: 1,
+      visibility: 'public',
+      status: 'cancelled',
+      ratingAvg: 4.0,
+      ratingCount: 2,
+      createdAt: DateTime.now().subtract(const Duration(days: 10)),
+      providerName: 'Pham Quang',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      bookedSlots: 0,
+      serviceImages: [],
+    ),
+    // Completed services for demo / "Hoàn thành" tab
+    Service(
+      id: '11',
+      userId: '11',
+      skillId: '1',
+      skillIds: ['1'],
+      title: 'Buổi Dạy Guitar',
+      description: 'Buổi học guitar đã hoàn thành và feedback được thu thập.',
+      regionCode: 'HNI',
+      place: '',
+      preferredStart: null,
+      time: 120,
+      slot: 4,
+      visibility: 'hidden',
+      status: 'completed',
+      ratingAvg: 4.9,
+      ratingCount: 12,
+      createdAt: DateTime.now().subtract(const Duration(days: 14)),
+      providerName: 'Trần Văn Minh',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      bookedSlots: 4,
+      serviceImages: [
+        'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500',
+      ],
+    ),
+    Service(
+      id: '12',
+      userId: '11',
+      skillId: '5',
+      skillIds: ['5'],
+      title: 'Lớp nấu ăn chay',
+      description: 'Khóa nấu ăn chay đã hoàn tất với nhiều món ngon.',
+      regionCode: 'HCM',
+      place: '',
+      preferredStart: null,
+      time: 180,
+      slot: 6,
+      visibility: 'public',
+      status: 'completed',
+      ratingAvg: 4.7,
+      ratingCount: 9,
+      createdAt: DateTime.now().subtract(const Duration(days: 20)),
+      providerName: 'Pham Quang',
+      providerAvatar:
+          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      bookedSlots: 6,
+      serviceImages: [
+        'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500',
+      ],
+    ),
   ];
 
   @override
@@ -374,6 +558,60 @@ class MockServiceRepository implements ServiceRepository {
     }
   }
 
+  // Method to get services by status. Optional ownerId filters to services
+  // belonging to a specific user (useful for "my services" views).
+  static List<Service> getServicesByStatus(String status, {String? ownerId}) {
+    final repo = MockServiceRepository();
+    return repo._mockData.where((s) {
+      final matchesStatus =
+          s.status.toString().toLowerCase() == status.toString().toLowerCase();
+      if (!matchesStatus) return false;
+      if (ownerId != null) return s.userId == ownerId;
+      return true;
+    }).toList();
+  }
+
+  // Set a service's status (used by UI to mark cancelled/completed states in mocks)
+  static void setServiceStatus(Object serviceId, String status) {
+    final sid = serviceId.toString();
+    final repo = MockServiceRepository();
+    try {
+      final idx = repo._mockData.indexWhere((s) => s.id == sid);
+      if (idx != -1) {
+        final s = repo._mockData[idx];
+        // Recreate the Service with updated status since Service is immutable
+        final updated = Service(
+          id: s.id,
+          userId: s.userId,
+          skillId: s.skillId,
+          skillIds: s.skillIds,
+          title: s.title,
+          description: s.description,
+          regionCode: s.regionCode,
+          place: s.place,
+          preferredStart: s.preferredStart,
+          time: s.time,
+          slot: s.slot,
+          visibility: s.visibility,
+          status: status,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+          ratingAvg: s.ratingAvg,
+          ratingCount: s.ratingCount,
+          providerName: s.providerName,
+          providerAvatar: s.providerAvatar,
+          providerSpecialization: s.providerSpecialization,
+          serviceImages: s.serviceImages,
+          bookedSlots: s.bookedSlots,
+        );
+        repo._mockData[idx] = updated;
+        _notifyListeners();
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
   // Method chuyển đổi minSlotMinutes thành format HH:MM:SS
   static String formatDuration(int minSlotMinutes) {
     final int hours = minSlotMinutes ~/ 60;
@@ -400,7 +638,7 @@ class MockServiceRepository implements ServiceRepository {
     // Thêm applicant mới vào mockApplicants
     final newApplicant = {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'name': 'Trần Văn Minh', // Current user name
+      'name': currentUserName, // Current user name
       'specialization': 'Công nghệ, Thiết kế, Marketing',
       'rating': 4.5,
       'requestType': 'receive',
