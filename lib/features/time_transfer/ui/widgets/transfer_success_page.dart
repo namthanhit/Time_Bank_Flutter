@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:time_bank_flutter/features/time_transfer/ui/transfer_page.dart';
-import 'package:time_bank_flutter/app/app_shell.dart';
 import 'package:time_bank_flutter/features/time_transfer/domain/models/transfer_result.dart';
 import '../../providers/transaction_providers.dart';
 
@@ -73,7 +71,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
 
 
   String _formatDuration(int totalSeconds) {
-    if (totalSeconds < 0) totalSeconds = 0; // Đảm bảo không âm
+    if (totalSeconds < 0) totalSeconds = 0;
     final d = Duration(seconds: totalSeconds);
     final hh = d.inHours.toString().padLeft(2, '0');
     final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
@@ -90,10 +88,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
     return WillPopScope(
       onWillPop: () async {
         ref.read(transactionFormProvider.notifier).reset();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TransferPage()),
-        );
+        Navigator.of(context).pop();
         return false;
       },
       child: Scaffold(
@@ -105,10 +100,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
               ref.read(transactionFormProvider.notifier).reset();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const TransferPage()),
-              );
+              Navigator.of(context).pop();
             },
           ),
         ),
@@ -237,11 +229,11 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                                     icon: Icons.home_outlined,
                                     label: "Trang chủ",
                                     onTap: () {
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                            builder: (_) => const AppShell()),
-                                            (route) => false,
-                                      );
+                                      ref
+                                          .read(transactionFormProvider.notifier)
+                                          .reset();
+                                      Navigator.of(context)
+                                          .popUntil((route) => route.isFirst);
                                     }),
                                 _ActionButton(
                                     icon: Icons.download_outlined,
@@ -284,11 +276,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                         ),
                         onPressed: () {
                           ref.read(transactionFormProvider.notifier).reset();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const TransferPage()),
-                          );
+                          Navigator.of(context).pop();
                         },
                         child: const Text(
                           "Thực hiện giao dịch khác",

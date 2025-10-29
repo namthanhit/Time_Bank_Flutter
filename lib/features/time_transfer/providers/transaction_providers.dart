@@ -11,52 +11,38 @@ import '../data/api_wallet_repository.dart';
 import '../../auth/providers/auth_providers.dart';
 
 
-// --- PROVIDERS ---
-
-// (1) WalletRepository
 final walletRepositoryProvider = Provider<WalletRepository>((ref) {
-  // SỬA LẠI: Dùng authedApiClientProvider
   final authedApi = ref.watch(authedApiClientProvider);
   return ApiWalletRepository(authedApi);
 });
 
-// (2) TransactionRepository
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  // SỬA LẠI: Dùng authedApiClientProvider
   final authedApi = ref.watch(authedApiClientProvider);
   return ApiTransactionRepository(authedApi);
 });
 
-// (3) Provider số dư
 final accountBalanceProvider = FutureProvider<WalletBalance>((ref) {
-  // 1. Lắng nghe trạng thái xác thực
   final isAuthenticated = ref.watch(authControllerProvider.select((s) => s.authenticated));
 
-  // 2. Nếu chưa đăng nhập, ném lỗi
   if (!isAuthenticated) {
     throw Exception('Chưa đăng nhập');
   }
 
-  // 3. (Giữ nguyên) Lấy repo và gọi API
-  //    (Sẽ chạy lại khi isAuthenticated = true)
   final repo = ref.watch(walletRepositoryProvider);
   return repo.getMyWallet();
 });
 
-// (4) Provider tên người gửi (lấy từ auth provider)
 final senderNameProvider = Provider<String>((ref) {
   final userProfileAsync = ref.watch(userProfileProvider);
   return userProfileAsync.when(
     data: (profile) => profile.fullName,
     loading: () => 'Đang tải...',
-    error: (e, st) => 'Bạn', // Tên dự phòng
+    error: (e, st) => 'Bạn',
   );
 });
 
-// --- STATE NOTIFIER (Giữ nguyên như cũ) ---
 
 class TransactionFormState {
-  // ... (giữ nguyên)
   final String toPhone;
   final Duration amount;
   final String note;
@@ -81,7 +67,6 @@ class TransactionFormState {
     AsyncValue<bool>? check,
     AsyncValue<TransferResult?>? execute,
   }) {
-    // ... (logic copyWith giữ nguyên)
     return TransactionFormState(
       toPhone: toPhone ?? this.toPhone,
       amount: amount ?? this.amount,
@@ -97,7 +82,6 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   final Ref ref;
   TransactionFormNotifier(this.ref) : super(TransactionFormState());
 
-  // ... (Tất cả logic (lookup, check, execute) giữ nguyên)
 
   void setToPhone(String phone) => state = state.copyWith(toPhone: phone, lookup: const AsyncValue.data(null), check: const AsyncValue.data(false));
   void setAmount(Duration d) => state = state.copyWith(amount: d, check: const AsyncValue.data(false));
@@ -136,10 +120,10 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   }
 
   Future<void> executeTransfer(String pin) async {
-    print('NOTIFIER: executeTransfer called with PIN.'); // <-- THÊM
+    print('NOTIFIER: executeTransfer called with PIN.');
     final recipient = state.lookup.value;
     if (recipient == null || !state.check.hasValue || !state.check.value!) {
-      print('NOTIFIER: Pre-conditions failed. Aborting.'); // <-- THÊM
+      print('NOTIFIER: Pre-conditions failed. Aborting.');
       return;
     }
 
@@ -153,20 +137,17 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
     state = state.copyWith(execute: const AsyncValue.loading());
     try {
       final repo = ref.read(transactionRepositoryProvider);
-      print('NOTIFIER: Calling repository executeTransfer...'); // <-- THÊM
+      print('NOTIFIER: Calling repository executeTransfer...');
       final result = await repo.executeTransfer(req);
-      print('NOTIFIER: Repository call successful. Result: ${result.id}'); // <-- THÊM
-      // Chỉ set state data nếu widget còn mounted (an toàn hơn)
+      print('NOTIFIER: Repository call successful. Result: ${result.id}');
       if (mounted) {
         state = state.copyWith(execute: AsyncValue.data(result));
       }
     } catch (e, st) {
-      print('NOTIFIER: Repository call failed: $e'); // <-- THÊM
-      // Chỉ set state error nếu widget còn mounted
+      print('NOTIFIER: Repository call failed: $e');
       if (mounted) {
         state = state.copyWith(execute: AsyncValue.error(e, st));
       }
-      // Quan trọng: Ném lại lỗi để PinVerificationDialog bắt được
       throw e;
     }
   }

@@ -48,7 +48,7 @@ class ConfirmInfoCard extends StatelessWidget {
             title: 'Người chuyển',
             name: senderName.toUpperCase(),
             number: senderNumber,
-            avatarUrl: senderAvatarUrl, // Tạm giữ
+            avatarUrl: senderAvatarUrl,
           ),
           const SizedBox(height: 12),
 
@@ -57,7 +57,7 @@ class ConfirmInfoCard extends StatelessWidget {
             title: 'Người nhận',
             name: receiverName.toUpperCase(),
             number: receiverNumber,
-            avatarUrl: senderAvatarUrl, // Tạm giữ
+            avatarUrl: senderAvatarUrl,
           ),
           const SizedBox(height: 12),
 
@@ -121,17 +121,14 @@ class ConfirmInfoCard extends StatelessWidget {
     required String number,
     required String? avatarUrl,
   }) {
-    // Helper to build the actual avatar widget
     Widget buildAvatar() {
       if (avatarUrl != null && avatarUrl.isNotEmpty && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'))) {
-        // If valid URL, use NetworkImage
         return CircleAvatar(
-          backgroundColor: Colors.grey[200], // Background while loading
+          backgroundColor: Colors.grey[200],
           radius: 22,
           backgroundImage: NetworkImage(avatarUrl),
         );
       } else {
-        // Otherwise, use placeholder icon
         return CircleAvatar(
           backgroundColor: Colors.grey[300],
           radius: 22,
@@ -163,7 +160,6 @@ class ConfirmInfoCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Use the buildAvatar helper
                 buildAvatar(),
                 const SizedBox(width: 16),
                 Column(

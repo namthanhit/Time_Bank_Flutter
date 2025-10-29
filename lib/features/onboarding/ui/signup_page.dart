@@ -74,7 +74,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Box trắng chứa form (GIỮ NGUYÊN)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -106,8 +105,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         ),
 
                         const SizedBox(height: 32),
-
-                        // Nút Tiếp theo (GIỮ NGUYÊN layout, đổi onPressed)
                         Container(
                           width: double.infinity,
                           height: 48,
@@ -142,7 +139,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                         const SizedBox(height: 20),
 
-                        // Divider với chữ "hoặc" (GIỮ NGUYÊN)
                         Row(
                           children: [
                             const Expanded(
@@ -164,7 +160,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                         const SizedBox(height: 16),
 
-                        // Nút đăng nhập (GIỮ NGUYÊN)
                         TextButton(
                           onPressed: () {
                             Navigator.push(
@@ -192,7 +187,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     );
   }
 
-  /// Giữ nguyên UI input
   Widget _buildInput({
     required String label,
     required String hint,

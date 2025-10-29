@@ -1,19 +1,19 @@
 export 'region.dart';
 class SignupPayload {
   final String phone;
-  final String? email;        // optional theo schema
-  final String? cccd;         // optional theo schema
+  final String? email;
+  final String? cccd;
   final String fullName;
   final DateTime? birthdate;
   final String? gender;       // "male" | "female" | "other" | "unknown"
-  final String specialization; // skill_id
-  final String regionId;       // <-- wardId (bắt buộc)
+  final String specialization;
+  final String regionId;
 
   const SignupPayload({
     required this.phone,
     required this.fullName,
     required this.specialization,
-    required this.regionId, // bắt buộc chọn đủ 3 cấp để có wardId
+    required this.regionId,
     this.email,
     this.cccd,
     this.birthdate,
@@ -28,13 +28,13 @@ class SignupPayload {
     'birth_date'   : birthdate?.toIso8601String(),
     'gender'       : gender,
     'specialization': specialization,
-    'region_id'    : regionId, // map đúng cột UserDetail.region_id
+    'region_id'    : regionId,
   };
 }
 
 class VerifyOtpPayload {
   final String phone;
-  final String code; // 6 digits
+  final String code;
   const VerifyOtpPayload({required this.phone, required this.code});
 
   Map<String, dynamic> toJson() => {
@@ -59,8 +59,8 @@ class CompleteProfilePayload {
   final String fullName;
   final DateTime? birthdate;
   final String? gender;
-  final String specialization; // skill_id
-  final String regionId;       // <-- wardId, thay cho address
+  final String specialization;
+  final String regionId;
 
   const CompleteProfilePayload({
     required this.phone,
@@ -131,7 +131,7 @@ class PersonalDto {
   final String? email;
   final DateTime? birthDate;
   final String? gender;
-  final String? regionId; // đổi tên cho thống nhất camelCase
+  final String? regionId;
   final String? specializationOrDescription;
 
   PersonalDto({

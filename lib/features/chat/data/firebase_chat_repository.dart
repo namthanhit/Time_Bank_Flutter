@@ -68,9 +68,8 @@ class FirebaseChatRepository implements ChatRepository {
     required String threadId,
     required String text,
     required String senderId,
-    required String localId, // <-- THÊM DÒNG NÀY
+    required String localId,
   }) async {
-    // Lấy code transaction từ 'sendImageProvider'
     final firestore = FirebaseFirestore.instance;
     final roomRef = firestore.collection('rooms').doc(threadId);
     final msgRef = roomRef.collection('messages').doc();
@@ -82,7 +81,7 @@ class FirebaseChatRepository implements ChatRepository {
         'type': 'text',
         'text': text,
         'createdAt': FieldValue.serverTimestamp(),
-        'localId': localId, // <-- LƯU localId VÀO FIRESTORE
+        'localId': localId,
       });
       tx.update(roomRef, {
         'updatedAt': FieldValue.serverTimestamp(),
@@ -91,7 +90,7 @@ class FirebaseChatRepository implements ChatRepository {
           'type': 'text',
           'senderId': senderId,
           'at': FieldValue.serverTimestamp(),
-          'localId': localId, // <-- (Nên thêm cả ở đây)
+          'localId': localId,
         },
       });
     });

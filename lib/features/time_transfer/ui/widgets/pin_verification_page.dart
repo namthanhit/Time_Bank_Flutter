@@ -19,7 +19,6 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
 
   @override
   void dispose() {
-    _controller.dispose();
     super.dispose();
   }
 
@@ -55,7 +54,7 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
               const SizedBox(height: 36),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10), // Đẩy ô PIN vào giữa một chút
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: PinCodeTextField(
                   appContext: context,
                   length: 6,

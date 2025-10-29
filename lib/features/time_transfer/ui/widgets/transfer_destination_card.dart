@@ -17,6 +17,7 @@ class TransferDestinationCard extends ConsumerStatefulWidget {
   final Function(String) onNoteChanged;
   final VoidCallback onLookupPressed;
   final bool showFieldErrors;
+  final VoidCallback? onQrPressed;
 
   const TransferDestinationCard({
     super.key,
@@ -30,6 +31,7 @@ class TransferDestinationCard extends ConsumerStatefulWidget {
     required this.onNoteChanged,
     required this.onLookupPressed,
     required this.showFieldErrors,
+    required this.onQrPressed,
   });
 
   @override
@@ -43,6 +45,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
   final FocusNode accountFocus = FocusNode();
 
   bool _isSyncingNote = false;
+  bool _isSyncingAccount = false;
 
   final Color colorPrimary = const Color(0xFF003E77);
 
@@ -63,13 +66,15 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
     if (widget.phone != oldWidget.phone &&
         widget.phone != accountController.text) {
+      _isSyncingAccount = true;
       accountController.text = widget.phone;
+      _isSyncingAccount = false;
     }
 
     if (widget.note != oldWidget.note && widget.note != noteController.text) {
-      _isSyncingNote = true; // <-- 1. Bật cờ
-      noteController.text = widget.note; // <-- 2. Gây ra listener
-      _isSyncingNote = false; // <-- 3. Tắt cờ
+      _isSyncingNote = true;
+      noteController.text = widget.note;
+      _isSyncingNote = false;
     }
 
     if (widget.lookupState != oldWidget.lookupState) {
@@ -100,6 +105,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
   }
 
   void _onAccountChanged() {
+    if (_isSyncingAccount) return;
     final currentText = accountController.text;
     widget.onPhoneChanged(currentText);
     if (currentText.length == 10) {
@@ -110,7 +116,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
 
   void _onNoteChanged() {
-    if (_isSyncingNote) return; // <-- KIỂM TRA CỜ
+    if (_isSyncingNote) return;
     widget.onNoteChanged(noteController.text);
   }
 
@@ -134,7 +140,6 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
 
   @override
   Widget build(BuildContext context) {
-    // Lấy số dư thật (để check)
     final balanceAsync = ref.watch(accountBalanceProvider);
     final balance = balanceAsync.value?.secs ?? 0;
     final enough = widget.amount.inSeconds <= balance;
@@ -151,6 +156,8 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
           title: 'Số tài khoản',
           hint: 'Nhập số tài khoản (SĐT)',
           controller: accountController,
+          onQrIconTap: widget.onQrPressed, // Hàm callback
+          qrIcon: Icons.qr_code_scanner,
           icon: Icons.person_search_outlined,
           onIconTap: widget.onLookupPressed,
           onSubmitted: widget.onPhoneSubmitted,
@@ -188,6 +195,8 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
     required TextEditingController controller,
     IconData? icon,
     VoidCallback? onIconTap,
+    IconData? qrIcon,
+    VoidCallback? onQrIconTap,
     Function(String)? onSubmitted,
     int maxLines = 1,
     bool readOnly = false,
@@ -208,7 +217,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-                color: showError ? Colors.red : Colors.transparent), // MỚI
+                color: showError ? Colors.red : Colors.transparent),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withAlpha((0.08 * 255).toInt()),
@@ -235,8 +244,6 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
                       readOnly: readOnly,
                       keyboardType: keyboardType,
                       onSubmitted: onSubmitted,
-                      // MỚI
-                      // XOÁ: onChanged (đã chuyển lên addListener)
                       decoration: InputDecoration(
                         hintText: hint,
                         hintStyle: const TextStyle(color: Colors.black38),
@@ -276,11 +283,8 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
   }
 
   Widget _buildTimeBox(bool enough, bool attemptFailed) {
-    // attemptFailed chính là widget.showFieldErrors từ TransferPage
     const colorPrimary = Color(0xFF003E77);
 
-    // SỬA LẠI ĐỊNH NGHĨA showError:
-    // Chỉ là lỗi khi amount = 0 VÀ đã có lần submit thất bại (attemptFailed == true)
     final bool showError = widget.amount == Duration.zero && attemptFailed;
 
     return GestureDetector(
@@ -290,8 +294,6 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          // SỬA LẠI ĐIỀU KIỆN CHO BORDER ĐỎ:
-          // Border đỏ nếu (!enough) HOẶC là (showError)
           border: Border.all(
               color: (enough && !showError) ? Colors.transparent : Colors.red
           ),
@@ -318,19 +320,16 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
                     _formatDuration(widget.amount),
                     style: TextStyle(
                       fontSize: 16,
-                      // SỬA LẠI ĐIỀU KIỆN MÀU CHỮ/ICON ĐỎ:
                       color: (enough && !showError) ? colorPrimary : Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Icon(Icons.access_time,
-                    // SỬA LẠI ĐIỀU KIỆN MÀU CHỮ/ICON ĐỎ:
                     color: (enough && !showError) ? colorPrimary : Colors.red,
                     size: 22),
               ],
             ),
-            // Hiển thị lỗi không đủ tiền (vẫn giữ nguyên logic cũ)
             if (!enough)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
@@ -339,8 +338,6 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
                   style: TextStyle(color: Colors.red, fontSize: 13),
                 ),
               ),
-            // SỬA LẠI ĐIỀU KIỆN HIỂN THỊ LỖI NÀY:
-            // Chỉ hiển thị khi showError là true
             if (showError)
               const Padding(
                 padding: EdgeInsets.only(top: 4),

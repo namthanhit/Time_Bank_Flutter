@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum MessageType { text, image }
 
-// <-- 1. THÊM ENUM NÀY ĐỂ THEO DÕI TRẠNG THÁI GỬI
 enum MessageStatus { pending, sent, failed }
 
 class Message {
@@ -15,8 +14,8 @@ class Message {
   final String? mediaMime;
   final DateTime createdAt;
 
-  // <-- 2. THÊM CÁC TRƯỜNG PHỤC VỤ OPTIMISTIC UI
-  final String? localId;    // ID tạm thời (do client tạo ra) để khớp tin nhắn
+
+  final String? localId;    // ID tạm thời
   final MessageStatus status; // Trạng thái của tin nhắn
   final bool isLocalFile;  // True nếu mediaUrl là đường dẫn file local (cho ảnh đang upload)
 
@@ -30,7 +29,6 @@ class Message {
     this.mediaMime,
     required this.createdAt,
 
-    // <-- THÊM CÁC TRƯỜNG MỚI VÀO CONSTRUCTOR
     this.localId,
     this.status = MessageStatus.sent, // Mặc định là 'sent'
     this.isLocalFile = false,       // Mặc định là 'false'
@@ -48,10 +46,9 @@ class Message {
       mediaMime: d['mediaMime'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
 
-      // <-- 3. ĐỌC localId TỪ FIRESTORE ĐỂ KHỚP VỚI TIN NHẮN TẠM
+
       localId: d['localId'] as String?,
 
-      // Khi tin nhắn đã từ Firestore về, nó luôn 'sent' và không phải 'local'
       status: MessageStatus.sent,
       isLocalFile: false,
     );
@@ -65,11 +62,9 @@ class Message {
     if (mediaMime != null) 'mediaMime': mediaMime,
     'createdAt': FieldValue.serverTimestamp(),
 
-    // <-- 3. LƯU localId VÀO FIRESTORE KHI GỬI LÊN
     if (localId != null) 'localId': localId,
   };
 
-  // <-- 4. HÀM COPYWITH RẤT QUAN TRỌNG ĐỂ CẬP NHẬT TRẠNG THÁI
   Message copyWith({
     String? id,
     String? threadId,

@@ -30,7 +30,6 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
 
     final password = _passwordController.text.trim();
 
-    // ✅ dùng setSecurity thay cho setPassword
     ref.read(onboardingControllerProvider.notifier).setSecurity(password: password);
 
     final state = ref.read(onboardingControllerProvider);
@@ -97,7 +96,6 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
                       ),
                       const SizedBox(height: 45),
 
-                      // Box trắng giữ nguyên UI
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
                         decoration: BoxDecoration(
@@ -170,7 +168,6 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
                               ),
                               const SizedBox(height: 60),
 
-                              // Nút Hoàn tất (gradient)
                               Container(
                                 width: double.infinity,
                                 height: 48,

@@ -15,7 +15,7 @@ class _TimePickerDialogCustomState extends State<TimePickerDialogCustom> {
   final TextEditingController _minuteController = TextEditingController(text: '');
   final TextEditingController _secondController = TextEditingController(text: '');
 
-  int _focusedIndex = -1; // 0: giờ, 1: phút, 2: giây
+  int _focusedIndex = -1;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,6 @@ class _TimePickerDialogCustomState extends State<TimePickerDialogCustom> {
             ),
             const SizedBox(height: 20),
 
-            // Các ô nhập thời gian
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -47,7 +46,6 @@ class _TimePickerDialogCustomState extends State<TimePickerDialogCustom> {
 
             const SizedBox(height: 20),
 
-            // Footer buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -100,7 +98,7 @@ class _TimePickerDialogCustomState extends State<TimePickerDialogCustom> {
           onTap: () {
             setState(() {
               _focusedIndex = index;
-              controller.clear(); // 👈 Xoá text khi nhấn vào để nhập
+              controller.clear();
             });
           },
           child: AnimatedContainer(
@@ -152,7 +150,6 @@ class _TimePickerDialogCustomState extends State<TimePickerDialogCustom> {
                 }
 
                 if (value.length == 2) {
-                  // tự động chuyển focus sang ô kế tiếp
                   if (index < 2) {
                     FocusScope.of(context).nextFocus();
                     setState(() => _focusedIndex = index + 1);
@@ -163,7 +160,6 @@ class _TimePickerDialogCustomState extends State<TimePickerDialogCustom> {
                 }
               },
               onEditingComplete: () {
-                // 👈 Nếu bỏ focus mà không nhập gì, hiển thị lại giá trị "00"
                 if (controller.text.isEmpty) {
                   controller.text = '00';
                 }

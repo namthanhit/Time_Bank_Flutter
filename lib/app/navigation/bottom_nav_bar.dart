@@ -12,7 +12,7 @@ class BottomNavBar extends StatelessWidget {
   });
 
   final List<NavItemData> items;
-  final int currentIndexNav; // index theo NAV (có QR)
+  final int currentIndexNav;
   final ValueChanged<int> onTap;
   final Color brandColor;
 

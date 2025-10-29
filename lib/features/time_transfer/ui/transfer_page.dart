@@ -6,18 +6,63 @@ import 'widgets/source_time_card.dart';
 import 'widgets/transfer_action_buttons.dart';
 import 'widgets/transfer_destination_card.dart';
 import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
+import 'package:time_bank_flutter/features/qr/ui/qr_scanner_page.dart';
 
+class TransferPage extends ConsumerStatefulWidget {
 
-class TransferPage extends ConsumerWidget {
-  const TransferPage({super.key});
+  final String? prefilledPhoneNumber;
+
+  const TransferPage({super.key, this.prefilledPhoneNumber});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TransferPage> createState() => _TransferPageState();
+}
+
+
+class _TransferPageState extends ConsumerState<TransferPage> {
+
+  @override
+  void initState() {
+    super.initState();
+
+    final prefilledPhone = widget.prefilledPhoneNumber;
+
+    if (prefilledPhone != null && prefilledPhone.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final notifier = ref.read(transactionFormProvider.notifier);
+
+        notifier.setToPhone(prefilledPhone);
+
+        notifier.lookupRecipient();
+      });
+    }
+  }
+
+  void _openQrScanner(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (pageContext) => QrScannerPage(
+          onScanSuccess: (scannedPhone) {
+            Navigator.of(pageContext).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => TransferPage(
+                  prefilledPhoneNumber: scannedPhone,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
+
     final formState = ref.watch(transactionFormProvider);
     final notifier = ref.read(transactionFormProvider.notifier);
     final balanceAsync = ref.watch(accountBalanceProvider);
-    // MỚI: Lấy user profile
     final userProfileAsync = ref.watch(userProfileProvider);
 
     ref.listen<AsyncValue<bool>>(
@@ -117,6 +162,7 @@ class TransferPage extends ConsumerWidget {
               onNoteChanged: notifier.setNote,
               onLookupPressed: notifier.lookupRecipient,
               showFieldErrors: formState.check.hasError,
+              onQrPressed: () => _openQrScanner(context),
             ),
             const SizedBox(height: 32),
 
