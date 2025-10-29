@@ -255,10 +255,48 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
         // Hàng 4: Chuyên môn - cùng một dòng
         _buildSpecializationInline(service),
 
+        const SizedBox(height: 12),
+        // Số lượng nhân sự: booked / capacity
+        _buildPersonnelCount(service),
+
         const SizedBox(height: 16),
 
         // Thanh tiến trình trạng thái
         _buildProgressIndicator(),
+      ],
+    );
+  }
+
+  Widget _buildPersonnelCount(Service service) {
+    final booked = service.bookedSlots ?? 0;
+    final cap = service.slot ?? 0;
+    final bookedStr = booked.toString().padLeft(2, '0');
+    final capStr = cap.toString().padLeft(2, '0');
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 20,
+          child: Icon(
+            Icons.group,
+            size: 16,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'Số lượng nhân sự: ',
+          style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+        ),
+        Text(
+          '$bookedStr/$capStr',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF003E77),
+          ),
+        ),
       ],
     );
   }
