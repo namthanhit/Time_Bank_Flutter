@@ -4,6 +4,7 @@ import '../../providers/service_providers.dart';
 import '../../domain/models/service.dart';
 import '../../data/mock_service_repository.dart';
 import '../service_applicants_page.dart';
+import '../four_service_applicants_page.dart';
 
 // Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
 // - Hiển thị header riêng (icon người gần title)
@@ -142,12 +143,16 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             Expanded(
               child: Row(
                 children: [
-                  Text(
-                    service.title,
-                    style: const TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF003E77),
+                  Expanded(
+                    child: Text(
+                      service.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF003E77),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -206,7 +211,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                     );
                     break;
                   case 'delete':
-                    _showDeleteConfirmDialog(context);
+                    _showDeleteConfirmDialog(context, service);
                     break;
                 }
               },
@@ -269,7 +274,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
   Widget _buildPersonnelCount(Service service) {
     final booked = service.bookedSlots ?? 0;
-    final cap = service.slot ?? 0;
+    final cap = service.slot;
     final bookedStr = booked.toString().padLeft(2, '0');
     final capStr = cap.toString().padLeft(2, '0');
 
@@ -421,32 +426,41 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   void _initializeStatus(Service service) {
-    // Khởi tạo step dựa trên service status
+    // Normalize and map service.status (string) to the integer _currentStep
     // Steps: 0=Đã tạo, 1=Đang mở, 2=Đang thực hiện, 3=Đã hoàn thành
-    // Chỉ khởi tạo nếu chưa bị hủy bởi user trên UI
-    if (!_isCancelled) {
-      switch (service.status) {
-        case 'Đang mở':
-          _currentStep = 1;
-          _isCancelled = false;
-          break;
-        case 'Đang thực hiện':
-          _currentStep = 2;
-          _isCancelled = false;
-          break;
-        case 'Đã hoàn thành':
-          _currentStep = 3;
-          _isCancelled = false;
-          break;
-        case 'Đã hủy':
-          _currentStep = 1; // cancelled at 'Đang mở' step
-          _isCancelled = true;
-          break;
-        default:
-          _currentStep =
-              1; // Mặc định là "Đang mở" - service đã được tạo thành công
-          _isCancelled = false;
-      }
+    // Accept both English backend values (e.g. 'open', 'in_progress',
+    // 'completed', 'cancelled') and Vietnamese labels used in some mocks.
+    if (_isCancelled) return; // keep cancelled state if already set by UI
+
+    final s = service.status.toString().toLowerCase();
+
+    if (s == 'open' || s == 'đang mở' || s == 'dang mo' || s == 'mở') {
+      _currentStep = 1;
+      _isCancelled = false;
+    } else if (s == 'in_progress' ||
+        s == 'doing' ||
+        s == 'đang thực hiện' ||
+        s == 'dang thuc hien' ||
+        s == 'matched') {
+      _currentStep = 2;
+      _isCancelled = false;
+    } else if (s == 'completed' ||
+        s == 'đã hoàn thành' ||
+        s == 'da hoan thanh') {
+      _currentStep = 3;
+      _isCancelled = false;
+    } else if (s == 'cancelled' ||
+        s == 'đã hủy' ||
+        s == 'da huy' ||
+        s == 'hủy' ||
+        s == 'huy') {
+      // When cancelled we display it at the 'Đang mở' slot but mark as cancelled
+      _currentStep = 1;
+      _isCancelled = true;
+    } else {
+      // Fallback: treat unknown/empty as 'Đang mở'
+      _currentStep = 1;
+      _isCancelled = false;
     }
   }
 
@@ -777,7 +791,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             // ),
             child: IconButton(
               onPressed: () {
-                _showDeleteConfirmDialog(context);
+                _showDeleteConfirmDialog(context, service);
               },
               icon: const Icon(
                 Icons.delete_outline,
@@ -791,7 +805,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     );
   }
 
-  void _showDeleteConfirmDialog(BuildContext context) {
+  void _showDeleteConfirmDialog(BuildContext context, Service service) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -828,6 +842,21 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                   _isCancelled = true;
                   _currentStep = 1; // Hủy ở bước "Đang mở"
                 });
+                // Also update the mock repository so the cancelled tab shows this
+                MockServiceRepository.setServiceStatus(
+                    widget.serviceId, 'cancelled');
+
+                // Open the FourServiceApplicantsPage on the 'Đã hủy' tab
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FourServiceApplicantsPage(
+                      serviceId: widget.serviceId,
+                      serviceTitle: service.title,
+                      initialTabIndex: 5, // index of 'Đã hủy'
+                    ),
+                  ),
+                );
               },
               child: const Text('Đồng ý',
                   style: TextStyle(

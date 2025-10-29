@@ -201,7 +201,10 @@ class _CommunityServiceDetailPageState
           _buildServiceBox(service),
           const SizedBox(height: 30),
           _buildActionRow(service),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          // Note: UI for displaying received/pending cards is handled by
+          // the dedicated `ReceivedApplicants` widget. Community page
+          // manages application state only and does not render the card.
         ],
       ),
     );

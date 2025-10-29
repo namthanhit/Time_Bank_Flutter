@@ -10,10 +10,15 @@ class PendingApplicantsNoSearchWidget extends StatefulWidget {
   final String serviceId;
   final bool showAllJobs;
 
+  /// When true only show pending applicants for services owned by the
+  /// current user (MockServiceRepository.currentUserId).
+  final bool showOnlyMyJobs;
+
   const PendingApplicantsNoSearchWidget({
     super.key,
     required this.serviceId,
     this.showAllJobs = true,
+    this.showOnlyMyJobs = false,
   });
 
   @override
@@ -50,23 +55,33 @@ class _PendingApplicantsNoSearchWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final servicePendingApplicants = widget.showAllJobs
-        ? MockServiceRepository.mockApplicants
-            .where((a) => a['status'] == 'pending')
-            .toList()
-        : MockServiceRepository.mockApplicants
-            .where((a) =>
-                a['status'] == 'pending' &&
-                a['serviceId'].toString() == widget.serviceId)
-            .toList();
+    List<Map<String, dynamic>> servicePendingApplicants;
+    if (widget.showOnlyMyJobs) {
+      servicePendingApplicants =
+          MockServiceRepository.mockApplicants.where((a) {
+            if (a['status'] != 'pending') return false;
+            final service = MockServiceRepository.getServiceById(a['serviceId']);
+            return service != null &&
+                service.userId == MockServiceRepository.currentUserId;
+          }).toList();
+    } else {
+      servicePendingApplicants = widget.showAllJobs
+          ? MockServiceRepository.mockApplicants
+          .where((a) => a['status'] == 'pending')
+          .toList()
+          : MockServiceRepository.mockApplicants
+          .where((a) =>
+      a['status'] == 'pending' &&
+          a['serviceId'].toString() == widget.serviceId)
+          .toList();
+    }
 
     if (servicePendingApplicants.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/images/thong_bao.png'
-                , width: 150, height: 150),
+            Image.asset('assets/images/thong_bao.png', width: 150, height: 150),
             SizedBox(height: 16),
             Text('Không có ứng viên nào đang chờ phê duyệt',
                 style: TextStyle(fontSize: 16, color: Colors.grey)),

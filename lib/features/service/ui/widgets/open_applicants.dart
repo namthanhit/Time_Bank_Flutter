@@ -7,12 +7,24 @@ import 'package:time_bank_flutter/features/service/domain/models/service.dart';
 class OpenApplicantsWidget extends StatelessWidget {
   final void Function(Service service)? onTap;
 
-  const OpenApplicantsWidget({super.key, this.onTap});
+  /// When true, only show services owned by the current user (useful for My tabs)
+  final bool showOnlyMyServices;
+
+  const OpenApplicantsWidget({
+    super.key,
+    this.onTap,
+    this.showOnlyMyServices = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final Future<List<Service>> loader = showOnlyMyServices
+        ? Future.value(MockServiceRepository.getServicesByStatus('open',
+            ownerId: MockServiceRepository.currentUserId))
+        : MockServiceRepository().fetchPublicServices();
+
     return FutureBuilder<List<Service>>(
-      future: MockServiceRepository().fetchPublicServices(),
+      future: loader,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
