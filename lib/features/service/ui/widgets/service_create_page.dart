@@ -464,14 +464,14 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             ..._selectedImages.map((url) => Container(
-                  width: 80,
-                  height: 80,
+                  width: 110,
+                  height: 110,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     image: DecorationImage(
                       image: NetworkImage(url),
                       fit: BoxFit.cover,
@@ -481,14 +481,14 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
             GestureDetector(
               onTap: () => _showImageSourceOptions(context),
               child: Container(
-                width: 80,
-                height: 80,
+                width: 110,
+                height: 110,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: const Center(child: Icon(Icons.add_a_photo)),
+                child: const Center(child: Icon(Icons.add_a_photo, size: 30)),
               ),
             ),
           ],
