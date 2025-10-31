@@ -38,49 +38,57 @@ class _CommunityHeaderState extends State<CommunityHeader> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header với Avatar + Greeting
+          // Header với Avatar + Greeting (make the framed container expand)
           Row(
             children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ServiceCreatePage(),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ServiceCreatePage(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!, width: 1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: AssetImage('assets/images/avatar.png'),
-                        onBackgroundImageError: (_, __) {},
-                        child: Icon(
-                          Icons.person,
-                          color: Color(0xFF003E77),
-                          size: 22,
+                    // ensure inner Row can take the available width
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage:
+                              AssetImage('assets/images/avatar.png'),
+                          onBackgroundImageError: (_, __) {},
+                          child: Icon(
+                            Icons.person,
+                            color: Color(0xFF003E77),
+                            size: 22,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Hãy tạo điều bạn muốn',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 15,
-                          //fontWeight: FontWeight.w500,
+                        const SizedBox(width: 10),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: Text(
+                            'Hãy tạo điều bạn muốn',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 15,
+                              //fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 160),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -91,7 +99,8 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           // 4 Icons Row
           Row(
             children: [
-              _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận', () {
+              _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận',
+                  () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -115,7 +124,8 @@ class _CommunityHeaderState extends State<CommunityHeader> {
                   ),
                 );
               }),
-              _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện', () {
+              _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện',
+                  () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -130,9 +140,7 @@ class _CommunityHeaderState extends State<CommunityHeader> {
               _buildStatusIcon('assets/icons/Wavy_Check.png', 'Đánh giá', () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => ServiceRatingPage()
-                  ),
+                  MaterialPageRoute(builder: (_) => ServiceRatingPage()),
                 );
               }),
             ],
@@ -265,7 +273,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
       ),
     );
   }
-
 
   void _showFilterDialog(BuildContext context) {
     showDialog(
