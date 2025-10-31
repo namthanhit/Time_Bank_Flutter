@@ -113,44 +113,47 @@ class _ServicePageState extends State<ServicePage> {
             Expanded(
               child: TabBarView(
                 children: [
-                  // Tab Cộng đồng
-                  Column(
-                    children: [
-                      CommunityHeader(
-                        isMyTab: false,
-                        onFilterChanged: (f) =>
-                            setState(() => _communityFilter = f),
-                        onSearchChanged: (searchText) =>
-                            setState(() => _query = searchText),
-                      ),
-                      Expanded(
-                        child: ServiceListContainer(
-                          query: _query,
-                          filter: null,
-                          socialFilter: _communityFilter,
+                  // Tab Cộng đồng: keep the TabBar fixed above and make the
+                  // header scroll with the inner list by using NestedScrollView
+                  // per tab. The outer TabBar remains visible.
+                  NestedScrollView(
+                    headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                      SliverToBoxAdapter(
+                        child: CommunityHeader(
+                          isMyTab: false,
+                          onFilterChanged: (f) =>
+                              setState(() => _communityFilter = f),
+                          onSearchChanged: (searchText) =>
+                              setState(() => _query = searchText),
                         ),
                       ),
                     ],
+                    body: ServiceListContainer(
+                      query: _query,
+                      filter: null,
+                      socialFilter: _communityFilter,
+                    ),
                   ),
+
                   // Tab Của tôi
-                  Column(
-                    children: [
-                      CommunityHeader(
-                        isMyTab: true,
-                        onFilterChanged: (f) => setState(() => _myFilter = f),
-                        onSearchChanged: (searchText) =>
-                            setState(() => _query = searchText),
-                      ),
-                      Expanded(
-                        child: ServiceListContainer(
-                          query: _query,
-                          filter: null,
-                          socialFilter: _myFilter,
-                          userId: '11', // ID của user hiện tại (string)
-                          isMyServiceTab: true,
+                  NestedScrollView(
+                    headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                      SliverToBoxAdapter(
+                        child: CommunityHeader(
+                          isMyTab: true,
+                          onFilterChanged: (f) => setState(() => _myFilter = f),
+                          onSearchChanged: (searchText) =>
+                              setState(() => _query = searchText),
                         ),
                       ),
                     ],
+                    body: ServiceListContainer(
+                      query: _query,
+                      filter: null,
+                      socialFilter: _myFilter,
+                      userId: '11', // ID của user hiện tại (string)
+                      isMyServiceTab: true,
+                    ),
                   ),
                 ],
               ),
