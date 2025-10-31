@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class PinSetupScreen extends ConsumerStatefulWidget {
   const PinSetupScreen({super.key});
@@ -26,14 +26,23 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       return;
     }
 
-    await ref.read(onboardingControllerProvider.notifier).setPin(_pin);
-    final state = ref.read(onboardingControllerProvider);
-    if (state.error == null && mounted) {
+    ref.read(onboardingControllerProvider.notifier).setSecurity(pin: _pin);
+
+    try {
+      final userId =
+      await ref.read(onboardingControllerProvider.notifier).submitCreateAccount();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tạo tài khoản thành công: $userId')),
+      );
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
             (route) => false,
       );
+    } catch (e) {
     }
   }
 
@@ -77,7 +86,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                       ),
                       const SizedBox(height: 30),
 
-                      // Box trắng giữ nguyên UI
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -164,8 +172,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                             ),
 
                             const SizedBox(height: 20),
-
-                            // Nút Xác Thực
                             GestureDetector(
                               onTap: state.loading ? null : _onSubmit,
                               child: Container(
@@ -188,7 +194,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                                   ),
                                 )
                                     : const Text(
-                                  "Xác Thực",
+                                  "Hoàn tất",
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/verify_otp_page.dart';
+import 'package:time_bank_flutter/features/onboarding/ui/verify_otp_page.dart';
 import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
-import 'package:time_bank_flutter/features/onboarding/domain/models/models.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -14,39 +13,24 @@ class SignUpPage extends ConsumerStatefulWidget {
 
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
-
-  final _cccdController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _nameController = TextEditingController();
 
   @override
   void dispose() {
-    _cccdController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
-    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final payload = SignupPayload(
-      cccd: _cccdController.text.trim(),
-      phone: _phoneController.text.trim(),
-      email: _emailController.text.trim(),
-      fullName: _nameController.text.trim(),
-      birthdate: null,
-      gender: null,
-      specialization: '',
-      address: '',
-    );
+    final phone = _phoneController.text.trim();
 
-    await ref.read(onboardingControllerProvider.notifier).signup(payload);
+    // ✅ Gọi flow mới: check-phone → gửi OTP (Firebase) → set verificationId/phoneToken
+    await ref.read(onboardingControllerProvider.notifier).startWithPhone(phone);
 
     final state = ref.read(onboardingControllerProvider);
-    if (state.error == null && mounted) {
+    if (state.error == null && state.verificationId != null && mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const OtpScreen()),
@@ -90,7 +74,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Box trắng chứa form (GIỮ NGUYÊN)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -104,27 +87,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        _buildInput(
-                          label: "Căn cước công dân",
-                          hint: "Nhập số CCCD",
-                          controller: _cccdController,
-                          keyboardType: TextInputType.number,
-                          isRequired: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Vui lòng nhập CCCD";
-                            }
-                            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-                              return "CCCD chỉ được chứa số";
-                            }
-                            if (value.length != 12) {
-                              return "CCCD phải đủ 12 số";
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
                         _buildInput(
                           label: "Số điện thoại",
                           hint: "Nhập số điện thoại",
@@ -141,43 +103,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 20),
-
-                        _buildInput(
-                          label: "Email",
-                          hint: "Nhập email",
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          isRequired: false,
-                          validator: (value) {
-                            if (value != null && value.isNotEmpty) {
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                  .hasMatch(value)) {
-                                return "Email không hợp lệ";
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        _buildInput(
-                          label: "Họ và tên",
-                          hint: "Nhập họ và tên",
-                          controller: _nameController,
-                          keyboardType: TextInputType.name,
-                          isRequired: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Vui lòng nhập họ và tên";
-                            }
-                            return null;
-                          },
-                        ),
 
                         const SizedBox(height: 32),
-
-                        // Nút Tiếp theo (chỉ đổi onPressed để gọi provider)
                         Container(
                           width: double.infinity,
                           height: 48,
@@ -188,8 +115,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             ),
                           ),
                           child: ElevatedButton(
-                            onPressed:
-                            state.loading ? null : _onSubmit, // ✅ refactor
+                            onPressed: state.loading ? null : _onSubmit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
@@ -213,7 +139,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                         const SizedBox(height: 20),
 
-                        // Divider với chữ "hoặc" (GIỮ NGUYÊN)
                         Row(
                           children: [
                             const Expanded(
@@ -235,7 +160,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                         const SizedBox(height: 16),
 
-                        // Nút đăng nhập (GIỮ NGUYÊN)
                         TextButton(
                           onPressed: () {
                             Navigator.push(
@@ -263,7 +187,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     );
   }
 
-  /// Giữ nguyên UI input
   Widget _buildInput({
     required String label,
     required String hint,

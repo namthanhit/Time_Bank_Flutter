@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/home_providers.dart';
+import '../../domain/models/home_models.dart'; // restored per request to revert external changes
 import '../widgets/activities_list.dart';
 
 class ActivitiesSectionContainer extends ConsumerWidget {

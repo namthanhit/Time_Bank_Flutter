@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "742754971534",
+    "firebase_url": "https://timebanking-chat-default-rtdb.firebaseio.com",
+    "project_id": "timebanking-chat",
+    "storage_bucket": "timebanking-chat.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742754971534:android:2204ec75a937ba8463bedf",
+        "android_client_info": {
+          "package_name": "com.example.time_bank_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEv4dpGUowjLQojC8i4lmrJ50Gl-TGIdE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
