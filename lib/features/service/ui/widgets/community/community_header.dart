@@ -284,7 +284,7 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildFilterOption(Icons.people, 'Mọi người'),
+              _buildFilterOption(Icons.public, 'Mọi người'),
               _buildFilterOption(Icons.group, 'Bạn bè'),
               _buildFilterOption(Icons.person, 'Của tôi'),
             ],
@@ -325,13 +325,14 @@ class _CommunityHeaderState extends State<CommunityHeader> {
   IconData _iconForFilter(String filter) {
     switch (filter) {
       case 'Bạn bè':
-        return Icons.group;
+        return Icons.group; // 👥
       case 'Của tôi':
-        return Icons.person;
+      case 'Yêu cầu của tôi':
+        return Icons.assignment_ind; // 🧾 hoặc Icons.person_outline
       case 'Mọi người':
       case 'Tất cả mọi người':
       default:
-        return Icons.people;
+        return Icons.public; // 🌐
     }
   }
 
