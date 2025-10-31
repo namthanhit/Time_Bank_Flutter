@@ -127,16 +127,9 @@ class _RatingServicePageState extends State<RatingServicePage> {
     };
 
     debugPrint('Sending review: $review');
-
-    // ScaffoldMessenger.of(context)
-    //     .showSnackBar(const SnackBar(content: Text('Đang gửi...')));
-    // await Future.delayed(const Duration(seconds: 1));
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('Đã gửi đánh giá thành công')));
-
-    // Notify the caller (ServiceRatingPage) about new review so it can store it.
-    // Do NOT pop — stay on the rating page per UX request.
     widget.onSubmit?.call(review);
+
+    Navigator.of(context).pop();
   }
 
   @override

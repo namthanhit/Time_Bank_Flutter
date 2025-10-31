@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../../../data/mock_service_repository.dart';
-import '../rating/rating_service_page.dart';
+import 'rating_service_page.dart';
 
 /// A reusable widget that renders a single review as a Card. This can be
 /// embedded inline (e.g., inside the 'Đã đánh giá' list) or used inside the

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/already_rated.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/rating/already_rated.dart';
 import 'package:time_bank_flutter/features/service/ui/widgets/rating/not_rated_yet.dart';
 
 // 🔹 Trang quản lý đánh giá với 2 tab
