@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_service_repository.dart';
-import '../../domain/models/service.dart';
+import '../../../data/mock_service_repository.dart';
+import '../../../domain/models/service.dart';
 
 /// A small widget that lists services with status == 'completed'.
 /// It mirrors `ServiceInProgressWidget` visuals so completed items

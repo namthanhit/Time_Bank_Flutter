@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_service_repository.dart';
+import '../../../data/mock_service_repository.dart';
 
 class PendingApplicantsWidget extends StatefulWidget {
   final String serviceId;
@@ -476,7 +476,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
           '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}';
     }
 
-    showModalBottomSheet(
+    (
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

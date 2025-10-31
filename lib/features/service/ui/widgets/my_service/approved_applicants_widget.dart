@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_service_repository.dart';
+import '../../../data/mock_service_repository.dart';
 
 class ApprovedApplicantsWidget extends StatefulWidget {
   final String serviceId;

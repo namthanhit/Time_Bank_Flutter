@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../providers/service_providers.dart';
-import '../../data/mock_service_repository.dart';
+import '../../../data/mock_service_repository.dart';
+import '../../../domain/models/service.dart';
+import '../../../providers/service_providers.dart';
 import 'service_detail_header.dart';
-import '../../domain/models/service.dart';
 
 class CommunityServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;

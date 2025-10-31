@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_service_repository.dart';
-import '../../domain/models/service.dart';
+import '../../../data/mock_service_repository.dart';
+import '../../../domain/models/service.dart';
 
-/// Widget that lists services with status == 'cancelled'.
-class ServiceCancelledWidget extends StatefulWidget {
+/// A small, reusable widget that lists services currently in-progress
+/// (status == 'in_progress'). It renders the same open-style card used
+/// across the app so the visual is consistent with `OpenApplicants`.
+class ServiceInProgressWidget extends StatefulWidget {
+  /// When true only show services owned by the current user
   final bool showOnlyMyServices;
+
+  /// Optional callback when a service card is tapped
   final void Function(Service)? onTap;
+
+  /// Optional refresh callback
   final VoidCallback? onRefresh;
 
-  const ServiceCancelledWidget({
+  const ServiceInProgressWidget({
     Key? key,
     this.showOnlyMyServices = false,
     this.onTap,
@@ -16,10 +23,11 @@ class ServiceCancelledWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ServiceCancelledWidget> createState() => _ServiceCancelledWidgetState();
+  State<ServiceInProgressWidget> createState() =>
+      _ServiceInProgressWidgetState();
 }
 
-class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
+class _ServiceInProgressWidgetState extends State<ServiceInProgressWidget> {
   @override
   void initState() {
     super.initState();
@@ -40,7 +48,7 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
   Widget build(BuildContext context) {
     final ownerId =
         widget.showOnlyMyServices ? MockServiceRepository.currentUserId : null;
-    final services = MockServiceRepository.getServicesByStatus('cancelled',
+    final services = MockServiceRepository.getServicesByStatus('in_progress',
         ownerId: ownerId);
 
     if (services.isEmpty) {
@@ -63,7 +71,7 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
                     width: 96, height: 96, fit: BoxFit.contain),
               ),
               const SizedBox(height: 12),
-              const Text('Không có dịch vụ đã hủy',
+              const Text('Không có dịch vụ đang thực hiện',
                   style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 8),
               if (widget.onRefresh != null)

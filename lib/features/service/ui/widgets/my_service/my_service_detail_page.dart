@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/service_providers.dart';
-import '../../domain/models/service.dart';
-import '../../data/mock_service_repository.dart';
-import '../service_applicants_page.dart';
-import '../four_service_applicants_page.dart';
+import '../../../providers/service_providers.dart';
+import '../../../domain/models/service.dart';
+import '../../../data/mock_service_repository.dart';
+import '../../page/service_applicants_page.dart';
+import '../../page/four_service_applicants_page.dart';
 
 // Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
 // - Hiển thị header riêng (icon người gần title)

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_service_repository.dart';
+import '../../../data/mock_service_repository.dart';
 import 'pending_applicant_card.dart';
 
 /// A simplified version of PendingApplicantsWidget that:

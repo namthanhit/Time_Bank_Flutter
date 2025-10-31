@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'widgets/pending_applicants_widget.dart';
-import 'widgets/approved_applicants_widget.dart';
+import '../widgets/my_service/pending_applicants_widget.dart';
+import '../widgets/my_service/approved_applicants_widget.dart';
 
 class ServiceApplicantsPage extends StatefulWidget {
   final String serviceId;

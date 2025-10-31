@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'widgets/service_list_container.dart';
+import '../widgets/service_list_container.dart';
 
 class ServiceSearchPage extends StatefulWidget {
   final String initialQuery;

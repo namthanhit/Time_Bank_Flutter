@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/applicantdetailfullpage.dart';
-import '../../data/mock_service_repository.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/applicantdetailfullpage.dart';
+import '../../../data/mock_service_repository.dart';
 
 /// Reusable applicant card used by Pending lists.
 /// Layout per user's request:

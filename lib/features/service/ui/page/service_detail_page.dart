@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'widgets/community_service_detail_page.dart';
-import 'widgets/my_service_detail_page.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/my_service/my_service_detail_page.dart';
+
+import '../widgets/community/community_service_detail_page.dart';
+
 
 class ServiceDetailPage extends StatelessWidget {
   final String serviceId;

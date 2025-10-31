@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/open_applicants.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/received_applicants.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/service_completed.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/service_cancelled.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/service_in_progress.dart';
-import 'widgets/pending_applicants_no_search_widget.dart';
-import '../data/mock_service_repository.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/open_applicants.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/pending_applicants_no_search_widget.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/received_applicants.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/service_cancelled.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/service_completed.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/service_in_progress.dart';
+import '../../data/mock_service_repository.dart';
 
 class FourServiceApplicantsPage extends StatefulWidget {
   final String serviceId;
@@ -163,14 +163,12 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
             return Padding(
                 padding: const EdgeInsets.all(0),
                 child: ServiceCompletedWidget());
-          }
-          ;
+          };
           if (tab == 'Đã hủy') {
             return Padding(
                 padding: const EdgeInsets.all(0),
                 child: ServiceCancelledWidget(showOnlyMyServices: true));
-          }
-          ;
+          };
           // Default placeholder for other tabs
           return Padding(
             padding: const EdgeInsets.all(16),

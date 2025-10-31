@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_service_repository.dart';
-import '../../domain/models/service.dart';
+import '../../../data/mock_service_repository.dart';
+import '../../../domain/models/service.dart';
 
-/// A small, reusable widget that lists services currently in-progress
-/// (status == 'in_progress'). It renders the same open-style card used
-/// across the app so the visual is consistent with `OpenApplicants`.
-class ServiceInProgressWidget extends StatefulWidget {
-  /// When true only show services owned by the current user
+/// Widget that lists services with status == 'cancelled'.
+class ServiceCancelledWidget extends StatefulWidget {
   final bool showOnlyMyServices;
-
-  /// Optional callback when a service card is tapped
   final void Function(Service)? onTap;
-
-  /// Optional refresh callback
   final VoidCallback? onRefresh;
 
-  const ServiceInProgressWidget({
+  const ServiceCancelledWidget({
     Key? key,
     this.showOnlyMyServices = false,
     this.onTap,
@@ -23,11 +16,10 @@ class ServiceInProgressWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ServiceInProgressWidget> createState() =>
-      _ServiceInProgressWidgetState();
+  State<ServiceCancelledWidget> createState() => _ServiceCancelledWidgetState();
 }
 
-class _ServiceInProgressWidgetState extends State<ServiceInProgressWidget> {
+class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
   @override
   void initState() {
     super.initState();
@@ -48,7 +40,7 @@ class _ServiceInProgressWidgetState extends State<ServiceInProgressWidget> {
   Widget build(BuildContext context) {
     final ownerId =
         widget.showOnlyMyServices ? MockServiceRepository.currentUserId : null;
-    final services = MockServiceRepository.getServicesByStatus('in_progress',
+    final services = MockServiceRepository.getServicesByStatus('cancelled',
         ownerId: ownerId);
 
     if (services.isEmpty) {
@@ -71,7 +63,7 @@ class _ServiceInProgressWidgetState extends State<ServiceInProgressWidget> {
                     width: 96, height: 96, fit: BoxFit.contain),
               ),
               const SizedBox(height: 12),
-              const Text('Không có dịch vụ đang thực hiện',
+              const Text('Không có dịch vụ đã hủy',
                   style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 8),
               if (widget.onRefresh != null)

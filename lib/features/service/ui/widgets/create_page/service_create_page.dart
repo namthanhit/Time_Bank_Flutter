@@ -54,6 +54,18 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     super.dispose();
   }
 
+  IconData _getIconForOption(String option) {
+    switch (option) {
+      case 'Mọi người':
+        return Icons.groups;
+      case 'Bạn bè':
+        return Icons.people_alt;
+      case 'Cá nhân':
+      default:
+        return Icons.person; // Hoặc Icons.person
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -459,10 +471,10 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
             ),
           ],
         ),
-        // Visibility selector (replaces the single icon)
         Row(
           children: [
-            Icon(Icons.people_alt_outlined,
+            // Icon này sẽ thay đổi dựa trên giá trị của _visibilityOption
+            Icon(_getIconForOption(_visibilityOption),
                 color: Colors.blue.shade800, size: 26),
             const SizedBox(width: 8),
             PopupMenuButton<String>(
@@ -473,12 +485,41 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                   _visibilityOption = val;
                 });
               },
+              // Đây là phần được cập nhật chính
               itemBuilder: (ctx) => [
-                const PopupMenuItem(value: 'Cá nhân', child: Text('Cá nhân')),
-                const PopupMenuItem(
-                    value: 'Mọi người', child: Text('Mọi người')),
-                const PopupMenuItem(value: 'Bạn bè', child: Text('Bạn bè')),
+                PopupMenuItem(
+                  value: 'Cá nhân',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, color: Colors.grey.shade700, size: 22),
+                      const SizedBox(width: 10),
+                      const Text('Cá nhân'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'Mọi người',
+                  child: Row(
+                    children: [
+                      Icon(Icons.groups, color: Colors.grey.shade700, size: 22),
+                      const SizedBox(width: 10),
+                      const Text('Mọi người'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'Bạn bè',
+                  child: Row(
+                    children: [
+                      Icon(Icons.people_alt,
+                          color: Colors.grey.shade700, size: 22),
+                      const SizedBox(width: 10),
+                      const Text('Bạn bè'),
+                    ],
+                  ),
+                ),
               ],
+              // Phần child này vẫn giữ nguyên
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -501,7 +542,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
               ),
             ),
           ],
-        ),
+        )
       ],
     );
   }
@@ -606,6 +647,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
+  // (Formatting helpers removed per UI decision)
+
   // Skill selector dialog - uses MockServiceRepository.skillNames
   Future<void> _showSkillSelector(BuildContext context) async {
     final allSkills = MockServiceRepository.skillNames;
@@ -700,7 +743,10 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         userId: MockServiceRepository.currentUserId,
         skillIds: _selectedSkillIds.isEmpty ? null : _selectedSkillIds,
         title: title,
-        description: _descriptionController.text,
+        // Convert literal newlines into escaped "\\n" so backend receives
+        // line breaks as the two-character sequence \n while keeping any
+        // tags or plain text intact.
+        description: _descriptionController.text.replaceAll('\n', '\\n'),
         regionCode: address,
         place: '',
         preferredStart: parseDdMmYyyy(date),
@@ -708,9 +754,9 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         // `slot` represents personnel capacity (count). Creation UI currently
         // doesn't collect capacity, so default to 1.
         slot: 1,
-    visibility: _visibilityOption == 'Cá nhân'
-      ? 'private'
-      : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public'),
+        visibility: _visibilityOption == 'Cá nhân'
+            ? 'private'
+            : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public'),
         status: 'open',
         createdAt: DateTime.now(),
         providerName: null,

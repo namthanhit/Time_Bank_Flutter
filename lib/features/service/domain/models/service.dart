@@ -11,20 +11,11 @@ class Service {
   final String place;
   final DateTime? preferredStart;
   final int time; // total time in minutes
-  // `slot` represents the number of personnel (capacity) for the service.
-  // Historically this project used confusing names: `slot` / `capacity` /
-  // `minSlotMinutes`. We're standardizing on:
-  // - `time`: duration in minutes
-  // - `slot`: personnel capacity (count)
   final int slot;
   final String visibility; // e.g. 'public', 'friends', 'hidden'
   final String status; // e.g. 'open', 'matched', 'completed'
   final DateTime createdAt;
   final DateTime? updatedAt;
-
-  // Personnel counts: number of booked personnel.
-  // `slot` is the canonical personnel capacity (count). The legacy field
-  // `capacity` was removed because the API returns `slot` only.
   final int? bookedSlots;
 
   // Optional UI-friendly fields (computed or joined from other endpoints)

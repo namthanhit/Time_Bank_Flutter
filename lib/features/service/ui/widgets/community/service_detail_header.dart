@@ -1,7 +1,7 @@
 // lib/features/service/ui/widgets/service_detail_header.dart
 import 'package:flutter/material.dart';
-import '../../domain/models/service.dart';
-import '../../data/mock_service_repository.dart';
+import '../../../domain/models/service.dart';
+import '../../../data/mock_service_repository.dart';
 
 class ServiceDetailHeader extends StatelessWidget {
   final Service service;

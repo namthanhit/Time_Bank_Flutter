@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/service.dart';
 import '../../data/mock_service_repository.dart';
-import '../../ui/service_detail_page.dart';
+import '../page/service_detail_page.dart';
 
 class ServiceCard extends StatelessWidget {
   final Service service;
