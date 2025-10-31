@@ -284,10 +284,8 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildFilterOption(Icons.all_inclusive, 'Tất cả'),
               _buildFilterOption(Icons.people, 'Mọi người'),
               _buildFilterOption(Icons.group, 'Bạn bè'),
-              _buildFilterOption(Icons.access_time, 'Gần đây'),
               _buildFilterOption(Icons.person, 'Của tôi'),
             ],
           ),
@@ -328,12 +326,9 @@ class _CommunityHeaderState extends State<CommunityHeader> {
     switch (filter) {
       case 'Bạn bè':
         return Icons.group;
-      case 'Gần đây':
-        return Icons.access_time;
       case 'Của tôi':
         return Icons.person;
       case 'Mọi người':
-      case 'Tất cả':
       case 'Tất cả mọi người':
       default:
         return Icons.people;
@@ -342,7 +337,7 @@ class _CommunityHeaderState extends State<CommunityHeader> {
 
   String _displayLabelForFilter(String filter) {
     // normalize some labels to match the UI expectation
-    if (filter == 'Tất cả' || filter == 'Mọi người') return 'Tất cả mọi người';
+    if (filter == 'Mọi người') return 'Mọi người';
     return filter;
   }
 }
