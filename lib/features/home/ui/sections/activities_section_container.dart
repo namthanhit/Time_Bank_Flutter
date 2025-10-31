@@ -20,9 +20,12 @@ class ActivitiesSectionContainer extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text('Lỗi tải hoạt động: $e', style: const TextStyle(color: Colors.red)),
+            Text('Lỗi tải hoạt động: $e',
+                style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 8),
-            OutlinedButton(onPressed: () => ref.refresh(activitiesProvider), child: const Text('Thử lại')),
+            OutlinedButton(
+                onPressed: () => ref.refresh(activitiesProvider),
+                child: const Text('Thử lại')),
           ],
         ),
       ),

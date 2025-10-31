@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:time_bank_flutter/features/service/ui/page/service_page.dart';
 import '../features/home/ui/home_page.dart';
 import 'navigation/bottom_nav_bar.dart';
 import 'navigation/nav_item_data.dart';
@@ -20,7 +21,7 @@ class _AppShellState extends State<AppShell> {
 
   late final List<Widget> _pages = [
     const HomePage(),
-    const StubPage(label: 'Dịch vụ'),
+    ServicePage(),
     const ChatListPage(),
     const SettingsPage(),
   ];
