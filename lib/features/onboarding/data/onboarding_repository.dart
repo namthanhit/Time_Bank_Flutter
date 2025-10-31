@@ -1,36 +1,96 @@
-import '../domain/models/models.dart';
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'onboarding_api.dart';
+import '../domain/phone_until.dart';
+import '../domain/models/models.dart';
 
-abstract class OnboardingRepository {
-  Future<void> signup(SignupPayload payload);
-  Future<void> resendOtp(String phone);
-  Future<void> verifyOtp(VerifyOtpPayload payload);
-  Future<void> setPassword(SetPasswordPayload payload);
-  Future<void> completeProfile(CompleteProfilePayload payload);
-  Future<void> setPin(SetPinPayload payload);
+class OnboardingRepository {
+  OnboardingRepository(this.api, this.auth);
+  final OnboardingApi api;
+  final FirebaseAuth auth;
+
+  // ---------- Regions ----------
+  Future<List<Region>> getProvinces() => api.fetchProvinces();
+  Future<List<Region>> getDistricts(String provinceId) => api.fetchDistricts(provinceId);
+  Future<List<Region>> getWards(String districtId) => api.fetchWards(districtId);
+  Future<Region> getRegionDetail(String id) => api.fetchRegionDetail(id);
+
+  // ---------- Uniqueness ----------
+  /// Trả về { 'email_taken': bool, 'citizen_id_taken': bool }
+  Future<Map<String, bool>> checkUnique({String? email, String? citizenId}) {
+    // API phía dưới đã map đúng query: citizen_id (snake_case)
+    return api.checkUnique(email: email, citizenId: citizenId);
+  }
+
+  // ---------- Phone/OTP ----------
+  Future<StartPhoneResult> startPhoneFlow(String phoneRaw) async {
+    final r = await api.checkPhone(phoneRaw);
+    if (r.exists) throw OnboardingError('Số điện thoại đã được sử dụng');
+    final phoneToken = r.phoneToken;
+    if (phoneToken == null) throw OnboardingError('Thiếu phone_token từ server');
+
+    final phoneE164 = toE164VN(phoneRaw);
+    final completer = Completer<StartPhoneResult>();
+    String? verificationId;
+
+    await auth.verifyPhoneNumber(
+      phoneNumber: phoneE164,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (_) {},
+      verificationFailed: (e) => completer.completeError(OnboardingError(e.message ?? 'Firebase error')),
+      codeSent: (verId, _) {
+        verificationId = verId;
+        completer.complete(StartPhoneResult(phoneToken: phoneToken, verificationId: verId));
+      },
+      codeAutoRetrievalTimeout: (verId) => verificationId ??= verId,
+    );
+
+    return completer.future;
+  }
+
+  Future<void> verifyOtpLocal({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final credential = PhoneAuthProvider.credential(verificationId: verificationId, smsCode: smsCode);
+    await auth.signInWithCredential(credential);
+    await auth.signOut(); // không giữ session Firebase
+  }
+
+  // ---------- Signup/Create ----------
+  Future<String> createAccount({
+    required String phoneToken,
+    required PersonalDto personal,
+    required String pin,
+    required String password,
+    required String skillId,
+  }) async {
+    // Guard nhẹ: cần wardId để lưu vào UserDetail.region_id
+    if ((personal.regionId ?? personal.regionId) == null) {
+      throw OnboardingError('Thiếu region_id (wardId) trong hồ sơ cá nhân');
+    }
+
+    final r = await api.signupCreate(
+      phoneToken: phoneToken,
+      personal: personal,
+      pin: pin,
+      password: password,
+      skillId: skillId,
+    );
+    if (!r.ok) throw OnboardingError('Tạo tài khoản thất bại');
+    return r.userId ?? '';
+  }
 }
 
-class OnboardingRepositoryImpl implements OnboardingRepository {
-  final OnboardingApi api;
-  OnboardingRepositoryImpl(this.api);
+class StartPhoneResult {
+  final String phoneToken;
+  final String verificationId;
+  StartPhoneResult({required this.phoneToken, required this.verificationId});
+}
 
+class OnboardingError implements Exception {
+  final String message;
+  OnboardingError(this.message);
   @override
-  Future<void> signup(SignupPayload payload) => api.signup(payload);
-
-  @override
-  Future<void> resendOtp(String phone) => api.resendOtp(phone);
-
-  @override
-  Future<void> verifyOtp(VerifyOtpPayload payload) => api.verifyOtp(payload);
-
-  @override
-  Future<void> setPassword(SetPasswordPayload payload) =>
-      api.setPassword(payload);
-
-  @override
-  Future<void> completeProfile(CompleteProfilePayload payload) =>
-      api.completeProfile(payload);
-
-  @override
-  Future<void> setPin(SetPinPayload payload) => api.setPin(payload);
+  String toString() => message;
 }

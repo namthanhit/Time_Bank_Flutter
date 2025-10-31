@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'app/app.dart';
-import 'core/app_config.dart';
-import 'features/auth/providers/auth_providers.dart';
-import 'features/auth/data/mock_auth_repository.dart';
 
-void main() {
-  runApp(
-    ProviderScope(
-      overrides: [
-        if (AppConfig.useMock) authRepoProvider.overrideWithValue(MockAuthRepository()),
-      ],
-      child: const App(),
-    ),
-  );
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp();
+  FirebaseDatabase.instance.databaseURL = 'https://timebanking-chat-default-rtdb.firebaseio.com/';
+
+  runApp(const ProviderScope(child: App()));
 }

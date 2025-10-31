@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/Onboarding/ui/set_security_page.dart';
-import 'package:time_bank_flutter/features/onboarding/providers/onboarding_controller.dart';
+import 'package:time_bank_flutter/features/onboarding/ui/set_security_page.dart';
+import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class PasswordSetupScreen extends ConsumerStatefulWidget {
   const PasswordSetupScreen({super.key});
@@ -29,7 +29,8 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final password = _passwordController.text.trim();
-    await ref.read(onboardingControllerProvider.notifier).setPassword(password);
+
+    ref.read(onboardingControllerProvider.notifier).setSecurity(password: password);
 
     final state = ref.read(onboardingControllerProvider);
     if (state.error == null && mounted) {
@@ -95,7 +96,6 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
                       ),
                       const SizedBox(height: 45),
 
-                      // Box trắng giữ nguyên UI
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
                         decoration: BoxDecoration(
@@ -168,7 +168,6 @@ class _PasswordSetupScreenState extends ConsumerState<PasswordSetupScreen> {
                               ),
                               const SizedBox(height: 60),
 
-                              // Nút Hoàn tất (gradient)
                               Container(
                                 width: double.infinity,
                                 height: 48,

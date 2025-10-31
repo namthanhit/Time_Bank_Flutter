@@ -26,17 +26,17 @@ class QuickActions extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               MenuButton(
-                icon: Icons.attach_money,
-                label: 'Chuyển tiền',
+                icon: Icons.compare_arrows,
+                label: 'Chuyển thời gian',
                 onTap: onTransfer,
               ),
-              const SizedBox(width: 50),
+              const SizedBox(width: 40),
               MenuButton(
                 icon: Icons.qr_code_scanner_rounded,
                 label: 'QR',
                 onTap: onQr,
               ),
-              const SizedBox(width: 50),
+              const SizedBox(width: 40),
               MenuButton(
                 icon: Icons.history,
                 label: 'Lịch sử\nGiao dịch',
