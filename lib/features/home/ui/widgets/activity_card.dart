@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/home_models.dart';
 import '../home_typography.dart';
-import 'tag_chip_fixed_width.dart';
+// specialization tag will mimic ServiceCard style
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
@@ -17,7 +17,7 @@ class ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor = _statusColor(activity.status);
+    // status removed for this card; keep helper in case needed later
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -60,13 +60,40 @@ class ActivityCard extends StatelessWidget {
                           CircleAvatar(
                             radius: 24,
                             backgroundColor: Colors.blue.shade100,
-                            child: Text(
-                              activity.user.isNotEmpty ? activity.user[0].toUpperCase() : '?',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.blue,
-                              ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: activity.avatarUrl != null &&
+                                      activity.avatarUrl!.isNotEmpty
+                                  ? Image.network(
+                                      activity.avatarUrl!,
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => Center(
+                                        child: Text(
+                                          activity.user.isNotEmpty
+                                              ? activity.user[0].toUpperCase()
+                                              : '?',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        activity.user.isNotEmpty
+                                            ? activity.user[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -77,7 +104,10 @@ class ActivityCard extends StatelessWidget {
                                 Text(
                                   activity.user,
                                   style: HomeTypography.cardUserName.copyWith(
-                                    fontSize: (HomeTypography.cardUserName.fontSize ?? 14) + 2,
+                                    fontSize:
+                                        (HomeTypography.cardUserName.fontSize ??
+                                                14) +
+                                            2,
                                     fontWeight: FontWeight.w700,
                                   ),
                                   maxLines: 1,
@@ -86,7 +116,10 @@ class ActivityCard extends StatelessWidget {
                                 Text(
                                   activity.timeAgo,
                                   style: HomeTypography.cardUserTime.copyWith(
-                                    fontSize: (HomeTypography.cardUserTime.fontSize ?? 12) + 1,
+                                    fontSize:
+                                        (HomeTypography.cardUserTime.fontSize ??
+                                                12) +
+                                            1,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -96,7 +129,8 @@ class ActivityCard extends StatelessWidget {
                           ),
                           IconButton(
                             visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.more_horiz, color: Color(0xFF0B4F80)),
+                            icon: const Icon(Icons.more_horiz,
+                                color: Color(0xFF0B4F80)),
                             onPressed: onMoreTap,
                           ),
                         ],
@@ -115,77 +149,31 @@ class ActivityCard extends StatelessWidget {
                       const SizedBox(height: 16),
 
                       // Info rows
-                      _info(icon: Icons.calendar_month, value: activity.taskTime, valueColor: const Color(0xFF2E8B2C)),
+                      _info(
+                          icon: Icons.calendar_month,
+                          value: activity.taskTime,
+                          valueColor: const Color(0xFF2E8B2C)),
                       const SizedBox(height: 6),
-                      _info(icon: Icons.access_time, value: activity.duration, valueColor: Colors.red),
+                      _info(
+                          icon: Icons.access_time,
+                          value: activity.duration,
+                          valueColor: Colors.red),
                       const SizedBox(height: 6),
                       _info(icon: Icons.location_on, value: activity.location),
 
                       const SizedBox(height: 8),
-
-                      // Status pill
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: statusColor.withOpacity(0.40),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            activity.status,
-                            style: HomeTypography.statusLabel.copyWith(fontSize: 14),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
               ),
 
-              // Tags overlay
+              // Specialization tag (matches ServiceCard style)
               Positioned(
-                top: 78,
+                top: 72,
                 right: 8,
-                left: null,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    // Giới hạn vùng tag (tuỳ bạn, 220 là ví dụ cũ)
-                    const double maxWrapWidth = 95;
-                    const int cols = 1;           // => 2 cột, tag = nhau
-                    const double spacing = 6.0;   // khoảng cách giữa các chip
-
-                    final width = maxWrapWidth;
-                    final cellWidth = (width - spacing * (cols - 1)) / cols;
-
-                    final tags = activity.tags;
-                    // Giới hạn số tag hiển thị và thêm "+N" nếu quá
-                    const maxShow = 2;
-                    final show = tags.length > maxShow
-                        ? [...tags.take(maxShow - 1), '+${tags.length - (maxShow - 1)}']
-                        : tags;
-
-                    return ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: maxWrapWidth),
-                      child: Wrap(
-                        spacing: spacing,
-                        runSpacing: spacing,
-                        alignment: WrapAlignment.end,
-                        children: [
-                          for (final t in show)
-                            TagChipFixedWidth(text: t, width: cellWidth),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                child: _buildSpecializationTag(context, activity.tags,
+                    chipWidth: 60.0, chipHeight: 16.0),
               ),
             ],
           ),
@@ -195,7 +183,8 @@ class ActivityCard extends StatelessWidget {
   }
 
   // === helpers ===
-  Widget _info({required IconData icon, required String value, Color? valueColor}) {
+  Widget _info(
+      {required IconData icon, required String value, Color? valueColor}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -215,12 +204,117 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String s) {
-    final x = s.toLowerCase();
-    if (x.contains('đã nhận') || x.contains('nhận')) return Colors.green;
-    if (x.contains('đang làm') || x.contains('in progress')) return const Color(0xFF0B4F80);
-    if (x.contains('hoàn thành') || x.contains('done')) return const Color(0xFF2E8B2C);
-    if (x.contains('hủy')) return Colors.red;
-    return Colors.orange;
+  Widget _buildSpecializationTag(BuildContext context, List<String>? tags,
+      {double chipWidth = 96.0, double chipHeight = 28.0}) {
+    final list = tags ?? <String>[];
+    final specialization = list.join(', ');
+    if (specialization.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE0DC06),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: const Text(
+          'Khác',
+          style: TextStyle(
+            fontSize: 10,
+            color: Color(0xFF003E77),
+          ),
+        ),
+      );
+    }
+
+    final parts = specialization
+        .split(RegExp(r'[,;|\n]'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE0DC06),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: const Text(
+          'Khác',
+          style: TextStyle(fontSize: 10, color: Color(0xFF000000)),
+        ),
+      );
+    }
+
+    if (parts.length == 1) {
+      return SizedBox(
+        width: chipWidth,
+        height: chipHeight,
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0DC06),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Text(
+            parts[0],
+            style: const TextStyle(fontSize: 10, color: Color(0xFF000000)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
+
+    return IntrinsicWidth(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: chipWidth,
+            height: chipHeight,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0DC06),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                parts[0],
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10, color: Color(0xFF000000)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: chipWidth,
+            height: chipHeight,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0DC06),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '...+${parts.length - 1}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF000000),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
+
+  // status removed from UI
 }
