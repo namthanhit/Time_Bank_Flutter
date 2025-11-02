@@ -9,7 +9,12 @@ class AuthApi implements IAuthApi {
 
   void _ensureOK(http.Response r) {
     if (r.statusCode < 200 || r.statusCode >= 300) {
-      throw Exception('HTTP ${r.statusCode}: ${r.body}');
+      try {
+        final errorBody = json.decode(utf8.decode(r.bodyBytes));
+        throw Exception(errorBody['message'] ?? 'Lỗi ${r.statusCode}');
+      } catch (e) {
+        throw Exception('HTTP ${r.statusCode}: ${r.body}');
+      }
     }
   }
 
@@ -39,4 +44,5 @@ class AuthApi implements IAuthApi {
     final res = await _api.post('/auth/logout', body: {'refresh_token': refreshToken});
     _ensureOK(res);
   }
+
 }

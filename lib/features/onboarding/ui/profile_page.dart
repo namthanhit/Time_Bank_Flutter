@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:time_bank_flutter/features/onboarding/ui/enter_password.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/region_providers.dart';
@@ -33,7 +32,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Khi vào màn hình, reset form & selections để không dính dữ liệu từ lần trước
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _resetForm();
     });
@@ -50,12 +48,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ---------- Reset helpers ----------
   void _resetRegionSelections() {
-    // Reset 3 selection
     ref.read(selectedProvinceIdProvider.notifier).state = null;
     ref.read(selectedDistrictIdProvider.notifier).state = null;
     ref.read(selectedWardIdProvider.notifier).state = null;
 
-    // Xoá cache list để lần sau vào fetch mới
     ref.invalidate(provincesProvider);
     ref.invalidate(districtsProvider);
     ref.invalidate(wardsProvider);
@@ -75,7 +71,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     _resetRegionSelections();
 
-    // Dọn draft trong state nếu có
     ref.read(onboardingControllerProvider.notifier).setPersonalDraft(
       fullName: null,
       email: null,
@@ -137,7 +132,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Map gender UI -> enum backend
     String? genderEnum;
     if (gender == "Nam") {
       genderEnum = "male";
@@ -149,7 +143,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       genderEnum = "unknown";
     }
 
-    // Bắt buộc: skill + đủ 3 cấp vùng -> wardId
     final wardSel = ref.read(selectedWardIdProvider);
     if (major == null || major!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,7 +165,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _checkingUnique = true;
     });
 
-    // Gọi check-unique (chỉ gửi param có giá trị) qua Repository
     final email = _emailController.text.trim();
     final cccd  = _cccdController.text.trim();
     final repo  = ref.read(onboardingRepoProvider);
@@ -180,7 +172,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       final unique = await repo.checkUnique(
         email: email.isEmpty ? null : email,
-        citizenId: cccd.isEmpty ? null : cccd, // repo sẽ map thành citizen_id
+        citizenId: cccd.isEmpty ? null : cccd,
       );
 
       bool hasInlineError = false;
@@ -198,26 +190,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       });
 
       if (hasInlineError) {
-        setState(() {}); // cập nhật UI errorText
-        return;          // dừng submit, KHÔNG điều hướng
+        setState(() {});
+        return;
       }
     } catch (e) {
-      // Nếu checkUnique lỗi mạng thì vẫn cho đi tiếp, hoặc tuỳ bạn xử lý.
       setState(() => _checkingUnique = false);
     }
 
-    // Chốt an toàn
     if (_emailErrorText != null || _cccdErrorText != null) return;
 
-    // Lưu bản nháp vào state; specialization là skill_id, regionId là wardId
     ref.read(onboardingControllerProvider.notifier).setPersonalDraft(
       fullName: _nameController.text.trim(),
       email: email.isEmpty ? null : email,
       cccd: cccd.isEmpty ? null : cccd,
       birthdate: selectedDate,
       gender: genderEnum,
-      regionId: wardSel,     // <-- lưu wardId
-      specialization: major, // <-- skill_id
+      regionId: wardSel,
+      specialization: major,
     );
 
     if (!mounted) return;
@@ -230,20 +219,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
-
-    // Lấy danh sách kỹ năng từ API
     final skillsAsync = ref.watch(skillsProvider);
-
-    // Regions cascade
     final provinceSel = ref.watch(selectedProvinceIdProvider);
     final districtSel = ref.watch(selectedDistrictIdProvider);
     final wardSel = ref.watch(selectedWardIdProvider);
-
     final provinces = ref.watch(provincesProvider);
     final districts = ref.watch(districtsProvider);
     final wards = ref.watch(wardsProvider);
-
-    // Optional preview địa chỉ đầy đủ
     final fullAddressAsync = ref.watch(fullAddressTextProvider);
 
     ref.listen(onboardingControllerProvider, (prev, next) {
@@ -284,7 +266,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // CCCD
                         _buildLabel("Căn cước công dân"),
                         const SizedBox(height: 6),
                         TextFormField(
@@ -317,7 +298,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Email
                         _buildLabel("Email", isRequired: false),
                         const SizedBox(height: 6),
                         TextFormField(
@@ -347,7 +327,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Họ và tên
                         _buildLabel("Họ và tên"),
                         const SizedBox(height: 6),
                         TextFormField(
@@ -368,7 +347,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Ngày sinh
                         _buildLabel("Ngày sinh"),
                         const SizedBox(height: 6),
                         TextFormField(
@@ -390,7 +368,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Giới tính
                         _buildLabel("Giới tính"),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
@@ -415,7 +392,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Chuyên môn (dropdown lấy từ API /skills)
                         _buildLabel("Chuyên môn"),
                         const SizedBox(height: 6),
                         skillsAsync.when(
@@ -455,11 +431,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Địa chỉ: Tỉnh/TP -> Quận/Huyện -> Xã/Phường
                         _buildLabel("Địa chỉ"),
                         const SizedBox(height: 6),
-
-                        // --- Tỉnh/Thành phố ---
                         provinces.when(
                           data: (items) => DropdownButtonFormField<String>(
                             value: provinceSel,
@@ -491,8 +464,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           error: (e, _) => Text('Lỗi tải Tỉnh/Thành: $e'),
                         ),
                         const SizedBox(height: 12),
-
-                        // --- Quận/Huyện ---
                         districts.when(
                           data: (items) => DropdownButtonFormField<String>(
                             value: districtSel,
@@ -528,8 +499,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           error: (e, _) => Text('Lỗi tải Quận/Huyện: $e'),
                         ),
                         const SizedBox(height: 12),
-
-                        // --- Xã/Phường ---
                         wards.when(
                           data: (items) => DropdownButtonFormField<String>(
                             value: wardSel,
@@ -564,7 +533,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           error: (e, _) => Text('Lỗi tải Xã/Phường: $e'),
                         ),
 
-                        // (Tuỳ chọn) Preview địa chỉ đầy đủ
                         fullAddressAsync.when(
                           data: (text) => text == null
                               ? const SizedBox.shrink()
@@ -582,8 +550,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
 
                         const SizedBox(height: 34),
-
-                        // Nút Tiếp theo
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -610,7 +576,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Nút Hủy -> reset & quay về LoginPage, clear stack
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(

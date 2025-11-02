@@ -1,42 +1,26 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/transaction_input.dart';
 
 class TransferActionButtons extends StatelessWidget {
-  final TransactionInput transferData;
-  final Duration accountBalance;
-  final ValueNotifier<bool> showErrorsNotifier;
+  final bool isEnabled;
   final VoidCallback onContinue;
   final VoidCallback? onBack;
 
   const TransferActionButtons({
     super.key,
-    required this.transferData,
-    required this.accountBalance,
-    required this.showErrorsNotifier,
+    required this.isEnabled,
     required this.onContinue,
     this.onBack,
   });
 
-  bool get isValid {
-    final receiverNumber = transferData.recipientAccount;
-    final receiverName = transferData.recipientName;
-    final timeAmount = transferData.amount;
-
-    if (receiverNumber.isEmpty || receiverName.isEmpty) return false;
-    if (timeAmount == Duration.zero) return false;
-    if (timeAmount > accountBalance) return false;
-    return true;
-  }
 
   @override
   Widget build(BuildContext context) {
     const colorPrimary = Color(0xFF003E77);
     final colorLightBlue =
-        const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
+    const Color(0xFFD6E8F5).withAlpha((0.9 * 255).toInt());
 
     return Row(
       children: [
-        // Nút quay lại
         Expanded(
           flex: 1,
           child: Container(
@@ -79,17 +63,16 @@ class TransferActionButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // Nút tiếp tục
         Expanded(
           flex: 2,
           child: Container(
             height: 46,
             decoration: BoxDecoration(
-              color: colorLightBlue,
+              color: isEnabled ? colorLightBlue : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: colorPrimary.withAlpha((0.2 * 255).toInt()),
+                  color: isEnabled ? colorPrimary.withAlpha((0.2 * 255).toInt()) : Colors.transparent,
                   offset: const Offset(0, 4),
                   blurRadius: 8,
                   spreadRadius: 1,
@@ -103,18 +86,13 @@ class TransferActionButtons extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
+                disabledBackgroundColor: Colors.transparent,
               ),
-              onPressed: () {
-                if (isValid) {
-                  onContinue();
-                } else {
-                  showErrorsNotifier.value = true;
-                }
-              },
-              child: const Text(
+              onPressed: isEnabled ? onContinue : null,
+              child: Text(
                 'Tiếp tục',
                 style: TextStyle(
-                  color: colorPrimary,
+                  color: isEnabled ? colorPrimary : Colors.grey.shade600,
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),

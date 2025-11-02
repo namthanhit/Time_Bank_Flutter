@@ -2,20 +2,26 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:time_bank_flutter/features/time_transfer/ui/transfer_page.dart';
-import 'package:time_bank_flutter/app/app_shell.dart';
-import '../../domain/models/transaction_ui_data.dart';
+import 'package:time_bank_flutter/features/time_transfer/domain/models/transfer_result.dart';
 import '../../providers/transaction_providers.dart';
 
 class TransferSuccessPage extends ConsumerStatefulWidget {
-  final TransactionUiData data;
+  final TransferResult result;
+  final String recipientName;
+  final String senderName;
+  final String recipientPhone;
 
-  const TransferSuccessPage({super.key, required this.data});
+  const TransferSuccessPage({
+    super.key,
+    required this.result,
+    required this.recipientName,
+    required this.senderName,
+    required this.recipientPhone,
+  });
 
   @override
   ConsumerState<TransferSuccessPage> createState() =>
@@ -23,14 +29,12 @@ class TransferSuccessPage extends ConsumerStatefulWidget {
 }
 
 class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
-  // Key để bọc vùng mà ta sẽ chụp ảnh và lưu ra file.
   final GlobalKey _repaintKey = GlobalKey();
 
-  // Hàm lưu ảnh: chụp widget trong RepaintBoundary và ghi file PNG vào thư mục ứng dụng.
   Future<void> _saveImage() async {
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      as RenderRepaintBoundary?;
       if (boundary == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -38,10 +42,9 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
         return;
       }
 
-      // Tăng pixelRatio để ảnh có chất lượng tốt hơn trên thiết bị có mật độ điểm ảnh cao.
       final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       final ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
+      await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -66,21 +69,26 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
     }
   }
 
+
+  String _formatDuration(int totalSeconds) {
+    if (totalSeconds < 0) totalSeconds = 0;
+    final d = Duration(seconds: totalSeconds);
+    final hh = d.inHours.toString().padLeft(2, '0');
+    final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hh:$mm:$ss';
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    final data = widget.data;
     const colorPrimary = Color(0xFF003E77);
-    const colorSuccess = Color(0xFF2ECC71); // xanh lá cây
+    const colorSuccess = Color(0xFF2ECC71);
 
     return WillPopScope(
       onWillPop: () async {
-        // Reset form and open a fresh TransferPage when user pops (swipe/back).
         ref.read(transactionFormProvider.notifier).reset();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TransferPage()),
-        );
-        // Returning false because we replace the route ourselves.
+        Navigator.of(context).pop();
         return false;
       },
       child: Scaffold(
@@ -91,36 +99,28 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              // Use same behavior as system back: reset and navigate to clean TransferPage
               ref.read(transactionFormProvider.notifier).reset();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const TransferPage()),
-              );
+              Navigator.of(context).pop();
             },
           ),
         ),
         body: Stack(
           children: [
-            // Nền xanh phía trên
             Container(
               height: 250,
               color: colorPrimary,
             ),
 
-            // Nội dung chính
             SingleChildScrollView(
               child: Column(
                 children: [
-                  // Box trắng chính
                   Align(
                     alignment: Alignment.topCenter,
                     child: RepaintBoundary(
                       key: _repaintKey,
-                      // Bọc toàn bộ box trắng chính để chụp ảnh
                       child: Container(
                         margin:
-                            const EdgeInsets.only(top: 60, left: 16, right: 16),
+                        const EdgeInsets.only(top: 60, left: 16, right: 16),
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -137,16 +137,14 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Dấu tích xanh lá - nền xanh, icon trắng
-                            CircleAvatar(
+                            const CircleAvatar(
                               radius: 32,
                               backgroundColor: colorSuccess,
-                              child: const Icon(Icons.check,
+                              child: Icon(Icons.check,
                                   color: Colors.white, size: 40),
                             ),
                             const SizedBox(height: 12),
 
-                            // Tiêu đề
                             const Text(
                               "Chuyển thời gian thành công",
                               style: TextStyle(
@@ -157,9 +155,8 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                             ),
                             const SizedBox(height: 20),
 
-                            // Thời gian
                             Text(
-                              data.timeAmount,
+                              _formatDuration(widget.result.secs),
                               style: const TextStyle(
                                 fontSize: 34,
                                 color: colorPrimary,
@@ -169,7 +166,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                             const SizedBox(height: 6),
                             Text(
                               DateFormat('HH:mm - dd/MM/yyyy')
-                                  .format(DateTime.now()),
+                                  .format(widget.result.completedAt?.toLocal() ?? DateTime.now()),
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 17,
@@ -178,7 +175,6 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                             ),
                             const SizedBox(height: 24),
 
-                            // Box người nhận
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -189,7 +185,7 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                               child: Column(
                                 children: [
                                   Text(
-                                    data.recipientName,
+                                    widget.recipientName.toUpperCase(),
                                     style: const TextStyle(
                                       fontSize: 18,
                                       color: colorPrimary,
@@ -198,13 +194,13 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    data.recipientAccount,
+                                    widget.recipientPhone,
                                     style: const TextStyle(
                                         fontSize: 16, color: Colors.black),
                                   ),
                                   const SizedBox(height: 18),
                                   Text(
-                                    '${data.senderName} chuyển khoản',
+                                    '${widget.senderName.toUpperCase()} chuyển khoản',
                                     style: const TextStyle(
                                       color: Colors.black,
                                       fontSize: 16,
@@ -218,36 +214,31 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                             const Text(
                               "Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi",
                               style:
-                                  TextStyle(color: Colors.black, fontSize: 16),
+                              TextStyle(color: Colors.black, fontSize: 16),
                             ),
                             const SizedBox(height: 36),
 
-                            // 3 nút chia sẻ
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 _ActionButton(
                                     icon: Icons.share_outlined,
                                     label: "Chia sẻ",
-                                    onTap: () {
-                                      // TODO: implement chia sẻ (share)
-                                    }),
+                                    onTap: () {}),
                                 _ActionButton(
                                     icon: Icons.home_outlined,
                                     label: "Trang chủ",
                                     onTap: () {
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                            builder: (_) => const AppShell()),
-                                        (route) => false,
-                                      );
+                                      ref
+                                          .read(transactionFormProvider.notifier)
+                                          .reset();
+                                      Navigator.of(context)
+                                          .popUntil((route) => route.isFirst);
                                     }),
                                 _ActionButton(
                                     icon: Icons.download_outlined,
                                     label: "Lưu ảnh",
-                                    onTap: () async {
-                                      await _saveImage();
-                                    }),
+                                    onTap: _saveImage),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -259,7 +250,6 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
 
                   const SizedBox(height: 40),
 
-                  // Nút nằm ngoài box trắng, canh đều lề như box
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -282,18 +272,11 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          elevation: 0,
+                          elevation: 0, // Bỏ elevation theo UI gốc
                         ),
                         onPressed: () {
-                          // Reset the transaction form so previous inputs are cleared
                           ref.read(transactionFormProvider.notifier).reset();
-                          // Replace this success page with a fresh TransferPage.
-                          // This ensures the user lands on the Transfer flow ready to start a new transaction.
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const TransferPage()),
-                          );
+                          Navigator.of(context).pop();
                         },
                         child: const Text(
                           "Thực hiện giao dịch khác",
@@ -312,9 +295,6 @@ class _TransferSuccessPageState extends ConsumerState<TransferSuccessPage> {
   }
 }
 
-// ================================================================
-// WIDGET: Action Button (icon tròn + nhãn nhỏ)
-// ================================================================
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;

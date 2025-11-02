@@ -1,22 +1,20 @@
-import '../models/transaction_request.dart';
-import '../models/transaction_preview.dart';
-import '../models/transaction_result.dart';
-import '../models/saved_account.dart';
+import '../models/check_request.dart';
+import '../models/create_transfer_request.dart';
+import '../models/recipient_info.dart';
+import '../models/transfer_result.dart';
+
 
 abstract class TransactionRepository {
-  /// Create a preview (calculate fee, reserve transaction id, etc.)
-  Future<TransactionPreview> createPreview(TransactionRequest request);
+  /// Tra cứu người nhận
+  Future<RecipientInfo> lookupRecipient(String phone);
 
-  /// Send OTP for a reserved transaction id
-  /// returns otpId or similar
-  Future<String> sendOtp(String transactionId);
+  /// (Kiểm tra số dư và ví
+  Future<bool> checkTransaction(CheckRequest request);
 
-  /// Verify OTP and finalize transaction
-  Future<TransactionResult> confirmWithOtp(String transactionId, String otp);
+  /// Thực thi chuyển tiền
+  Future<TransferResult> executeTransfer(CreateTransferRequest request);
 
-  /// Return a list of saved accounts for the current user (mocked)
-  Future<List<SavedAccount>> getSavedAccounts();
-
-  /// Build a default note string for a transfer given recipient name and amount
-  String buildDefaultNote(String senderName, String recipientName, String formattedAmount);
+  /// Build a default note string
+  String buildDefaultNote(
+      String senderName, String recipientName, String formattedAmount);
 }

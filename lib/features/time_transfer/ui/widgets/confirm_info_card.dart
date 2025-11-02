@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../domain/models/transaction_ui_data.dart';
 
 class ConfirmInfoCard extends StatelessWidget {
-  final TransactionUiData data;
+  final Map<String, dynamic> data;
 
   const ConfirmInfoCard({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
-  // colorPrimary removed (unused here)
+    final receiverName = data['recipientName'] as String;
+    final receiverNumber = data['recipientAccount'] as String;
+    final senderAvatarUrl = data['senderAvatarUrl'] as String?;
+    final receiverAvatarUrl = data['receiverAvatarUrl'] as String?;
+    final note = data['note'] as String;
+    final timeAmount = data['amountFormatted'] as String;
+    final senderName = data['senderName'] as String;
+    final senderNumber = data['senderAccount'] as String; // Key đã đổi
+    final transferMethod = 'Chuyển thời gian trong TimeBanking';
+    final fee = data['fee'] as String;
 
-  final receiverName = data.recipientName;
-  final receiverNumber = data.recipientAccount;
-  final note = data.note;
-  final timeAmount = data.timeAmount;
-  final senderName = data.senderName;
-  final senderNumber = data.senderNumber;
-  final transferMethod = 'Chuyển thời gian trong TimeBanking';
-  final fee = data.fee;
 
-    final now = DateTime.now();
+    final now = data['timestamp'] as DateTime;
     final formattedTime = DateFormat('dd/MM/yyyy   HH:mm:ss').format(now);
 
     return Container(
@@ -46,18 +46,18 @@ class ConfirmInfoCard extends StatelessWidget {
           // Người chuyển
           _buildUserSection(
             title: 'Người chuyển',
-            name: senderName,
+            name: senderName.toUpperCase(),
             number: senderNumber,
-            avatar: 'assets/images/avatar_sender.png',
+            avatarUrl: senderAvatarUrl,
           ),
           const SizedBox(height: 12),
 
           // Người nhận
           _buildUserSection(
             title: 'Người nhận',
-            name: receiverName,
+            name: receiverName.toUpperCase(),
             number: receiverNumber,
-            avatar: 'assets/images/avatar_receiver.png',
+            avatarUrl: senderAvatarUrl,
           ),
           const SizedBox(height: 12),
 
@@ -115,13 +115,32 @@ class ConfirmInfoCard extends StatelessWidget {
     );
   }
 
-  // Chỉ thay đổi phần người gửi & người nhận: thêm padding trái cho cả avatar + nội dung
   Widget _buildUserSection({
     required String title,
     required String name,
     required String number,
-    required String avatar,
+    required String? avatarUrl,
   }) {
+    Widget buildAvatar() {
+      if (avatarUrl != null && avatarUrl.isNotEmpty && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'))) {
+        return CircleAvatar(
+          backgroundColor: Colors.grey[200],
+          radius: 22,
+          backgroundImage: NetworkImage(avatarUrl),
+        );
+      } else {
+        return CircleAvatar(
+          backgroundColor: Colors.grey[300],
+          radius: 22,
+          child: Icon(
+            Icons.person_outline,
+            size: 28,
+            color: Colors.grey[600],
+          ),
+        );
+      }
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -137,15 +156,11 @@ class ConfirmInfoCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 6),
           Padding(
-            padding: const EdgeInsets.only(left: 40), // Lùi cả avatar và nội dung
+            padding: const EdgeInsets.only(left: 40),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.grey[300],
-                  radius: 22,
-                  backgroundImage: AssetImage(avatar),
-                ),
+                buildAvatar(),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -45,9 +45,9 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     String? email,
     String? cccd,
     DateTime? birthdate,
-    String? gender,          // "male" | "female" | "other" | "unknown"
-    String? regionId,        // <- wardId (bắt buộc trước khi submit)
-    String? specialization,  // <- skill_id (bắt buộc trước khi submit)
+    String? gender,
+    String? regionId,
+    String? specialization,
   }) {
     state = state.copyWith(
       fullName: fullName,
@@ -55,8 +55,8 @@ class OnboardingController extends StateNotifier<OnboardingState> {
       cccd: cccd,
       birthdate: birthdate,
       gender: gender,
-      regionId: regionId,              // thay cho address
-      specialization: specialization,  // skill_id
+      regionId: regionId,
+      specialization: specialization,
     );
   }
 
@@ -70,7 +70,6 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     final phoneToken = state.phoneToken;
     if (phoneToken == null) throw Exception('Thiếu phone_token');
 
-    // Validate thông tin bắt buộc
     if (state.fullName == null || state.fullName!.trim().isEmpty) {
       throw Exception('Thiếu họ tên');
     }
@@ -97,12 +96,12 @@ class OnboardingController extends StateNotifier<OnboardingState> {
           email: state.email,
           birthDate: state.birthdate,
           gender: state.gender,
-          regionId: state.regionId,                 // <-- gửi wardId
+          regionId: state.regionId,
           specializationOrDescription: null,
         ),
         pin: state.pin!,
         password: state.password!,
-        skillId: state.specialization!,             // <-- skill_id
+        skillId: state.specialization!,
       );
       state = state.copyWith(loading: false);
       return userId;
