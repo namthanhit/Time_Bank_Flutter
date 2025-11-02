@@ -5,7 +5,6 @@ import 'navigation/bottom_nav_bar.dart';
 import 'navigation/nav_item_data.dart';
 import '../features/qr/ui/qr_scanner_page.dart';
 import '../features/settings/ui/settings_page.dart';
-import '../common/ui/stub_page.dart';
 import '../features/chat/ui/chat_list_page.dart';
 import '../features/time_transfer/ui/transfer_page.dart';
 
