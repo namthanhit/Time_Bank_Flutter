@@ -77,7 +77,7 @@ class _AppShellState extends State<AppShell> {
           brandColor: _brand,
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.white.withOpacity(1.0),
     );
   }
 }
