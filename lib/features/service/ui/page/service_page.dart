@@ -5,7 +5,10 @@ import '../widgets/community/community_header.dart';
 import '../widgets/create_page/service_create_page.dart';
 
 class ServicePage extends StatefulWidget {
-  const ServicePage({super.key});
+  const ServicePage({super.key, this.initialTabIndex = 0});
+
+  /// Which tab to show on open. 0 = Cộng đồng, 1 = Của tôi
+  final int initialTabIndex;
 
   @override
   State<ServicePage> createState() => _ServicePageState();
@@ -20,9 +23,11 @@ class _ServicePageState extends State<ServicePage> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.initialTabIndex,
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
+          iconTheme: const IconThemeData(color: Colors.white),
           backgroundColor: const Color(0xFF003E77),
           elevation: 0,
           title: const Text(

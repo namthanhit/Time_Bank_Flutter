@@ -9,7 +9,8 @@ class ActivitiesSectionContainer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activities = ref.watch(activitiesProvider);
+    // Use the "My" section mock data for the activities shown here
+    final activities = ref.watch(myActivitiesProvider);
 
     return activities.when(
       loading: () => const Padding(
