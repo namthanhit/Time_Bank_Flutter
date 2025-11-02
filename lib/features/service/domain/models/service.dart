@@ -1,37 +1,34 @@
-// lib/features/service/domain/models/service.dart
-// Updated to align with the new database schema: string IDs and new fields
 class Service {
   final String id;
   final String userId;
-  final String? skillId; // optional: some APIs may still return skill relation
-  final List<String>? skillIds; // support multiple skills per service
+  final String? skillId;
+  final List<String>? skillIds;
+  final List<String>? skillNames;
   final String title;
   final String? description;
   final String? regionCode;
   final String place;
   final DateTime? preferredStart;
-  final int time; // total time in minutes
+  final int time;
   final int slot;
-  final String visibility; // e.g. 'public', 'friends', 'hidden'
-  final String status; // e.g. 'open', 'matched', 'completed'
+  final String visibility;
+  final String status;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final int? bookedSlots;
-
-  // Optional UI-friendly fields (computed or joined from other endpoints)
   final double? ratingAvg;
   final int? ratingCount;
   final String? providerName;
   final String? providerAvatar;
-  final String? providerSpecialization; // backward-compatible
+  final String? providerSpecialization;
   final List<String>? serviceImages;
 
-  // Backwards-compatible constructor: accept old names (minSlotMinutes, isPublic)
   Service({
     required this.id,
     required this.userId,
     this.skillId,
     this.skillIds,
+    this.skillNames,
     required this.title,
     this.description,
     this.regionCode,
@@ -50,26 +47,28 @@ class Service {
     this.providerSpecialization,
     this.serviceImages,
     this.bookedSlots,
-    // legacy fields
     int? minSlotMinutes,
     bool? isPublic,
   })  : time = time ?? 0,
-        // prefer explicit `slot` (capacity). Default to 1 person if not provided.
         slot = slot ?? 1,
         visibility = visibility ?? (isPublic == true ? 'public' : 'hidden'),
         status = status ?? 'open';
 
   factory Service.fromJson(Map<String, dynamic> json) {
-    // Support both numeric and string IDs from different backends
     String parseId(dynamic v) => v == null ? '' : v.toString();
 
-    // Some APIs return slot/time under different keys; be defensive
     int parseInt(dynamic v, [int fallback = 0]) {
       if (v == null) return fallback;
       if (v is int) return v;
       if (v is String) return int.tryParse(v) ?? fallback;
       if (v is double) return v.toInt();
       return fallback;
+    }
+
+    double? parseDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString());
     }
 
     DateTime? parseDateTime(dynamic v) {
@@ -82,95 +81,72 @@ class Service {
       }
     }
 
-    // service images may be provided as nested objects or list of strings
-    List<String>? images;
-    if (json['service_images'] is List) {
-      images = (json['service_images'] as List)
-          .map((e) => e == null ? '' : e.toString())
+    final user = json['user'];
+    final providerName =
+        user is Map<String, dynamic> ? user['full_name'] as String? : null;
+    final providerAvatar =
+        user is Map<String, dynamic> ? user['avatar_url'] as String? : null;
+
+    List<String>? skillIds;
+    List<String>? skillNames;
+
+    if (json['skills'] is List) {
+      final skills =
+          (json['skills'] as List).whereType<Map<String, dynamic>>().toList();
+      skillIds = skills.map((e) => e['id']?.toString() ?? '').toList();
+      skillNames = skills
+          .map((e) => e['name']?.toString() ?? '')
           .where((s) => s.isNotEmpty)
           .toList();
-      if (images.isEmpty) images = null;
+    }
+
+    // Convert skillNames to a readable specialization string
+    final providerSpecialization = (skillNames != null && skillNames.isNotEmpty)
+        ? skillNames.join(', ')
+        : null;
+
+    List<String>? images;
+    if (json['serviceImages'] is List) {
+      images = (json['serviceImages'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((e) {
+            final dynamic urlCandidate = e['url'] ?? e['image']?['url'];
+            return urlCandidate?.toString() ?? '';
+          })
+          .where((url) => url.isNotEmpty)
+          .toList();
     }
 
     return Service(
       id: parseId(json['id'] ?? json['service_id']),
       userId:
           parseId(json['user_id'] ?? json['provider_id'] ?? json['owner_id']),
-      // parse skill ids: accept 'skill_id' as single value or 'skill_ids' as list
-      skillId: json['skill_id'] != null ? json['skill_id'].toString() : null,
-      skillIds: (() {
-        final v = json['skill_ids'] ?? json['skill_id'];
-        if (v == null) return null;
-        if (v is List) return v.map((e) => e.toString()).toList();
-        if (v is String) return [v];
-        return [v.toString()];
-      })(),
+      skillIds: skillIds,
+      skillNames: skillNames,
       title: (json['title'] ?? '') as String,
       description: json['description'] as String?,
       regionCode: json['region_code'] as String?,
       place: json['place'] as String? ?? '',
       preferredStart: parseDateTime(json['preferred_start']),
-      time: parseInt(
-          json['time'], parseInt(json['secs'] ?? json['secs_booked'] ?? 0)),
-      // Parse capacity: prefer 'slot' (explicit), then 'capacity' legacy key.
-      slot: (() {
-        final parsedSlot = json['slot'];
-        if (parsedSlot != null) return parseInt(parsedSlot, 0);
-        final parsedCapacity = json['capacity'];
-        if (parsedCapacity != null) return parseInt(parsedCapacity, 0);
-        return 0;
-      })(),
+      time: parseInt(json['time']),
+      slot: parseInt(json['slot'] ?? json['capacity']),
       visibility: (json['visibility'] ?? 'public').toString(),
       status: (json['status'] ?? 'open').toString(),
       createdAt: parseDateTime(json['created_at']) ?? DateTime.now(),
       updatedAt: parseDateTime(json['updated_at']),
-      ratingAvg: json['rating_avg'] != null
-          ? (json['rating_avg'] as num).toDouble()
-          : null,
-      ratingCount: json['rating_count'] is int
-          ? json['rating_count'] as int
-          : (json['rating_count'] is String
-              ? int.tryParse(json['rating_count'])
-              : null),
-      providerName: json['provider_name'] as String?,
-      providerAvatar: json['provider_avatar'] as String?,
-      providerSpecialization: json['provider_specialization'] as String?,
-      // personnel fields
-      bookedSlots: json['booked_slots'] is int
-          ? json['booked_slots'] as int
-          : (json['booked_slots'] is String
-              ? int.tryParse(json['booked_slots'])
-              : null),
+      ratingAvg: parseDouble(json['rating_avg']),
+      ratingCount: parseInt(json['rating_count']),
+      providerName: providerName,
+      providerAvatar: providerAvatar,
+      providerSpecialization: providerSpecialization,
+      bookedSlots: parseInt(json['booked_slots']),
       serviceImages: images,
-      // support legacy keys
-      minSlotMinutes: json['min_slot_minutes'] is int
-          ? json['min_slot_minutes'] as int
-          : (json['min_slot_minutes'] is String
-              ? int.tryParse(json['min_slot_minutes'])
-              : null),
-      isPublic: json['isPublic'] is bool
-          ? json['isPublic'] as bool
-          : (json['is_public'] == true ||
-              (json['visibility'] ?? '') == 'public'),
+      minSlotMinutes: parseInt(json['min_slot_minutes']),
+      isPublic:
+          json['is_public'] == true || (json['visibility'] ?? '') == 'public',
     );
   }
 
-  // Backwards-compatible getters used by older UI code
-  // `minSlotMinutes` historically was overloaded; in this codebase we
-  // treat `time` as the duration (minutes). Expose `minSlotMinutes` as
-  // an alias for duration so existing formatting code keeps working.
   int get minSlotMinutes => time;
-
   bool get isPublic => visibility == 'public';
-
-  // Backward-compatible accessor: return comma-joined providerSpecialization
-  // or the raw skill IDs joined. UI layer should map IDs -> names using a
-  // repository or a dedicated lookup. Keeping domain model free of mock data.
-  String? get providerSpecializationValue {
-    final ids = skillIds ?? (skillId != null ? [skillId!] : null);
-    if (ids != null && ids.isNotEmpty) {
-      return ids.join(', ');
-    }
-    return providerSpecialization;
-  }
 }

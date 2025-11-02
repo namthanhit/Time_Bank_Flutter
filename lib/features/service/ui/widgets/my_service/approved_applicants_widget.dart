@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../data/mock_service_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../../domain/models/offer.dart';
+import '../../../providers/service_providers.dart';
+// Đã XÓA: Import MockServiceRepository
 
-class ApprovedApplicantsWidget extends StatefulWidget {
+class ApprovedApplicantsWidget extends ConsumerStatefulWidget {
+  // <-- Đã đổi
   final String serviceId;
 
   const ApprovedApplicantsWidget({
@@ -10,210 +15,228 @@ class ApprovedApplicantsWidget extends StatefulWidget {
   });
 
   @override
-  State<ApprovedApplicantsWidget> createState() =>
+  ConsumerState<ApprovedApplicantsWidget> createState() => // <-- Đã đổi
       _ApprovedApplicantsWidgetState();
 }
 
-class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
-    with WidgetsBindingObserver {
+class _ApprovedApplicantsWidgetState
+    extends ConsumerState<ApprovedApplicantsWidget> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    // Đăng ký listener để nhận thông báo khi có thay đổi
-    MockServiceRepository.addListener(_onDataChanged);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    MockServiceRepository.removeListener(_onDataChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Refresh UI khi app resumed hoặc có thay đổi
-      setState(() {});
-    }
+  Future<void> _handleRefresh() async {
+    ref.invalidate(offerListProvider(widget.serviceId));
   }
 
-  void _onDataChanged() {
-    //print('📢 ApprovedApplicantsWidget received data change notification');
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  Map<String, dynamic> _mapOfferToApplicantMap(Offer offer) {
+    final specializationString = offer.skills
+        .map((skill) => skill['name']?.toString() ?? 'N/A')
+        .join(', ');
 
-  // Method để refresh từ bên ngoài
-  void refresh() {
-    if (mounted) {
-      setState(() {});
-    }
+    final requestTimeString =
+        DateFormat('HH:mm dd/MM/yyyy').format(offer.createdAt.toLocal());
+
+    return {
+      'id': offer.id,
+      'status': offer.status,
+      'serviceId': offer.jobId,
+      'name': offer.offerUserName,
+      'avatar': offer.offerUserAvatar,
+      'specialization': specializationString.isEmpty
+          ? 'Chưa có thông tin'
+          : specializationString,
+      'rating': 4.0,
+      'requestTime': requestTimeString,
+      'originalOffer': offer,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    // Debug logging
-    // Use MockServiceRepository.mockApplicants directly when needed
-    //print(
-    //  '🔍 ApprovedApplicantsWidget build for serviceId: ${widget.serviceId}');
-    // print('📊 Total applicants: ${allApplicants.length}');
-    //print('📊 Applicants for this service: ${serviceApplicants.length}');
+    final offersAsyncValue = ref.watch(offerListProvider(widget.serviceId));
 
-    // Debug: applicants available via MockServiceRepository.mockApplicants
-
-    // Lọc ứng viên approved của service cụ thể
-    final serviceApprovedApplicants = MockServiceRepository.mockApplicants
-        .where((a) =>
-            a['status'] == 'approved' &&
-            a['serviceId'].toString() == widget.serviceId)
-        .toList();
-
-    // print(
-    //     '📊 Approved applicants for this service: ${serviceApprovedApplicants.length}');
-
-    // Lọc theo tìm kiếm
-    final filteredApplicants = serviceApprovedApplicants.where((applicant) {
-      final name = applicant['name'].toString().toLowerCase();
-      return name.contains(_searchQuery.toLowerCase());
-    }).toList();
-
-    return Column(
-      children: [
-        // Thanh tìm kiếm và icon lọc
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Tìm kiếm ứng viên đã duyệt...',
-                      hintStyle: TextStyle(
-                        fontSize: 14, // 👈 chữ nhỏ lại
-                        // color: Colors.grey,    // màu nhẹ hơn cho hint
-                      ),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-                    ),
+    return offersAsyncValue.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: LayoutBuilder(builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Không thể tải danh sách đã duyệt:\n$error\nKéo xuống để thử lại',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed: () {
-                  // Simplified filter - just show a message for now
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bộ lọc đang phát triển')),
-                  );
-                },
-                icon: const Icon(Icons.filter_alt_outlined,
-                    color: Color(0xFF003E77), size: 28),
-                tooltip: 'Lọc ứng viên',
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        }),
+      ),
+      data: (List<Offer> offers) {
+        final allApplicantsMap = offers.map(_mapOfferToApplicantMap).toList();
 
-        // Danh sách ứng viên
-        Expanded(
-          child: Builder(
-            builder: (context) {
-              // print(
-              //     '🎯 UI Decision for ApprovedApplicants: filteredApplicants.isEmpty = ${filteredApplicants.isEmpty}');
-              // print('🎯 Search query: "$_searchQuery"');
-              // print(
-              //     '🎯 Filtered applicants count: ${filteredApplicants.length}');
+        final serviceApprovedApplicants = allApplicantsMap
+            .where((a) =>
+                a['status'] == 'accepted' &&
+                a['serviceId'].toString() == widget.serviceId)
+            .toList();
 
-              if (filteredApplicants.isEmpty) {
-                //print('📺 Showing empty state for approved applicants');
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _searchQuery.isNotEmpty
-                            ? Icons.search_off
-                            : Icons.check_circle_outline,
-                        size: 64,
-                        color: Colors.grey,
+        // Lọc theo tìm kiếm
+        final filteredApplicants = serviceApprovedApplicants.where((applicant) {
+          final name = applicant['name'].toString().toLowerCase();
+          return name.contains(_searchQuery.toLowerCase());
+        }).toList();
+
+        return Column(
+          children: [
+            // Thanh tìm kiếm và icon lọc
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(color: Colors.grey[300]!),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _searchQuery.isNotEmpty
-                            ? 'Không tìm thấy ứng viên nào'
-                            : 'Chưa có ứng viên nào được duyệt',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          hintText: 'Tìm kiếm ứng viên đã duyệt...',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(Icons.search, color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 9),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                );
-              } else {
-                // print(
-                //     '📺 Showing ListView with ${filteredApplicants.length} approved applicants');
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filteredApplicants.length,
-                  itemBuilder: (context, index) {
-                    //print(
-                    //'🏗️ Building approved card for applicant ${index}: ${filteredApplicants[index]['name']}');
-                    try {
-                      return _buildApplicantCard(
-                          context, filteredApplicants[index]);
-                    } catch (e) {
-                      return Container(
-                        height: 80,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.red[100],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text('Error loading applicant: $e',
-                              style: const TextStyle(color: Colors.red)),
-                        ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Bộ lọc đang phát triển')),
+                      );
+                    },
+                    icon: const Icon(Icons.filter_alt_outlined,
+                        color: Color(0xFF003E77), size: 28),
+                    tooltip: 'Lọc ứng viên',
+                  ),
+                ],
+              ),
+            ),
+
+            // Danh sách ứng viên
+            Expanded(
+              child: RefreshIndicator(
+                // <-- Thêm RefreshIndicator
+                onRefresh: _handleRefresh,
+                child: Builder(
+                  builder: (context) {
+                    if (filteredApplicants.isEmpty) {
+                      // Bọc trạng thái rỗng để cho phép cuộn
+                      return LayoutBuilder(builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _searchQuery.isNotEmpty
+                                        ? Icons.search_off
+                                        : Icons.check_circle_outline,
+                                    size: 64,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _searchQuery.isNotEmpty
+                                        ? 'Không tìm thấy ứng viên nào'
+                                        : 'Chưa có ứng viên nào được duyệt',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      });
+                    } else {
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: filteredApplicants.length,
+                        itemBuilder: (context, index) {
+                          try {
+                            return _buildApplicantCard(
+                                context, filteredApplicants[index]);
+                          } catch (e) {
+                            return Container(
+                              height: 80,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.red[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text('Error loading applicant: $e',
+                                    style: const TextStyle(color: Colors.red)),
+                              ),
+                            );
+                          }
+                        },
                       );
                     }
                   },
-                );
-              }
-            },
-          ),
-        ),
-      ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildApplicantCard(
       BuildContext context, Map<String, dynamic> applicant) {
-    // print('🎨 Building card for approved applicant: ${applicant['name']}');
-    // print('🔍 Applicant data: ${applicant.toString()}');
-
+    // Cập nhật text, có thể đổi màu nếu muốn
     final String requestTypeText = 'Yêu cầu đã được phê duyệt nhận dịch vụ';
+    const Color requestTypeColor =
+        Color.fromARGB(255, 1, 151, 6); // Màu xanh lá
 
     return GestureDetector(
       onTap: () => _showApplicantDetailsModal(context, applicant),
@@ -241,7 +264,7 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header với loại yêu cầu và thời gian
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -249,15 +272,15 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                   child: Text(
                     requestTypeText,
                     style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF003E77),
+                      fontSize: 12,
+                      color: requestTypeColor, // <-- Dùng màu xanh
                     ),
                   ),
                 ),
                 Text(
                   applicant['requestTime']?.toString() ?? 'Không có thời gian',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     color: Color(0xFF003E77),
                   ),
                 ),
@@ -266,12 +289,12 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
 
             const SizedBox(height: 10),
 
-            // Thông tin ứng viên: Avatar + Tên + Chuyên môn + Đánh giá + Chat Icon
+            // Thông tin ứng viên
             Row(
               children: [
                 // Avatar
                 CircleAvatar(
-                  radius: 35,
+                  radius: 30,
                   backgroundColor: const Color(0xFF003E77),
                   backgroundImage: (applicant['avatar'] != null &&
                           applicant['avatar'].toString().isNotEmpty)
@@ -285,12 +308,12 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
 
                 const SizedBox(width: 16),
 
-                // Thông tin bên phải avatar
+                // Thông tin bên phải
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Tên ứng viên
+                      // Tên
                       Text(
                         applicant['name']?.toString() ?? 'Unknown User',
                         style: const TextStyle(
@@ -299,10 +322,9 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                           color: Color(0xFF003E77),
                         ),
                       ),
-                      // Liên hệ với 2 icon
                       const SizedBox(height: 8),
 
-                      // Chuyên môn ngang hàng với tags
+                      // Chuyên môn
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -323,7 +345,7 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
 
                       const SizedBox(height: 8),
 
-                      // Đánh giá sao
+                      // Đánh giá
                       Row(
                         children: [
                           ...List.generate(5, (starIndex) {
@@ -350,8 +372,6 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                     ],
                   ),
                 ),
-
-                // Không còn icon Chat ở đây
               ],
             ),
           ],
@@ -362,10 +382,11 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
 
   Widget _buildSpecializationTags(
       BuildContext context, String? specializations) {
-    // Hiển thị tag chuyên môn dạng Wrap; mỗi tag có nền vàng nhạt
-    if (specializations == null || specializations.isEmpty) {
+    if (specializations == null ||
+        specializations.isEmpty ||
+        specializations == 'Chưa có thông tin') {
       return const Text('Chưa có thông tin',
-          style: TextStyle(color: Colors.grey));
+          style: TextStyle(color: Colors.grey, fontSize: 12));
     }
 
     final List<String> tags =
@@ -379,7 +400,7 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
         children: tags
             .map((tag) => Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: Color(0xFFE0DC06),
                     borderRadius: BorderRadius.circular(5),
@@ -387,10 +408,9 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                   child: Text(
                     tag,
                     style: TextStyle(
-                        fontSize: 9,
-                        color: (Color(0xFF000000)) // Sắc 900 là sắc đậm nhất,
-                        // fontWeight: FontWeight.w500,
-                        ),
+                      fontSize: 9,
+                      color: (Color(0xFF000000)),
+                    ),
                   ),
                 ))
             .toList(),
@@ -400,8 +420,14 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
 
   void _showApplicantDetailsModal(
       BuildContext context, Map<String, dynamic> applicant) {
-    // Get service information
-    final service = MockServiceRepository.getServiceById(widget.serviceId);
+    final Offer? offer = applicant['originalOffer'] as Offer?;
+
+    final serviceName = offer?.jobTitle ?? 'N/A';
+    final jobCreatedTime = offer?.jobCreatedAt != null
+        ? _formatDateTime(offer!.jobCreatedAt)
+        : 'N/A';
+    final duration = offer != null ? _formatDuration(offer.time) : '00:00:00';
+    final description = offer?.jobDescription ?? 'Không có mô tả';
 
     showModalBottomSheet(
       context: context,
@@ -424,7 +450,7 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -449,7 +475,6 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Avatar + Name + Specialization + Rating + Chat Icon
                       Row(
                         children: [
                           CircleAvatar(
@@ -596,50 +621,31 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
                       // Thông tin chi tiết công việc
                       Container(
                         padding: const EdgeInsets.all(10),
-                        // decoration: BoxDecoration(
-                        //   color: Colors.grey[50],
-                        //   borderRadius: BorderRadius.circular(12),
-                        //   border: Border.all(color: Colors.grey[200]!),
-                        // ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Tên công việc
+                            // DÙNG DỮ LIỆU TỪ OFFER
                             _buildInfoSectionBold(
-                                'Tên công việc:', service?.title ?? 'N/A'),
+                                'Tên công việc:', serviceName),
+                            const SizedBox(height: 12),
+                            _buildInfoSectionBold('Thời gian:', jobCreatedTime),
+                            const SizedBox(height: 12),
+                            _buildInfoSectionBold('Thời lượng:', duration),
                             const SizedBox(height: 12),
 
-                            // Thời gian
-                            _buildInfoSectionBold(
-                                'Thời gian:',
-                                service?.createdAt != null
-                                    ? _formatDateTime(service!.createdAt)
-                                    : 'N/A'),
-                            const SizedBox(height: 12),
-
-                            // Thời lượng
-                            _buildInfoSectionBold(
-                                'Thời lượng:',
-                                service != null
-                                    ? _formatDuration(service.minSlotMinutes)
-                                    : '00:00:00'),
-                            const SizedBox(height: 12),
-
-                            // Ngày tạo yêu cầu
+                            // DÙNG DỮ LIỆU TỪ APPLICANT (MAP)
                             _buildInfoSection(
                                 'Ngày tạo yêu cầu:',
                                 applicant['requestTime']?.toString() ??
                                     'Không có thông tin'),
                             const SizedBox(height: 12),
 
-                            // Trạng thái
                             _buildInfoSectionBold(
                                 'Trạng thái:', 'Đã được duyệt'),
                             const SizedBox(height: 12),
 
-                            // Mô tả công việc
-                            _buildInfoSection('Mô tả công việc:',
-                                service?.description ?? 'Không có mô tả'),
+                            // DÙNG DỮ LIỆU TỪ OFFER
+                            _buildInfoSection('Mô tả công việc:', description),
                           ],
                         ),
                       ),
@@ -691,7 +697,6 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
               title,
               style: const TextStyle(
                 fontSize: 16,
-                // fontWeight: FontWeight.w600,
                 color: Color(0xFF003E77),
               ),
             ),
@@ -722,7 +727,6 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
               title,
               style: const TextStyle(
                 fontSize: 16,
-                //fontWeight: FontWeight.w600,
                 color: Color(0xFF003E77),
               ),
             ),
@@ -743,12 +747,15 @@ class _ApprovedApplicantsWidgetState extends State<ApprovedApplicantsWidget>
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+    final localDateTime = dateTime.toLocal();
+    return '${localDateTime.day.toString().padLeft(2, '0')}/${localDateTime.month.toString().padLeft(2, '0')}/${localDateTime.year}';
   }
 
-  String _formatDuration(int minutes) {
-    int hours = minutes ~/ 60;
-    int remainingMinutes = minutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${remainingMinutes.toString().padLeft(2, '0')}:00';
+  String _formatDuration(int totalMinutes) {
+    final duration = Duration(minutes: totalMinutes);
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 }
