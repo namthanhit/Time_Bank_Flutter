@@ -26,11 +26,9 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       return;
     }
 
-    // Lưu PIN vào state
     ref.read(onboardingControllerProvider.notifier).setSecurity(pin: _pin);
 
     try {
-      // ✅ GỌI API TẠO TÀI KHOẢN
       final userId =
       await ref.read(onboardingControllerProvider.notifier).submitCreateAccount();
 
@@ -39,15 +37,12 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         SnackBar(content: Text('Tạo tài khoản thành công: $userId')),
       );
 
-      // Điều hướng về login (hoặc Home tuỳ bạn)
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
             (route) => false,
       );
     } catch (e) {
-      // lỗi đã được set trong state.error và listener sẽ show SnackBar,
-      // nhưng vẫn catch để không crash flow
     }
   }
 
@@ -91,7 +86,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                       ),
                       const SizedBox(height: 30),
 
-                      // Box trắng
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -178,8 +172,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                             ),
 
                             const SizedBox(height: 20),
-
-                            // Nút Hoàn tất = CALL API
                             GestureDetector(
                               onTap: state.loading ? null : _onSubmit,
                               child: Container(

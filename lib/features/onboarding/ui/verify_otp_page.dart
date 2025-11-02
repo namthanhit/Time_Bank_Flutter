@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-
 import 'package:time_bank_flutter/features/onboarding/ui/profile_page.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
@@ -21,7 +20,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   int _resendLeft = _resendCooldownSec;
   Timer? _resendTimer;
 
-  String _otp = ""; // không dùng controller để tránh lỗi dispose
+  String _otp = "";
 
   @override
   void initState() {
@@ -92,7 +91,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
     final state = ref.read(onboardingControllerProvider);
     if (state.error == null && mounted) {
-      // ✅ OTP đã verify local → sang trang nhập thông tin
+      // OTP đã verify local → sang trang nhập thông tin
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -140,7 +139,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Box trắng
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -150,7 +148,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ô nhập OTP
                       PinCodeTextField(
                         length: 6,
                         appContext: context,
@@ -179,7 +176,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                       const SizedBox(height: 8),
 
-                      // Thông báo + Đếm thời gian được gửi lại
                       Column(
                         children: [
                           const Text(
@@ -204,7 +200,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Nút Gửi lại mã
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
@@ -229,7 +224,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Nút Xác Thực
                       GestureDetector(
                         onTap: isBusy ? null : _verifyOtp,
                         child: Container(

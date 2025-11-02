@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-
 import '../providers/auth_providers.dart';
 import '../providers/auth_state.dart';
 import '../domain/validators.dart';
@@ -20,11 +19,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _pwdCtrl = TextEditingController();
   final _pwdFocus = FocusNode();
   bool _obscure = true;
-  final authControllerProvider =
-  StateNotifierProvider<AuthController, AuthState>(
-        (ref) => AuthController(ref.read(authRepoProvider)),
-  );
-
 
   @override
   void dispose() {
@@ -43,6 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -51,7 +46,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final pwd = _pwdCtrl.text;
     final device = await _deviceModel();
 
-    await ref.read(authControllerProvider.notifier)
+    await ref
+        .read(authControllerProvider.notifier)
         .signIn(phone, pwd, deviceInfo: device);
   }
 
@@ -60,16 +56,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final state = ref.watch(authControllerProvider);
     final isLoading = state.loading;
 
-    // Lắng nghe thay đổi state để điều hướng / show lỗi
-    ref.listen<AuthState>(authControllerProvider, (prev, next) {
-      if (prev?.authenticated != true && next.authenticated) {
-        if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
-      }
-      if (next.error != null && next.error!.isNotEmpty) {
+    ref.listen<AuthState>(authControllerProvider, (prev, next) async {
+
+      if (next.error != null && (prev?.error != next.error)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!)),
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     });
@@ -203,11 +198,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
-                            onPressed: isLoading
-                                ? null
-                                : () {
-                              // TODO: Forgot password
-                            },
+                            onPressed: isLoading ? null : () {},
                             child: const Text(
                               "Quên mật khẩu?",
                               style: TextStyle(

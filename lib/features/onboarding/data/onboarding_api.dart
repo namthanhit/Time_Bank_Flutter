@@ -36,7 +36,7 @@ class OnboardingApi {
   }) async {
     final res = await _api.post('/auth/signup/create', body: {
       'phone_token': phoneToken,
-      'personal': personal.toJson(), // personal.toJson() phải có region_id (wardId)
+      'personal': personal.toJson(),
       'pin': pin,
       'password': password,
       'skill_id': skillId,

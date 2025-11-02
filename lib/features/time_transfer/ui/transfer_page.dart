@@ -1,133 +1,125 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
-import 'package:time_bank_flutter/features/time_transfer/domain/models/recipient.dart';
-import 'package:time_bank_flutter/features/time_transfer/domain/models/transaction_input.dart';
 import 'package:time_bank_flutter/features/time_transfer/ui/confirm_page.dart';
 import 'widgets/source_time_card.dart';
 import 'widgets/transfer_action_buttons.dart';
 import 'widgets/transfer_destination_card.dart';
+import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
+import 'package:time_bank_flutter/features/qr/ui/qr_scanner_page.dart';
 
 class TransferPage extends ConsumerStatefulWidget {
-  const TransferPage({super.key});
+
+  final String? prefilledPhoneNumber;
+
+  const TransferPage({super.key, this.prefilledPhoneNumber});
 
   @override
   ConsumerState<TransferPage> createState() => _TransferPageState();
 }
 
+
 class _TransferPageState extends ConsumerState<TransferPage> {
-  TransactionInput transferData = const TransactionInput(recipientName: '', recipientAccount: '', amount: Duration.zero, note: '');
 
-  final ValueNotifier<bool> showErrorsNotifier = ValueNotifier(false);
+  @override
+  void initState() {
+    super.initState();
 
-  void _updateTransferData(TransactionInput newData) {
-    // Container nhận input từ widget presentational. Thực hiện lookup
-    // saved accounts tại đây (container layer) và tự động điền tên nếu tìm thấy.
-    final accountsAsync = ref.read(savedAccountsProvider);
-    final accounts = accountsAsync.value;
-    String resolvedName = newData.recipientName;
-    if ((resolvedName.isEmpty) && (accounts != null)) {
-      try {
-        final found = accounts.firstWhere((a) => a.number == newData.recipientAccount);
-        resolvedName = found.name;
-      } catch (_) {
-        // không tìm thấy, giữ nguyên
-      }
+    final prefilledPhone = widget.prefilledPhoneNumber;
+
+    if (prefilledPhone != null && prefilledPhone.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final notifier = ref.read(transactionFormProvider.notifier);
+
+        notifier.setToPhone(prefilledPhone);
+
+        notifier.lookupRecipient();
+      });
     }
-
-    setState(() {
-      transferData = newData.copyWith(recipientName: resolvedName);
-    });
   }
 
-  bool _listenersAttached = false;
-
-  // Duration parsing is handled by TransactionInput.amount; helper removed.
-
-  Future<void> _handleContinue(BuildContext context) async {
-    // Push data into provider and ask provider to create preview
-    final notifier = ref.read(transactionFormProvider.notifier);
-  // map transferData into domain fields inside notifier
-  final receiverName = transferData.recipientName;
-  final receiverNumber = transferData.recipientAccount;
-  final amount = transferData.amount;
-
-    // set recipient model
-    notifier.setRecipient(Recipient(accountNumber: receiverNumber, name: receiverName));
-    notifier.setAmount(amount);
-    // Build default note via provider helper (moved into notifier)
-    final senderName = ref.read(senderNameProvider);
-    await notifier.setNoteFromSender(senderName);
-
-    // Nếu widget unmounted sau các await trước đó thì không show dialog
-    if (!mounted) return;
-    // Show a loading dialog while preview is being fetched
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+  void _openQrScanner(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (pageContext) => QrScannerPage(
+          onScanSuccess: (scannedPhone) {
+            Navigator.of(pageContext).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => TransferPage(
+                  prefilledPhoneNumber: scannedPhone,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
-
-    try {
-      await notifier.submitPreview();
-
-      final state = ref.read(transactionFormProvider);
-      final preview = state.preview.value;
-      if (!context.mounted) return;
-      if (preview != null) {
-        Navigator.pop(context); // close loading
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const ConfirmPage(),
-          ),
-        );
-      } else {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể tạo preview')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi tạo preview: $e')),
-      );
-    }
-  }
-
-  String _formatDuration(Duration d) {
-    final hh = d.inHours.toString().padLeft(2, '0');
-    final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
-    final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$hh:$mm:$ss';
   }
 
   @override
   Widget build(BuildContext context) {
-    // Attach the provider listener from inside build (Riverpod requires
-    // ref.listen to be called during build). Guard to register only once.
-    if (!_listenersAttached) {
-      _listenersAttached = true;
-      ref.listen<TransactionFormState>(transactionFormProvider, (previous, next) {
-            final wasNonEmpty = previous != null && (
-              previous.recipient != null ||
-              (previous.note).isNotEmpty ||
-              previous.amount != Duration.zero ||
-              previous.preview.value != null
-            );
-            final isReset = (next.recipient == null) && (next.note.isEmpty) && (next.amount == Duration.zero) && (next.preview.value == null);
-        if (wasNonEmpty && isReset) {
-          if (mounted) {
-            setState(() {
-              transferData = const TransactionInput(recipientName: '', recipientAccount: '', amount: Duration.zero, note: '');
-              showErrorsNotifier.value = false;
-            });
-          }
-        }
-      });
-    }
     const colorPrimary = Color(0xFF003E77);
+
+    final formState = ref.watch(transactionFormProvider);
+    final notifier = ref.read(transactionFormProvider.notifier);
+    final balanceAsync = ref.watch(accountBalanceProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
+
+    ref.listen<AsyncValue<bool>>(
+      transactionFormProvider.select((state) => state.check),
+          (previous, next) {
+        if (next.isLoading) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+        } else if (next.hasError) {
+          Navigator.pop(context); // Tắt loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text((next.error as Exception).toString().replaceFirst("Exception: ", ""))),
+          );
+        } else if (next.hasValue && next.value == true) {
+          Navigator.pop(context); // Tắt loading
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ConfirmPage()),
+          );
+        }
+      },
+    );
+
+    void handleContinue() {
+      if (formState.toPhone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng nhập số tài khoản')),
+        );
+        return;
+      }
+      if (formState.lookup.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đang tra cứu, vui lòng đợi...')),
+        );
+        return;
+      }
+      if (formState.lookup.value == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không tìm thấy người nhận này')),
+        );
+        return;
+      }
+      if (formState.amount.inSeconds <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Số thời gian phải lớn hơn 0')),
+        );
+        return;
+      }
+
+      notifier.submitCheck();
+    }
+
+    ref.listen<TransactionFormState>(transactionFormProvider, (previous, next) {
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -153,22 +145,34 @@ class _TransferPageState extends ConsumerState<TransferPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // SourceTimeCard could be wired to accountBalanceProvider if needed; keep as-is for presentational UI
-            SourceTimeCard(balance: ref.read(accountBalanceProvider)),
+            SourceTimeCard(
+              balanceAsync: balanceAsync,
+              userProfileAsync: userProfileAsync,
+            ),
             const SizedBox(height: 18),
+
             TransferDestinationCard(
-              // Truyền giá trị hiện tại từ container xuống presentational widget
-              value: transferData,
-              accountBalance: ref.read(accountBalanceProvider),
-              onChanged: _updateTransferData,
-              showErrorsNotifier: showErrorsNotifier,
+              phone: formState.toPhone,
+              amount: formState.amount,
+              note: formState.note,
+              lookupState: formState.lookup,
+              onPhoneChanged: notifier.setToPhone,
+              onPhoneSubmitted: (phone) => notifier.lookupRecipient(),
+              onAmountChanged: notifier.setAmount,
+              onNoteChanged: notifier.setNote,
+              onLookupPressed: notifier.lookupRecipient,
+              showFieldErrors: formState.check.hasError,
+              onQrPressed: () => _openQrScanner(context),
             ),
             const SizedBox(height: 32),
+
             TransferActionButtons(
-              transferData: transferData,
-              accountBalance: ref.read(accountBalanceProvider),
-              showErrorsNotifier: showErrorsNotifier,
-              onContinue: () => _handleContinue(context),
+              isEnabled: formState.lookup.hasValue &&
+                  formState.lookup.value != null &&
+                  formState.amount.inSeconds > 0 &&
+                  !formState.check.isLoading &&
+                  !formState.lookup.isLoading,
+              onContinue: handleContinue,
               onBack: () => Navigator.pop(context),
             ),
           ],

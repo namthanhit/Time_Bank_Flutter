@@ -12,8 +12,8 @@ class OnboardingState {
   final DateTime? birthdate;
   final String? gender;
 
-  final String? regionId;        // <-- mới
-  final String? specialization;  // skill_id
+  final String? regionId;
+  final String? specialization;
 
   final String? pin;
   final String? password;
@@ -29,7 +29,7 @@ class OnboardingState {
     this.cccd,
     this.birthdate,
     this.gender,
-    this.regionId,        // <-- mới
+    this.regionId,
     this.specialization,
     this.pin,
     this.password,
@@ -46,7 +46,7 @@ class OnboardingState {
     String? cccd,
     DateTime? birthdate,
     String? gender,
-    String? regionId,        // <-- mới
+    String? regionId,
     String? specialization,
     String? pin,
     String? password,
@@ -62,7 +62,7 @@ class OnboardingState {
       cccd: cccd ?? this.cccd,
       birthdate: birthdate ?? this.birthdate,
       gender: gender ?? this.gender,
-      regionId: regionId ?? this.regionId,              // <-- mới
+      regionId: regionId ?? this.regionId,
       specialization: specialization ?? this.specialization,
       pin: pin ?? this.pin,
       password: password ?? this.password,
