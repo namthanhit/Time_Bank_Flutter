@@ -6,13 +6,20 @@ import 'widgets/profile_header.dart';
 import 'widgets/profile_details.dart';
 import 'widgets/reviews_list.dart';
 
-class OtherProfilePage extends ConsumerWidget {
+class OtherProfilePage extends ConsumerStatefulWidget {
   final String userId;
   const OtherProfilePage({Key? key, this.userId = 'me'}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(profileByIdProvider(userId));
+  ConsumerState<OtherProfilePage> createState() => _OtherProfilePageState();
+}
+
+class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
+  bool _isFollowing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final profileAsync = ref.watch(profileByIdProvider(widget.userId));
     return Scaffold(
       // don't draw the body behind the AppBar here so the header's blue band
       // starts below the AppBar. This keeps the computed avatar seam position
@@ -65,18 +72,20 @@ class OtherProfilePage extends ConsumerWidget {
                   children: [
                     const SizedBox(height: 8),
 
-                    // Center the two primary action buttons (no overflow menu)
+                    // Center the two primary action buttons (Follow / Message)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        // Follow / Unfollow toggle
                         ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Thêm bạn bè'),
+                          onPressed: () => setState(() => _isFollowing = !_isFollowing),
+                          icon: Icon(_isFollowing ? Icons.person_remove : Icons.person_add),
+                          label: Text(_isFollowing ? 'Bỏ theo dõi' : 'Theo dõi'),
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            backgroundColor: const Color(0xFFF0F6F9),
-                            foregroundColor: const Color(0xFF0D4C7B),
+                            backgroundColor: _isFollowing ? const Color(0xFF0D4C7B) : const Color(0xFFF0F6F9),
+                            foregroundColor: _isFollowing ? Colors.white : const Color(0xFF0D4C7B),
+                            fixedSize: const Size(140, 40),
                             elevation: 0,
                           ),
                         ),
@@ -89,6 +98,7 @@ class OtherProfilePage extends ConsumerWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             side: const BorderSide(color: Color(0xFF0D4C7B)),
                             foregroundColor: const Color(0xFF0D4C7B),
+                            fixedSize: const Size(140, 40),
                           ),
                         ),
                       ],
