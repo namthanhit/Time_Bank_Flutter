@@ -6,7 +6,7 @@ import '../../data/mock_service_repository.dart';
 import 'service_card.dart';
 import '../../data/model/service_filter.dart';
 
-class ServiceListContainer extends ConsumerWidget {
+class ServiceListContainer extends ConsumerStatefulWidget {
   /// If [userId] is provided, the widget will show services for that user.
   /// Otherwise it shows public services.
   final String? userId;
@@ -25,10 +25,19 @@ class ServiceListContainer extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final servicesAsync = userId == null
+  ConsumerState<ServiceListContainer> createState() =>
+      _ServiceListContainerState();
+}
+
+class _ServiceListContainerState extends ConsumerState<ServiceListContainer> {
+  // Track ids removed locally so the card can disappear immediately on delete
+  final Set<String> _removedIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final servicesAsync = widget.userId == null
         ? ref.watch(publicServicesProvider)
-        : ref.watch(servicesByUserProvider(userId!));
+        : ref.watch(servicesByUserProvider(widget.userId!));
 
     return servicesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -118,13 +127,13 @@ class ServiceListContainer extends ConsumerWidget {
         var filteredList = services;
 
         // apply social filter (e.g., 'Bạn bè') if provided
-        if (socialFilter != null) {
-          if (socialFilter == 'Bạn bè') {
+        if (widget.socialFilter != null) {
+          if (widget.socialFilter == 'Bạn bè') {
             // only include services provided by friends
             filteredList = filteredList
                 .where((s) => MockServiceRepository.isFriend(s.userId))
                 .toList();
-          } else if (socialFilter == 'Của tôi') {
+          } else if (widget.socialFilter == 'Của tôi') {
             filteredList = filteredList
                 .where((s) => s.userId == MockServiceRepository.currentUserId)
                 .toList();
@@ -133,77 +142,88 @@ class ServiceListContainer extends ConsumerWidget {
         }
 
         // apply query if present
-        final filtered = (query == null || query!.trim().isEmpty)
+        final filtered = (widget.query == null || widget.query!.trim().isEmpty)
             ? filteredList
             : filteredList.where((s) {
-                final q = normalize(query!.trim());
-                final title = normalize(s.title);
-                final desc = normalize(s.description ?? '');
-                final provider = normalize(s.providerName ?? '');
-                final type = normalize(MockServiceRepository.skillNamesAsString(
-                    s.skillIds ?? (s.skillId != null ? [s.skillId!] : null)));
-                return title.contains(q) ||
-                    desc.contains(q) ||
-                    provider.contains(q) ||
-                    type.contains(q);
-              }).toList();
+          final q = normalize(widget.query!.trim());
+          final title = normalize(s.title);
+          final desc = normalize(s.description ?? '');
+          final provider = normalize(s.providerName ?? '');
+          final type = normalize(MockServiceRepository.skillNamesAsString(
+              s.skillIds ?? (s.skillId != null ? [s.skillId!] : null)));
+          return title.contains(q) ||
+              desc.contains(q) ||
+              provider.contains(q) ||
+              type.contains(q);
+        }).toList();
 
         // apply filter if provided (basic, uses fields available on Service model)
-        final afterFilter = filter == null
+        final afterFilter = widget.filter == null
             ? filtered
             : filtered.where((s) {
-                // duration filtering based on minSlotMinutes
-                switch (filter!.duration) {
-                  case DurationFilterOption.upTo30:
-                    if (!(s.minSlotMinutes <= 30)) return false;
-                    break;
-                  case DurationFilterOption.between30And60:
-                    if (!(s.minSlotMinutes > 30 && s.minSlotMinutes <= 60))
-                      return false;
-                    break;
-                  case DurationFilterOption.moreThan60:
-                    if (!(s.minSlotMinutes > 60)) return false;
-                    break;
-                  case DurationFilterOption.any:
-                  case null:
-                    break;
-                }
+          // duration filtering based on minSlotMinutes
+          switch (widget.filter!.duration) {
+            case DurationFilterOption.upTo30:
+              if (!(s.minSlotMinutes <= 30)) return false;
+              break;
+            case DurationFilterOption.between30And60:
+              if (!(s.minSlotMinutes > 30 && s.minSlotMinutes <= 60))
+                return false;
+              break;
+            case DurationFilterOption.moreThan60:
+              if (!(s.minSlotMinutes > 60)) return false;
+              break;
+            case DurationFilterOption.any:
+            case null:
+              break;
+          }
 
-                // location match (regionCode contains filter string)
-                if (filter!.location != null &&
-                    filter!.location!.trim().isNotEmpty) {
-                  final lc = filter!.location!.toLowerCase();
-                  if ((s.regionCode ?? '').toLowerCase().contains(lc) == false)
-                    return false;
-                }
+          // location match (regionCode contains filter string)
+          if (widget.filter!.location != null &&
+              widget.filter!.location!.trim().isNotEmpty) {
+            final lc = widget.filter!.location!.toLowerCase();
+            if ((s.regionCode ?? '').toLowerCase().contains(lc) == false)
+              return false;
+          }
 
-                // category match (providerSpecialization)
-                if (filter!.category != null &&
-                    filter!.category!.trim().isNotEmpty) {
-                  final cat = filter!.category!.toLowerCase();
-                  if ((s.providerSpecialization ?? '')
-                          .toLowerCase()
-                          .contains(cat) ==
-                      false) return false;
-                }
+          // category match (providerSpecialization)
+          if (widget.filter!.category != null &&
+              widget.filter!.category!.trim().isNotEmpty) {
+            final cat = widget.filter!.category!.toLowerCase();
+            if ((s.providerSpecialization ?? '')
+                .toLowerCase()
+                .contains(cat) ==
+                false) return false;
+          }
 
-                // timeOfDay filter - not implemented precisely because Service model lacks scheduled times;
-                // we'll skip unless we have more data.
+          // timeOfDay filter - not implemented precisely because Service model lacks scheduled times;
+          // we'll skip unless we have more data.
 
-                return true;
-              }).toList();
+          return true;
+        }).toList();
 
+        // remove any services deleted locally so card disappears immediately
+        final visibleList =
+        afterFilter.where((s) => !_removedIds.contains(s.id)).toList();
         return Container(
           color: const Color(0xFFF8F9FA), // Màu nền nhẹ
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: afterFilter.length,
+            itemCount: visibleList.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final service = afterFilter[index];
+              final service = visibleList[index];
               return ServiceCard(
                 service: service,
-                isMyService: isMyServiceTab,
+                isMyService: widget.isMyServiceTab,
+                onDelete: (id) {
+                  // mark locally removed so UI hides the card immediately
+                  setState(() {
+                    _removedIds.add(id);
+                  });
+                  debugPrint('Service removed in parent (local): $id');
+                  // Optionally: call repository/provider to perform permanent delete
+                },
               );
             },
           ),

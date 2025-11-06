@@ -458,11 +458,11 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
     );
   }
 
-  void _showApplicantDetailsModal(
-      BuildContext context, Map<String, dynamic> applicant) {
+// ...existing code...
+  void _showApplicantDetailsModal(BuildContext context, Map<String, dynamic> applicant) {
     // Lấy thông tin service từ serviceId
     final service =
-        MockServiceRepository.getServiceById(applicant['serviceId']);
+    MockServiceRepository.getServiceById(applicant['serviceId']);
     final serviceName = service?.title ?? 'Chưa có thông tin';
     final duration = service != null
         ? MockServiceRepository.formatDuration(service.minSlotMinutes)
@@ -473,10 +473,11 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
     if (service?.createdAt != null) {
       final createdAt = service!.createdAt;
       jobCreatedTime =
-          '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}';
+      '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}';
     }
 
-    (
+    // <-- fix: actually call showModalBottomSheet
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -533,7 +534,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
                                 : null,
                             child: applicant['avatar'] == null
                                 ? const Icon(Icons.person,
-                                    color: Colors.white, size: 35)
+                                color: Colors.white, size: 35)
                                 : null,
                           ),
                           const SizedBox(width: 16),
@@ -648,12 +649,12 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide:
-                                          BorderSide(color: Colors.grey[300]!),
+                                      BorderSide(color: Colors.grey[300]!),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide:
-                                          BorderSide(color: Colors.grey[300]!),
+                                      BorderSide(color: Colors.grey[300]!),
                                     ),
                                     contentPadding: const EdgeInsets.all(12),
                                   ),
@@ -706,7 +707,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
                                 padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                const EdgeInsets.symmetric(vertical: 8),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -732,6 +733,7 @@ class _PendingApplicantsWidgetState extends State<PendingApplicantsWidget>
       ),
     );
   }
+// ...existing code...
 
   Widget _buildInfoRow(String label, String value) {
     return Row(

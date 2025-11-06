@@ -11,7 +11,9 @@ import 'package:time_bank_flutter/features/service/domain/models/service.dart';
 // as the UI is for a "Request", not a "Service".
 
 class ServiceCreatePage extends ConsumerStatefulWidget {
-  const ServiceCreatePage({super.key});
+  final Service? initialService;
+
+  const ServiceCreatePage({super.key, this.initialService});
 
   @override
   ConsumerState<ServiceCreatePage> createState() => _ServiceCreatePageState();
@@ -54,6 +56,51 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.initialService;
+    if (s != null) {
+      // Prefill fields from the provided Service
+      _titleController.text = s.title;
+      _addressController.text = s.regionCode ?? '';
+      _descriptionController.text =
+          s.description?.replaceAll('\\n', '\n') ?? '';
+      _selectedSkillIds = s.skillIds ?? (s.skillId != null ? [s.skillId!] : []);
+      _selectedImages = s.serviceImages ?? [];
+      _participantsCount = s.slot;
+
+      // Map visibility
+      if (s.visibility == 'private') {
+        _visibilityOption = 'Cá nhân';
+      } else if (s.visibility == 'friends') {
+        _visibilityOption = 'Bạn bè';
+      } else {
+        _visibilityOption = 'Mọi người';
+      }
+
+      // preferred start date: prefer explicit preferredStart, fallback to createdAt
+      if (s.preferredStart != null) {
+        final dt = s.preferredStart!;
+        _dateController.text =
+            '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      } else {
+        final dt = s.createdAt;
+        _dateController.text =
+            '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      }
+
+      // time -> hh:mm and duration hh:mm:ss
+      final minutes = s.time;
+      final hh = minutes ~/ 60;
+      final mm = minutes % 60;
+      _timeController.text =
+          '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}';
+      _durationController.text =
+          '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
+    }
+  }
+
   IconData _getIconForOption(String option) {
     switch (option) {
       case 'Mọi người':
@@ -73,7 +120,9 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         backgroundColor: Color(0xFF003E77),
         foregroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
-        title: const Text('Tạo yêu cầu'),
+        title: Text(widget.initialService != null
+            ? 'Chỉnh sửa yêu cầu'
+            : 'Tạo yêu cầu'),
       ),
       backgroundColor: Colors.white,
       body: Container(
@@ -428,8 +477,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text(
-                          'Tạo yêu cầu',
+                        child: Text(
+                          widget.initialService != null ? 'Lưu' : 'Tạo yêu cầu',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -462,7 +511,9 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Tạo yêu cầu',
+              widget.initialService != null
+                  ? 'Chỉnh sửa yêu cầu'
+                  : 'Tạo yêu cầu',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -738,43 +789,67 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       final durationMinutes = parseDurationToMinutes(duration);
 
       // Build a mock Service and add it to the MockServiceRepository so it appears in "My" tab
-      final newService = Service(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: MockServiceRepository.currentUserId,
+      final serviceId = widget.initialService?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+
+      final updatedService = Service(
+        id: serviceId,
+        userId: widget.initialService?.userId ??
+            MockServiceRepository.currentUserId,
         skillIds: _selectedSkillIds.isEmpty ? null : _selectedSkillIds,
         title: title,
         // Convert literal newlines into escaped "\\n" so backend receives
         // line breaks as the two-character sequence \n while keeping any
         // tags or plain text intact.
-        description: _descriptionController.text.replaceAll('\n', '\\n'),
+        description: _descriptionController.text.replaceAll('\n', '\\\\n'),
         regionCode: address,
         place: '',
-        preferredStart: parseDdMmYyyy(date),
+        // Combine date and time into preferredStart (date + hh:mm)
+        preferredStart: (() {
+          final d = parseDdMmYyyy(date);
+          if (d == null) return null;
+          // parse time hh:mm
+          try {
+            final parts = _timeController.text.split(':');
+            final h = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
+            final m = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+            return DateTime(d.year, d.month, d.day, h, m);
+          } catch (_) {
+            return d;
+          }
+        })(),
         time: timeMinutes > 0 ? timeMinutes : durationMinutes,
-        // `slot` represents personnel capacity (count). Creation UI currently
-        // doesn't collect capacity, so default to 1.
-        slot: 1,
+        // Use participant count as slot when editing/creating
+        slot: _participantsCount,
         visibility: _visibilityOption == 'Cá nhân'
             ? 'private'
             : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public'),
-        status: 'open',
-        createdAt: DateTime.now(),
-        providerName: null,
+        status: widget.initialService?.status ?? 'open',
+        createdAt: widget.initialService?.createdAt ?? DateTime.now(),
+        providerName: widget.initialService?.providerName,
+        serviceImages: _selectedImages.isEmpty ? null : _selectedImages,
       );
 
-      MockServiceRepository.addService(newService);
+      if (widget.initialService != null) {
+        // Update existing service in mock repository
+        MockServiceRepository.updateService(updatedService);
 
-      // Use collected values (debug/log)
-      debugPrint(
-          'Create request: title=$title, address=$address, time=$time, date=$date, duration=$duration');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yêu cầu đã được cập nhật!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        MockServiceRepository.addService(updatedService);
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Yêu cầu đã được tạo thành công!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yêu cầu đã được tạo thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
 
       // Navigate back; listeners should refresh My tab from mock repository
       Navigator.of(context).pop();

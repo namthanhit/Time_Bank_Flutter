@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/service_providers.dart';
@@ -5,13 +6,7 @@ import '../../../domain/models/service.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
-
-// Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
-// - Hiển thị header riêng (icon người gần title)
-// - Hiển thị progress/status của dịch vụ
-// - Hiển thị một box nổi chứa: mô  loại bỏ ở bản này theo chỉ thtả dịch vụ và ảnh (nếu có) — không dùng viền, chỉ dùng shadow để "nổi"
-// - Nút 'Xem chi tiết ứng viên' có icon thùng rác (trash) theo yêu cầu
-// Lưu ý: chức năng hủy yêu cầu đã đượcị.
+import '../create_page/service_create_page.dart';
 
 class MyServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
@@ -206,8 +201,14 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Chức năng chỉnh sửa')),
+                    // Open the create page in edit mode, passing the service to prefill fields
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ServiceCreatePage(
+                          initialService: service,
+                        ),
+                      ),
                     );
                     break;
                   case 'delete':
@@ -686,10 +687,47 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    images[index],
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
+                  child: Builder(builder: (context) {
+                    final img = images[index];
+                    // If the image string looks like a network URL, use Image.network.
+                    // Otherwise treat it as a local file path and use Image.file.
+                    if (img.startsWith('http') || img.startsWith('https')) {
+                      return Image.network(
+                        img,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                                size: 50,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    // Fallback: try to show as local file. If it fails, show placeholder.
+                    try {
+                      final file = File(img);
+                      return Image.file(
+                        file,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      );
+                    } catch (_) {
                       return Container(
                         color: Colors.grey[300],
                         child: const Center(
@@ -700,8 +738,8 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                           ),
                         ),
                       );
-                    },
-                  ),
+                    }
+                  }),
                 ),
               );
             },

@@ -6,11 +6,13 @@ import '../page/service_detail_page.dart';
 class ServiceCard extends StatelessWidget {
   final Service service;
   final bool isMyService;
+  final ValueChanged<String>? onDelete;
 
   const ServiceCard({
     super.key,
     required this.service,
     this.isMyService = false,
+    this.onDelete,
   });
 
   String _formatTimeAgo(DateTime dt) {
@@ -169,21 +171,6 @@ class ServiceCard extends StatelessWidget {
                         elevation: 8,
                         itemBuilder: (context) => [
                           const PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit,
-                                    size: 18, color: Color(0xFF003E77)),
-                                SizedBox(width: 10),
-                                Text('Chỉnh sửa',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    )),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
                             value: 'delete',
                             child: Row(
                               children: [
@@ -215,45 +202,48 @@ class ServiceCard extends StatelessWidget {
                           ),
                         ],
                         onSelected: (value) {
-                          if (value == 'edit') {
-                            // TODO: Implement edit functionality
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Chức năng chỉnh sửa đang phát triển'),
-                                backgroundColor: Color(0xFF003E77),
-                              ),
-                            );
-                          } else if (value == 'delete') {
+                          if (value == 'delete') {
                             // Show confirmation dialog
                             showDialog(
                               context: context,
                               builder: (BuildContext context) {
                                 return AlertDialog(
-                                  title: const Text('Xác nhận xóa'),
+                                  backgroundColor: Colors.white,
+                                  title: const Text('Xác nhận xóa',
+                                      style: TextStyle(
+                                        color: Color(0xFF003E77),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      )
+                                  ),
                                   content: const Text(
-                                      'Bạn có chắc chắn muốn xóa dịch vụ này không?'),
+                                      'Bạn có chắc chắn muốn xóa dịch vụ này không?',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                      )
+                                  ),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
-                                      child: const Text('Hủy'),
+                                      child: const Text('Hủy',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.red,
+                                          )
+                                      ),
                                     ),
                                     TextButton(
                                       onPressed: () {
                                         Navigator.of(context).pop();
-                                        // TODO: Implement delete functionality
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Chức năng xóa đang phát triển'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
+                                        // Log & call parent callback to remove the item
+                                        debugPrint(
+                                            'Delete requested: ${service.id}');
+                                        onDelete?.call(service.id);
                                       },
                                       child: const Text('Xóa',
-                                          style: TextStyle(color: Colors.red)),
+                                          style: TextStyle(color: Color(0xFF003E77), fontSize: 16)),
                                     ),
                                   ],
                                 );

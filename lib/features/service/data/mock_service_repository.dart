@@ -836,4 +836,18 @@ class MockServiceRepository implements ServiceRepository {
     repo._mockData.insert(0, service);
     _notifyListeners();
   }
+
+  // Update an existing service (matched by id) and notify listeners
+  static void updateService(Service service) {
+    final repo = MockServiceRepository();
+    try {
+      final idx = repo._mockData.indexWhere((s) => s.id == service.id);
+      if (idx != -1) {
+        repo._mockData[idx] = service;
+        _notifyListeners();
+      }
+    } catch (_) {
+      // ignore errors in mock update
+    }
+  }
 }
