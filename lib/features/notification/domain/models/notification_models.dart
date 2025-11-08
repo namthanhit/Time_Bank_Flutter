@@ -1,37 +1,98 @@
-import 'package:equatable/equatable.dart';
+import 'package:intl/intl.dart'; // <--- THÊM IMPORT NÀY
 
-enum AppNotificationType { activity, general }
+enum NotificationType { transferOut, transferIn, systemAlert }
 
-class AppNotification extends Equatable {
+NotificationType _mapType(String s) {
+  switch (s) {
+    case 'TRANSFER_OUT':
+      return NotificationType.transferOut;
+    case 'TRANSFER_IN':
+      return NotificationType.transferIn;
+    default:
+      return NotificationType.systemAlert;
+  }
+}
+
+class AppNotification {
   final String id;
-  final AppNotificationType type;
   final String title;
-  final String message;
+  final String body;
+  final NotificationType type;
   final DateTime createdAt;
+  final bool read;
+  final Map<String, dynamic> data;
 
-  // activity-only
-  final String? account;
-  final String? change;
-  final String? balance;
-  final String? note;
-  final String? timeText;
-  final String? dateText;
-
-  const AppNotification({
+  AppNotification({
     required this.id,
-    required this.type,
     required this.title,
-    required this.message,
+    required this.body,
+    required this.type,
     required this.createdAt,
-    this.account,
-    this.change,
-    this.balance,
-    this.note,
-    this.timeText,
-    this.dateText,
+    required this.read,
+    required this.data,
   });
 
-  @override
-  List<Object?> get props =>
-      [id, type, title, message, createdAt, account, change, balance, note, timeText, dateText];
+  factory AppNotification.fromJson(Map<String, dynamic> j) {
+    final d = (j['data'] as Map?)?.map((k, v) => MapEntry('$k', v)) ?? <String, dynamic>{};
+    return AppNotification(
+      id: j['id'] as String,
+      title: j['title'] as String,
+      body: j['body'] as String,
+      type: _mapType(j['type'] as String),
+      createdAt: DateTime.parse(j['created_at'] as String),
+      read: (j['read'] as bool?) ?? false,
+      data: d,
+    );
+  }
+
+  // ===== BẮT ĐẦU PHẦN THÊM VÀO =====
+
+  /// 'message' trong widget NotificationItem sẽ dùng 'body'
+  String get message => body;
+
+  /// 'note' trong widget TransactionCard sẽ lấy từ data (nếu backend có gửi)
+  String? get note {
+    return data['note'] as String?;
+  }
+
+  /// 'change' trong TransactionCard sẽ dùng 'body'
+  String get change => body;
+
+  /// 'account' và 'balance' API không trả về, nên ta trả về rỗng
+  String get account => '';
+  String get balance => '';
+
+  // --- Format ngày giờ ---
+  static final _dateFormatter = DateFormat('dd/MM/yyyy');
+  static final _timeFormatter = DateFormat('HH:mm');
+
+  String get dateText {
+    return _dateFormatter.format(createdAt);
+  }
+
+  String get timeText {
+    return _timeFormatter.format(createdAt);
+  }
+
+  // ===== HÀM COPYWITH ĐỂ DÙNG TRONG PROVIDER =====
+  AppNotification copyWith({
+    String? id,
+    String? title,
+    String? body,
+    NotificationType? type,
+    DateTime? createdAt,
+    bool? read,
+    Map<String, dynamic>? data,
+  }) {
+    return AppNotification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      type: type ?? this.type,
+      createdAt: createdAt ?? this.createdAt,
+      read: read ?? this.read,
+      data: data ?? this.data,
+    );
+  }
+// ===== KẾT THÚC PHẦN THÊM VÀO =====
 }
