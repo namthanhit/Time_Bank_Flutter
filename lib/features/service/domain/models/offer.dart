@@ -60,62 +60,25 @@ class Offer {
     throw UnimplementedError('Use Offer.fromJobJsonList() instead.');
   }
 
+  static DateTime _tryParseTime(dynamic d) {
+    if (d == null) return DateTime.now();
+    try {
+      return DateTime.parse(d.toString());
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
+  static int _tryParseInt(dynamic i) {
+    if (i == null) return 0;
+    if (i is int) return i;
+    return int.tryParse(i.toString()) ?? 0;
+  }
+
   static List<Offer> fromJobJsonList(Map<String, dynamic> jobJson) {
     final job = jobJson;
     final offers = (job['offers'] as List?) ?? [];
-
-    return offers.map((offerJson) {
-      final user = offerJson['user'] ?? {};
-      final jobOwner = job['user'] ?? {};
-      return Offer(
-        id: offerJson['id'],
-        note: offerJson['note'],
-        status: offerJson['status'],
-        createdAt: DateTime.parse(offerJson['created_at']),
-        jobId: job['id'],
-        jobTitle: job['title'],
-        jobDescription: job['description'],
-        regionCode: job['region_code'],
-        place: job['place'],
-        preferredStart: DateTime.parse(job['preferred_start']),
-        time: job['time'],
-        slot: job['slot'],
-        visibility: job['visibility'],
-        jobStatus: job['status'],
-        jobCreatedAt: DateTime.parse(job['created_at']),
-        jobOwnerId: jobOwner['id'],
-        jobOwnerName: jobOwner['full_name'],
-        jobOwnerAvatar: jobOwner['avatar_url'],
-        skills: List<Map<String, dynamic>>.from(job['skills']),
-        offers: List<Map<String, dynamic>>.from(offers),
-        offerUserId: user['id'],
-        offerUserName: user['full_name'],
-        offerUserAvatar: user['avatar_url'],
-      );
-    }).toList();
-  }
-
-  factory Offer.fromPendingOfferJson(Map<String, dynamic> json) {
-    final offerData = json;
-    final offerUser = json['user'] ?? {};
-    final job = json['service'] ?? {};
     final jobOwner = job['user'] ?? {};
-
-    // 🔽 SỬA LỖI Ở ĐÂY: Đổi 'DateTime?' thành 'DateTime'
-    DateTime tryParseTime(dynamic d) {
-      if (d == null) return DateTime.now();
-      try {
-        return DateTime.parse(d.toString());
-      } catch (e) {
-        return DateTime.now();
-      }
-    }
-
-    int tryParseInt(dynamic i) {
-      if (i == null) return 0;
-      if (i is int) return i;
-      return int.tryParse(i.toString()) ?? 0;
-    }
 
     final List<Map<String, dynamic>> skillsList;
     if (job['serviceSkills'] is List) {
@@ -129,34 +92,39 @@ class Offer {
       })
           .where((skillMap) => skillMap.isNotEmpty)
           .toList();
+    } else if (job['skills'] is List) {
+      skillsList = List<Map<String, dynamic>>.from(job['skills']);
     } else {
       skillsList = [];
     }
 
-    return Offer(
-      id: offerData['id'] ?? '',
-      note: offerData['note'] ?? '',
-      status: offerData['status'] ?? '',
-      createdAt: tryParseTime(offerData['created_at']),
-      jobId: job['id'] ?? '',
-      jobTitle: job['title'] ?? '',
-      jobDescription: job['description'] ?? '',
-      regionCode: job['region_code'] ?? '',
-      place: job['place'] ?? '',
-      preferredStart: tryParseTime(job['preferred_start']),
-      time: tryParseInt(job['time']),
-      slot: tryParseInt(job['slot']),
-      visibility: job['visibility'] ?? '',
-      jobStatus: job['status'] ?? '',
-      jobCreatedAt: tryParseTime(job['created_at']),
-      skills: skillsList,
-      jobOwnerId: jobOwner['id'] ?? '',
-      jobOwnerName: jobOwner['full_name'] ?? '',
-      jobOwnerAvatar: jobOwner['avatar_url'],
-      offerUserId: offerUser['id'] ?? '',
-      offerUserName: offerUser['full_name'] ?? '',
-      offerUserAvatar: offerUser['avatar_url'],
-      offers: [],
-    );
+    return offers.map((offerJson) {
+      final user = offerJson['user'] ?? {};
+      return Offer(
+        id: offerJson['id'] ?? '',
+        note: offerJson['note'] ?? '',
+        status: offerJson['status'] ?? '',
+        createdAt: _tryParseTime(offerJson['created_at']),
+        jobId: job['id'] ?? '',
+        jobTitle: job['title'] ?? '',
+        jobDescription: job['description'] ?? '',
+        regionCode: job['region_code'] ?? '',
+        place: job['place'] ?? '',
+        preferredStart: _tryParseTime(job['preferred_start']),
+        time: _tryParseInt(job['time']),
+        slot: _tryParseInt(job['slot']),
+        visibility: job['visibility'] ?? '',
+        jobStatus: job['status'] ?? '',
+        jobCreatedAt: _tryParseTime(job['created_at']),
+        jobOwnerId: jobOwner['id'] ?? '',
+        jobOwnerName: jobOwner['full_name'] ?? '',
+        jobOwnerAvatar: jobOwner['avatar_url'],
+        skills: skillsList,
+        offers: List<Map<String, dynamic>>.from(offers),
+        offerUserId: user['id'] ?? '',
+        offerUserName: user['full_name'] ?? '',
+        offerUserAvatar: user['avatar_url'],
+      );
+    }).toList();
   }
 }

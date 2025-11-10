@@ -34,7 +34,15 @@ class _ApplicantDetailFullPageState
   Widget build(BuildContext context) {
     final refLocal = ref;
     final offer = widget.offer;
-    final appBarTitle = 'Yêu cầu nhận dịch vụ';
+
+    final bool isWithdrawRequest = offer.status == 'withdrawn';
+
+    final appBarTitle = isWithdrawRequest
+        ? 'Yêu cầu hủy dịch vụ'
+        : 'Yêu cầu nhận dịch vụ';
+
+    final greenButtonText = isWithdrawRequest ? 'Duyệt hủy' : 'Duyệt yêu cầu';
+    final redButtonText = isWithdrawRequest ? 'Từ chối hủy' : 'Từ chối';
 
     final serviceName = offer.jobTitle;
     final duration = _formatDuration(offer.time);
@@ -164,11 +172,15 @@ class _ApplicantDetailFullPageState
                             : () async {
                           setState(() => _isLoading = true);
                           try {
+                            final statusToUpdate = isWithdrawRequest
+                                ? 'cancelled'
+                                : 'accepted';
+
                             await refLocal.read(
                                 updateOfferStatusAcceptedProvider((
                                 offerId: offer.id,
                                 jobId: offer.jobId,
-                                status: 'accepted'
+                                status: statusToUpdate
                                 )).future);
                             Navigator.pop(context);
                             refLocal.invalidate(allMyPendingOffersProvider);
@@ -193,8 +205,8 @@ class _ApplicantDetailFullPageState
                           ),
                         )
                             : const SizedBox.shrink(),
-                        label: const Text('Duyệt yêu cầu',
-                            style: TextStyle(
+                        label: Text(greenButtonText,
+                            style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
@@ -214,11 +226,15 @@ class _ApplicantDetailFullPageState
                               : () async {
                             setState(() => _isLoading = true);
                             try {
+                              final statusToUpdate = isWithdrawRequest
+                                  ? 'accepted'
+                                  : 'rejected';
+
                               await refLocal.read(
                                   updateOfferStatusRejectedProvider((
                                   offerId: offer.id,
                                   jobId: offer.jobId,
-                                  status: 'rejected'
+                                  status: statusToUpdate
                                   )).future);
                               Navigator.pop(context);
                               refLocal.invalidate(allMyPendingOffersProvider);
@@ -246,9 +262,9 @@ class _ApplicantDetailFullPageState
                               color: Colors.white,
                             ),
                           )
-                              : const Text(
-                            'Từ chối',
-                            style: TextStyle(
+                              : Text(
+                            redButtonText,
+                            style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white),

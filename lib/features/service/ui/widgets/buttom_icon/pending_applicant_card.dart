@@ -8,8 +8,8 @@ class PendingApplicantCard extends StatelessWidget {
 
   const PendingApplicantCard({super.key, required this.offer});
 
-  String _formatDuration(int totalMinutes) {
-    final duration = Duration(minutes: totalMinutes);
+  String _formatDuration(int totalSeconds) {
+    final duration = Duration(seconds: totalSeconds);
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -17,13 +17,26 @@ class PendingApplicantCard extends StatelessWidget {
     return "$hours:$minutes:$seconds";
   }
 
+
   String _formatDateTime(DateTime dt) {
     return DateFormat('HH:mm dd/MM/yyyy').format(dt);
   }
 
   @override
   Widget build(BuildContext context) {
-    final requestTypeText = 'Yêu cầu chờ xét duyệt nhận dịch vụ';
+    final bool isWithdrawRequest = offer.status == 'withdrawn';
+
+    final String requestTypeText;
+    final Color requestColor;
+
+    if (isWithdrawRequest) {
+      requestTypeText = 'Yêu cầu chờ xét duyệt hủy dịch vụ';
+      requestColor = Colors.red[800] ?? const Color(0xFFD32F2F);
+    } else {
+      requestTypeText = 'Yêu cầu chờ xét duyệt nhận dịch vụ';
+      requestColor = Colors.green;
+    }
+
     final requestTime = _formatDateTime(offer.createdAt);
 
     final jobTitle = offer.jobTitle;
@@ -62,11 +75,11 @@ class PendingApplicantCard extends StatelessWidget {
               children: [
                 Expanded(
                     child: Text(requestTypeText,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF003E77)))),
+                        style: TextStyle(
+                            fontSize: 13, color: requestColor))),
                 Text(requestTime,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF003E77))),
+                    style: TextStyle(
+                        fontSize: 12, color: requestColor)),
               ],
             ),
             const SizedBox(height: 10),

@@ -19,8 +19,10 @@ class PendingApplicantsNoSearchWidget extends ConsumerWidget {
       },
       child: offersAsync.when(
         data: (offers) {
-          final pendingOffers =
-          offers.where((o) => o.status == 'pending').toList();
+          final pendingOffers = offers
+              .where((o) =>
+          o.status == 'pending' || o.status == 'withdrawn')
+              .toList();
 
           if (pendingOffers.isEmpty) {
             return SingleChildScrollView(

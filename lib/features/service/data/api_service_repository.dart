@@ -116,11 +116,19 @@ class ApiServiceRepository implements ServiceRepository {
   Future<List<Offer>> fetchMyPendingOffers() async {
     const path = '/offers/me/pending-offers';
     final res = await _api.get(path);
+
     _ensureOK(res);
-    final List<dynamic> decodedList = json.decode(utf8.decode(res.bodyBytes));
-    return decodedList
-        .map((item) => Offer.fromPendingOfferJson(item as Map<String, dynamic>))
-        .toList();
+
+    final List<dynamic> jobList = json.decode(utf8.decode(res.bodyBytes));
+
+    final List<Offer> allOffers = [];
+    for (final jobJson in jobList) {
+      if (jobJson is Map<String, dynamic>) {
+        allOffers.addAll(Offer.fromJobJsonList(jobJson));
+      }
+    }
+
+    return allOffers;
   }
 
   @override
