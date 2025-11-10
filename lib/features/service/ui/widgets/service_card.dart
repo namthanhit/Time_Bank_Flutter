@@ -239,7 +239,8 @@ class ServiceCard extends StatelessWidget {
                       width: chipWidth,
                       child: _buildSpecializationTag(
                         context,
-                        (service.skillNames != null && service.skillNames!.isNotEmpty)
+                        (service.skillNames != null &&
+                                service.skillNames!.isNotEmpty)
                             ? service.skillNames!.join(', ')
                             : null,
                         chipWidth: chipWidth,
@@ -280,7 +281,7 @@ class ServiceCard extends StatelessWidget {
                       style: TextStyle(fontSize: 12, color: Colors.grey[800]),
                     ),
                     Text(
-                      _formatDurationHMS(service.minSlotMinutes),
+                      _formatDurationHMS(service.time),
                       style: TextStyle(
                           fontSize: 20,
                           color: Colors.red[600],
@@ -319,10 +320,13 @@ class ServiceCard extends StatelessWidget {
     return '${t.day}/${t.month}/${t.year} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
   }
 
-  static String _formatDurationHMS(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:00';
+  static String _formatDurationHMS(int seconds) {
+    print('Input seconds to _formatDurationHMS: $seconds');
+    final hours = seconds ~/ 3600;
+    final remainingSeconds = seconds % 3600;
+    final mins = remainingSeconds ~/ 60;
+    final secs = remainingSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   Widget _buildSpecializationTag(BuildContext context, String? specialization,
