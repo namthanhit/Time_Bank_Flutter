@@ -9,7 +9,6 @@ import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
 import 'package:time_bank_flutter/features/qr/ui/qr_scanner_page.dart';
 
 class TransferPage extends ConsumerStatefulWidget {
-
   final String? prefilledPhoneNumber;
 
   const TransferPage({super.key, this.prefilledPhoneNumber});
@@ -18,25 +17,25 @@ class TransferPage extends ConsumerStatefulWidget {
   ConsumerState<TransferPage> createState() => _TransferPageState();
 }
 
-
 class _TransferPageState extends ConsumerState<TransferPage> {
+
 
   @override
   void initState() {
     super.initState();
 
-    final prefilledPhone = widget.prefilledPhoneNumber;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(accountBalanceProvider);
 
-    if (prefilledPhone != null && prefilledPhone.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      final prefilledPhone = widget.prefilledPhoneNumber;
+      if (prefilledPhone != null && prefilledPhone.isNotEmpty) {
         final notifier = ref.read(transactionFormProvider.notifier);
-
         notifier.setToPhone(prefilledPhone);
-
         notifier.lookupRecipient();
-      });
-    }
+      }
+    });
   }
+
 
   void _openQrScanner(BuildContext context) {
     Navigator.of(context).push(
@@ -75,12 +74,12 @@ class _TransferPageState extends ConsumerState<TransferPage> {
             builder: (_) => const Center(child: CircularProgressIndicator()),
           );
         } else if (next.hasError) {
-          Navigator.pop(context); // Tắt loading
+          Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text((next.error as Exception).toString().replaceFirst("Exception: ", ""))),
           );
         } else if (next.hasValue && next.value == true) {
-          Navigator.pop(context); // Tắt loading
+          Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ConfirmPage()),
@@ -117,6 +116,7 @@ class _TransferPageState extends ConsumerState<TransferPage> {
 
       notifier.submitCheck();
     }
+
 
     ref.listen<TransactionFormState>(transactionFormProvider, (previous, next) {
     });
