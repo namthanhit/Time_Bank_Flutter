@@ -1,8 +1,6 @@
-// lib/features/service/ui/widgets/service_list_container.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/service_providers.dart';
-import '../../data/mock_service_repository.dart';
+import '../../providers/service_pagination_provider.dart';
 import 'service_card.dart';
 import '../../data/model/service_filter.dart';
 
@@ -138,8 +136,30 @@ class _ServiceListContainerState extends ConsumerState<ServiceListContainer> {
                 .where((s) => s.userId == MockServiceRepository.currentUserId)
                 .toList();
           }
-          // other socialFilter values can be implemented later
         }
+        return false;
+      },
+      child: ListView.separated(
+        // let NestedScrollView provide the inner controller (don't set one here)
+        padding: const EdgeInsets.all(16),
+        itemCount: filtered.length + (isLoading ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index >= filtered.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          }
+
+          final service = filtered[index];
+          return ServiceCard(
+            service: service,
+            isMyService: widget.isMyServiceTab,
+          );
+        },
+      ),
+    );
 
         // apply query if present
         final filtered = (widget.query == null || widget.query!.trim().isEmpty)
@@ -229,6 +249,12 @@ class _ServiceListContainerState extends ConsumerState<ServiceListContainer> {
           ),
         );
       },
+      child: listView,
+    );
+
+    return Container(
+      color: const Color(0xFFF8F9FA),
+      child: listView,
     );
   }
 }

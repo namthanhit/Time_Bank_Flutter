@@ -16,7 +16,6 @@ class ServiceDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Router logic để chọn widget phù hợp
     if (isMyService) {
       return MyServiceDetailPage(serviceId: serviceId);
     } else {

@@ -1,4 +1,6 @@
 import 'package:time_bank_flutter/features/service/domain/repositories/service_repository.dart';
+import '../domain/models/offer.dart';
+import '../domain/models/pagination.dart';
 import '../domain/models/service.dart';
 import 'package:flutter/material.dart';
 
@@ -41,6 +43,22 @@ class MockServiceRepository implements ServiceRepository {
   static String? getSkillName(String? skillId) {
     if (skillId == null) return null;
     return skillNames[skillId];
+  }
+
+  @override
+  Future<void> updateOfferStatusAccepted(
+      {required String offerId,
+      required String jobId,
+      required String status}) async {
+    final path = 'offers/$offerId/me-job/$jobId/accept-offer';
+  }
+
+  @override
+  Future<void> updateOfferStatusRejected(
+      {required String offerId,
+      required String jobId,
+      required String status}) async {
+    final path = 'offers/$offerId/me-job/$jobId/accept-offer';
   }
 
   // Map a list of skill IDs to display names. Returns empty list when ids is null.
@@ -522,6 +540,65 @@ class MockServiceRepository implements ServiceRepository {
       ],
     ),
   ];
+
+  @override
+  Future<Map<String, dynamic>> getMyJobs({
+    required PaginationRequestDto pagingInfo,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final myServices =
+        _mockData.where((s) => s.userId == currentUserId).toList();
+
+    // Simple pagination logic
+    final start = (pagingInfo.page - 1) * pagingInfo.pageSize;
+    final end = start + pagingInfo.pageSize;
+    final pagedServices = myServices.sublist(
+      start,
+      end > myServices.length ? myServices.length : end,
+    );
+
+    return {
+      'items': pagedServices,
+      'total': myServices.length,
+    };
+  }
+
+  @override
+  Future<List<Offer>> getOffersForMyJob(Object jobId) async {
+    final sid = jobId.toString();
+    await Future.delayed(const Duration(milliseconds: 300));
+    // In a real app, offers would be fetched from an API or database.
+    // Here we filter mockApplicants for those linked to the given serviceId.
+    final offers = mockApplicants
+        .where((applicant) => applicant['serviceId'] == sid)
+        .map((applicant) => Offer(
+              id: applicant['id'],
+              status: applicant['status'],
+              note: '',
+              createdAt: DateTime.now(),
+              jobId: '',
+              jobTitle: '',
+              jobDescription: '',
+              regionCode: '',
+              place: '',
+              preferredStart: DateTime.now(),
+              time: 111,
+              slot: 1,
+              visibility: '',
+              jobStatus: '',
+              jobCreatedAt: DateTime.now(),
+              jobOwnerId: '',
+              jobOwnerName: '',
+              jobOwnerAvatar: '',
+              skills: [],
+              offers: [],
+              offerUserId: '',
+              offerUserName: '',
+              offerUserAvatar: '',
+            ))
+        .toList();
+    return offers;
+  }
 
   @override
   Future<List<Service>> fetchPublicServices() async {

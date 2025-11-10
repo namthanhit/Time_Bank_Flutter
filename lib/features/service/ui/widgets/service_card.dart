@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/service.dart';
-import '../../data/mock_service_repository.dart';
 import '../page/service_detail_page.dart';
 
 class ServiceCard extends StatelessWidget {
@@ -34,11 +33,12 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Define chip sizing used in this card so height/width are consistent
     const double chipWidth = 60.0;
     const double chipHeight = 16.0;
     final bool hasMultipleSkills =
-        (service.skillIds?.length ?? (service.skillId != null ? 1 : 0)) > 1;
+        (service.skillNames?.length ?? (service.skillNames != null ? 1 : 0)) >
+            1;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -79,7 +79,7 @@ class ServiceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar + Name + Time ago (chiều cao = avatar)
+                // Avatar + Name + Time ago
                 Row(
                   children: [
                     ClipRRect(
@@ -115,7 +115,7 @@ class ServiceCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: SizedBox(
-                        height: 40, // Đảm bảo chiều cao = avatar
+                        height: 40,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -139,7 +139,6 @@ class ServiceCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Nút ba chấm cho tab "Của tôi"
                     if (isMyService)
                       PopupMenuButton<String>(
                         icon: Container(
@@ -167,7 +166,7 @@ class ServiceCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        color: Colors.white, // Màu nền trắng cho popup menu
+                        color: Colors.white,
                         elevation: 8,
                         itemBuilder: (context) => [
                           const PopupMenuItem<String>(
@@ -264,11 +263,9 @@ class ServiceCard extends StatelessWidget {
                   ],
                 ),
 
-                // Reduce vertical gap when card shows multi-line specialization
-                // so avatar/name and title/time don't look too far apart.
                 SizedBox(height: hasMultipleSkills ? 6 : 14),
 
-                // Title + Job type (bên cạnh nhau)
+                // 🔧 CHỈNH PHẦN NÀY: Hiển thị trực tiếp skillNames từ API
                 Row(
                   children: [
                     Expanded(
@@ -284,16 +281,13 @@ class ServiceCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Use fixed chipWidth/chipHeight so chips look uniform.
                     SizedBox(
                       width: chipWidth,
                       child: _buildSpecializationTag(
                         context,
-                        MockServiceRepository.skillNamesAsString(
-                            service.skillIds ??
-                                (service.skillId != null
-                                    ? [service.skillId!]
-                                    : null)),
+                        (service.skillNames != null && service.skillNames!.isNotEmpty)
+                            ? service.skillNames!.join(', ')
+                            : null,
                         chipWidth: chipWidth,
                         chipHeight: chipHeight,
                       ),
@@ -303,7 +297,6 @@ class ServiceCard extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // Thời gian: giờ phút giây
                 Row(
                   children: [
                     const Icon(Icons.access_time,
@@ -316,14 +309,14 @@ class ServiceCard extends StatelessWidget {
                     ),
                     Text(
                       _formatDateTime(service.createdAt),
-                      style: TextStyle(fontSize: 16, color: Color(0xFF419C23)),
+                      style: const TextStyle(
+                          fontSize: 16, color: Color(0xFF419C23)),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 8),
 
-                // Duration
                 Row(
                   children: [
                     Icon(Icons.timer, size: 12, color: Colors.grey[600]),
@@ -342,10 +335,8 @@ class ServiceCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-
                 const SizedBox(height: 8),
 
-                // Address
                 Row(
                   children: [
                     const Icon(Icons.location_on,
@@ -353,7 +344,7 @@ class ServiceCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Địa chỉ: ${service.regionCode ?? 'Chưa xác định'}',
+                        'Địa chỉ: ${service.place ?? 'Chưa xác định'}',
                         style: const TextStyle(
                             fontSize: 12, color: Colors.black54),
                         maxLines: 1,
@@ -388,7 +379,6 @@ class ServiceCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFE0DC06),
           borderRadius: BorderRadius.circular(5),
-          // border: Border.all(color: const Color(0xFF003E77).withOpacity(0.5)),
         ),
         child: const Text(
           'Khác',
@@ -400,14 +390,12 @@ class ServiceCard extends StatelessWidget {
       );
     }
 
-    // Tách chuỗi chuyên môn thành danh sách
     List<String> tags = specialization
         .split(RegExp(r'[,;|\n]'))
         .map((tag) => tag.trim())
         .where((tag) => tag.isNotEmpty)
         .toList();
 
-    // Nếu không có thẻ nào sau khi lọc (ví dụ: chuỗi chỉ chứa dấu phẩy)
     if (tags.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -425,7 +413,6 @@ class ServiceCard extends StatelessWidget {
       );
     }
 
-    // Nếu chỉ có 1 thẻ, hiển thị bình thường
     if (tags.length == 1) {
       return SizedBox(
         width: chipWidth,
@@ -436,7 +423,6 @@ class ServiceCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFE0DC06),
             borderRadius: BorderRadius.circular(5),
-            // border: Border.all(color: const Color(0xFF003E77)),
           ),
           child: Text(
             tags[0],
@@ -451,8 +437,6 @@ class ServiceCard extends StatelessWidget {
       );
     }
 
-    // Nếu có nhiều thẻ, hiển thị thẻ đầu + thẻ "...+số" (theo cột dọc)
-    // SỬ DỤNG IntrinsicWidth ĐỂ BUỘC CÁC CON CÓ CHIỀU RỘNG BẰNG NHAU
     return IntrinsicWidth(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -481,14 +465,6 @@ class ServiceCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => ServiceDetailPage(
-                  serviceId: service.id,
-                  isMyService: isMyService,
-                ),
-              ));
-            },
             child: SizedBox(
               width: chipWidth,
               height: chipHeight,

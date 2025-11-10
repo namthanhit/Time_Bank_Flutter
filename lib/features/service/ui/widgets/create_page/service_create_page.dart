@@ -7,6 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:time_bank_flutter/features/service/data/mock_service_repository.dart';
 import 'package:time_bank_flutter/features/service/domain/models/service.dart';
+
+import '../../../../time_transfer/domain/models/recipient_info.dart';
+import '../../../../time_transfer/ui/widgets/transfer_destination_card.dart';
 // Note: The 'Service' model and 'MockServiceRepository' are no longer used
 // as the UI is for a "Request", not a "Service".
 
@@ -27,7 +30,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   final _dateController = TextEditingController();
   final _durationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  int _participantsCount = 3;
+  int _participantsCount = 1;
   // visibility options: 'Cá nhân' (private), 'Mọi người' (public), 'Bạn bè' (friends)
   String _visibilityOption = 'Mọi người';
   // selected skills (store skill ids)
@@ -852,7 +855,32 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       }
 
       // Navigate back; listeners should refresh My tab from mock repository
-      Navigator.of(context).pop();
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (ctx) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Chuyển thời gian'),
+              backgroundColor: const Color(0xFF003E77),
+            ),
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TransferDestinationCard(
+                phone: '', // khởi tạo theo yêu cầu (hoặc truyền số từ form)
+                amount: Duration.zero,
+                note: _titleController.text,
+                lookupState: AsyncValue.data(null),
+                onPhoneChanged: (s) {},
+                onPhoneSubmitted: (s) {},
+                onAmountChanged: (d) {},
+                onNoteChanged: (s) {},
+                onLookupPressed: () {},
+                showFieldErrors: false,
+                onQrPressed: () {},
+              ),
+            ),
+          );
+        }),
+      );
     }
   }
 
