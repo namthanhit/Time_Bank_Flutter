@@ -1,18 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/service/data/api_service_repository.dart';
 import '../../../providers/service_providers.dart';
 import '../../../domain/models/service.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
-
-// Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
-// - Hiển thị header riêng (icon người gần title)
-// - Hiển thị progress/status của dịch vụ
-// - Hiển thị một box nổi chứa: mô  loại bỏ ở bản này theo chỉ thtả dịch vụ và ảnh (nếu có) — không dùng viền, chỉ dùng shadow để "nổi"
-// - Nút 'Xem chi tiết ứng viên' có icon thùng rác (trash) theo yêu cầu
-// Lưu ý: chức năng hủy yêu cầu đã đượcị.
 
 class MyServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
@@ -932,9 +924,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  String _formatDuration(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:00';
+  static String _formatDuration(int seconds) {
+    print('Input seconds to _formatDurationHMS: $seconds');
+    final hours = seconds ~/ 3600;
+    final remainingSeconds = seconds % 3600;
+    final mins = remainingSeconds ~/ 60;
+    final secs = remainingSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }
