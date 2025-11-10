@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-// ===== SỬA LỖI IMPORT Ở ĐÂY =====
-import 'package:time_bank_flutter/main.dart'; // Import file main
+import 'package:time_bank_flutter/main.dart';
 import 'package:time_bank_flutter/features/notification/domain/models/notification_models.dart';
 import 'package:time_bank_flutter/features/notification/providers/notification_providers.dart';
-// =================================
-
 import 'package:time_bank_flutter/features/service/ui/page/service_page.dart';
 import '../features/home/ui/home_page.dart';
 import 'navigation/bottom_nav_bar.dart';
@@ -53,14 +49,19 @@ class _AppShellState extends ConsumerState<AppShell> {
     });
   }
 
-  // ===== LOGIC FCM (Đã sửa lỗi import) =====
-
   Future<void> _initializeFcm() async {
+
     await _sendTokenToServer();
+
     FirebaseMessaging.instance.onTokenRefresh.listen(_sendTokenToServer);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Got a message whilst in the foreground! (from AppShell)');
+      if (!mounted) {
+        print('FCM message received, but AppShell is disposed. Ignoring.');
+        return;
+      }
+
       final notification = _parseFcmMessage(message);
 
       if (notification != null) {
@@ -72,7 +73,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         if (title != null && body != null) {
           final AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
-            channel.id, // ID từ main.dart
+            channel.id,
             channel.name,
             channelDescription: channel.description,
             importance: Importance.max,
@@ -83,7 +84,6 @@ class _AppShellState extends ConsumerState<AppShell> {
           final NotificationDetails platformChannelSpecifics =
           NotificationDetails(android: androidPlatformChannelSpecifics);
 
-          // Dùng 'flutterLocalNotificationsPlugin' từ main.dart
           flutterLocalNotificationsPlugin.show(
             0,
             title,
@@ -93,15 +93,16 @@ class _AppShellState extends ConsumerState<AppShell> {
         }
       }
     });
-
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         print('App opened from terminated state by message: ${message.data}');
+        // TODO: Điều hướng đến trang thông báo
       }
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('App opened from background state by message: ${message.data}');
+      // TODO: Điều hướng đến trang thông báo
     });
   }
 
