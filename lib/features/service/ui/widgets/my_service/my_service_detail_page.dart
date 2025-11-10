@@ -7,13 +7,6 @@ import '../../../data/mock_service_repository.dart';
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
 
-// Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
-// - Hiển thị header riêng (icon người gần title)
-// - Hiển thị progress/status của dịch vụ
-// - Hiển thị một box nổi chứa: mô  loại bỏ ở bản này theo chỉ thtả dịch vụ và ảnh (nếu có) — không dùng viền, chỉ dùng shadow để "nổi"
-// - Nút 'Xem chi tiết ứng viên' có icon thùng rác (trash) theo yêu cầu
-// Lưu ý: chức năng hủy yêu cầu đã đượcị.
-
 class MyServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
 
@@ -123,9 +116,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
     // Nội dung chính: cuộn dọc
     return SingleChildScrollView(
-      // This SingleChildScrollView is nested inside the RefreshIndicator's scrollable,
-      // keep physics default here because the outer RefreshIndicator's SingleChildScrollView
-      // (in build) already sets AlwaysScrollableScrollPhysics.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

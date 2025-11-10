@@ -20,8 +20,8 @@ class Offer {
   final String jobOwnerName;
   final String? jobOwnerAvatar;
 
-  final List<Map<String, dynamic>> skills; // giữ nguyên dạng list đơn giản
-  final List<Map<String, dynamic>> offers; // nếu cần load thêm danh sách offer khác
+  final List<Map<String, dynamic>> skills;
+  final List<Map<String, dynamic>> offers;
 
   final String offerUserId;
   final String offerUserName;
@@ -54,7 +54,6 @@ class Offer {
   });
 
   factory Offer.fromJson(Map<String, dynamic> json) {
-    // parse data từ API gốc (job chứa offers[])
     final job = json;
     final offers = job['offers'] as List;
 
@@ -94,5 +93,70 @@ class Offer {
         offerUserAvatar: user['avatar_url'],
       );
     }).toList();
+  }
+
+  factory Offer.fromPendingOfferJson(Map<String, dynamic> json) {
+    final offerData = json;
+    final offerUser = json['user'] ?? {};
+    final job = json['service'] ?? {};
+    final jobOwner = job['user'] ?? {};
+
+    // 🔽 SỬA LỖI Ở ĐÂY: Đổi 'DateTime?' thành 'DateTime'
+    DateTime tryParseTime(dynamic d) {
+      if (d == null) return DateTime.now();
+      try {
+        return DateTime.parse(d.toString());
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+
+    int tryParseInt(dynamic i) {
+      if (i == null) return 0;
+      if (i is int) return i;
+      return int.tryParse(i.toString()) ?? 0;
+    }
+
+    final List<Map<String, dynamic>> skillsList;
+    if (job['serviceSkills'] is List) {
+      skillsList = (job['serviceSkills'] as List)
+          .map((serviceSkill) {
+        final skill = serviceSkill['skill'];
+        if (skill is Map) {
+          return Map<String, dynamic>.from(skill);
+        }
+        return <String, dynamic>{};
+      })
+          .where((skillMap) => skillMap.isNotEmpty)
+          .toList();
+    } else {
+      skillsList = [];
+    }
+
+    return Offer(
+      id: offerData['id'] ?? '',
+      note: offerData['note'] ?? '',
+      status: offerData['status'] ?? '',
+      createdAt: tryParseTime(offerData['created_at']),
+      jobId: job['id'] ?? '',
+      jobTitle: job['title'] ?? '',
+      jobDescription: job['description'] ?? '',
+      regionCode: job['region_code'] ?? '',
+      place: job['place'] ?? '',
+      preferredStart: tryParseTime(job['preferred_start']),
+      time: tryParseInt(job['time']),
+      slot: tryParseInt(job['slot']),
+      visibility: job['visibility'] ?? '',
+      jobStatus: job['status'] ?? '',
+      jobCreatedAt: tryParseTime(job['created_at']),
+      skills: skillsList,
+      jobOwnerId: jobOwner['id'] ?? '',
+      jobOwnerName: jobOwner['full_name'] ?? '',
+      jobOwnerAvatar: jobOwner['avatar_url'],
+      offerUserId: offerUser['id'] ?? '',
+      offerUserName: offerUser['full_name'] ?? '',
+      offerUserAvatar: offerUser['avatar_url'],
+      offers: [],
+    );
   }
 }

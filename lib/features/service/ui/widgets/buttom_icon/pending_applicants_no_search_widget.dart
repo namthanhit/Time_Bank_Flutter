@@ -1,107 +1,78 @@
 import 'package:flutter/material.dart';
-import '../../../data/mock_service_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/service/providers/service_providers.dart';
 import 'pending_applicant_card.dart';
 
-/// A simplified version of PendingApplicantsWidget that:
-/// - hides the search bar and filter icon
-/// - shows pending applicants (optionally across all jobs)
-/// - uses the reusable PendingApplicantCard for each entry
-class PendingApplicantsNoSearchWidget extends StatefulWidget {
-  final String serviceId;
-  final bool showAllJobs;
-
-  /// When true only show pending applicants for services owned by the
-  /// current user (MockServiceRepository.currentUserId).
-  final bool showOnlyMyJobs;
-
+class PendingApplicantsNoSearchWidget extends ConsumerWidget {
   const PendingApplicantsNoSearchWidget({
     super.key,
-    required this.serviceId,
-    this.showAllJobs = true,
-    this.showOnlyMyJobs = false,
   });
 
   @override
-  State<PendingApplicantsNoSearchWidget> createState() =>
-      _PendingApplicantsNoSearchWidgetState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offersAsync = ref.watch(allMyPendingOffersProvider);
 
-class _PendingApplicantsNoSearchWidgetState
-    extends State<PendingApplicantsNoSearchWidget> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    MockServiceRepository.addListener(_onDataChanged);
-  }
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(allMyPendingOffersProvider);
+        await ref.read(allMyPendingOffersProvider.future);
+      },
+      child: offersAsync.when(
+        data: (offers) {
+          final pendingOffers =
+          offers.where((o) => o.status == 'pending').toList();
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    MockServiceRepository.removeListener(_onDataChanged);
-    super.dispose();
-  }
+          if (pendingOffers.isEmpty) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('assets/images/thong_bao.png',
+                          width: 150, height: 150),
+                      const SizedBox(height: 16),
+                      const Text('Không có ứng viên nào đang chờ phê duyệt',
+                          style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
 
-  void _onDataChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      if (mounted) setState(() {});
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    List<Map<String, dynamic>> servicePendingApplicants;
-    if (widget.showOnlyMyJobs) {
-      servicePendingApplicants =
-          MockServiceRepository.mockApplicants.where((a) {
-            if (a['status'] != 'pending') return false;
-            final service = MockServiceRepository.getServiceById(a['serviceId']);
-            return service != null &&
-                service.userId == MockServiceRepository.currentUserId;
-          }).toList();
-    } else {
-      servicePendingApplicants = widget.showAllJobs
-          ? MockServiceRepository.mockApplicants
-          .where((a) => a['status'] == 'pending')
-          .toList()
-          : MockServiceRepository.mockApplicants
-          .where((a) =>
-      a['status'] == 'pending' &&
-          a['serviceId'].toString() == widget.serviceId)
-          .toList();
-    }
-
-    if (servicePendingApplicants.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/images/thong_bao.png', width: 150, height: 150),
-            SizedBox(height: 16),
-            Text('Không có ứng viên nào đang chờ phê duyệt',
-                style: TextStyle(fontSize: 16, color: Colors.grey)),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      color: Colors.grey[200],
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: servicePendingApplicants.length,
-        itemBuilder: (context, index) {
-          final applicant = servicePendingApplicants[index];
-          return PendingApplicantCard(applicant: applicant);
+          return Container(
+            color: Colors.grey[200],
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: pendingOffers.length,
+              itemBuilder: (context, index) {
+                final offer = pendingOffers[index];
+                return PendingApplicantCard(offer: offer);
+              },
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Lỗi tải danh sách ứng viên: ${err.toString()}',
+                      textAlign: TextAlign.center),
+                ),
+              ),
+            ),
+          );
         },
       ),
     );
   }
 }
-
-// end of file
