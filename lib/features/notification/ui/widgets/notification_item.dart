@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/notification_models.dart';
 
-/// Card style notification item: Title + Date, message body, time footer.
 class NotificationItem extends StatelessWidget {
   const NotificationItem({
     super.key,
@@ -14,7 +13,7 @@ class NotificationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bodyColor = Color(0xCC000000); // ~80% black
+    const bodyColor = Color(0xCC000000);
     const caption = Colors.black54;
 
     return Material(

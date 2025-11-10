@@ -11,11 +11,24 @@ class TransactionNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final String dateText = notification.dateText;
+    final String timeText = notification.timeText;
+    final String account = notification.account;
+    final String change = notification.change;
+    final String dataDateTime = notification.dataDateTime;
+    final String balance = notification.balance;
+    final String? note = notification.note;
+
+
+    final bool isCredit = notification.type == NotificationType.transferIn;
+    final Color changeColor = isCredit ? const Color(0xFF008A00) : const Color(0xFFD32F2F);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: notification.read ? Colors.white : const Color(0xFFF0F5FF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -41,8 +54,9 @@ class TransactionNotificationCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
-                notification.dateText ?? '',
+                dateText,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -51,29 +65,55 @@ class TransactionNotificationCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            '${notification.account ?? ''} | THAY ĐỔI: ${notification.change ?? ''} | SỐ DƯ: ${notification.balance ?? ''}',
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.3,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade800,
+          const SizedBox(height: 8),
+
+          RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.4,
+                color: Colors.grey.shade800,
+              ),
+              children: [
+                const TextSpan(text: 'Số dư TK '),
+                TextSpan(
+                  text: '$account ',
+                  style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87),
+                ),
+                TextSpan(
+                  text: '$change ',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: changeColor),
+                ),
+                const TextSpan(text: 'lúc '),
+                TextSpan(
+                  text: '$dataDateTime. ',
+                  style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
+                ),
+                const TextSpan(text: 'Số dư '),
+                TextSpan(
+                  text: balance,
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            'GHI CHÚ: ${notification.note ?? ''}',
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.3,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700,
+
+          if (note != null && note.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Ghi chú: $note',
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.3,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
             ),
-          ),
+          ],
+
           const SizedBox(height: 14),
           Text(
-            notification.timeText ?? '',
+            timeText,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,

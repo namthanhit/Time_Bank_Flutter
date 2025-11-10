@@ -2,16 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../notification/data/notification_repository.dart';
 import '../../notification/domain/models/notification_models.dart';
 import '../../auth/providers/auth_providers.dart';
-/// Cung cấp repository cho notification
+
 final notificationRepositoryProvider = Provider<INotificationRepository>((ref) {
-  // Dòng này bây BE GIỜ sẽ hoạt động vì 'authedApiClientProvider'
-  // đã được import từ file auth chuẩn
+
   final api = ref.watch(authedApiClientProvider);
   return NotificationRepository(api);
 });
 
 
-/// StateNotifier cho danh sách "Biến động" (có pagination)
 final activityNotificationsProvider =
 StateNotifierProvider<ActivityNotifier, AsyncValue<List<AppNotification>>>(
       (ref) => ActivityNotifier(ref),
@@ -75,7 +73,6 @@ class ActivityNotifier extends StateNotifier<AsyncValue<List<AppNotification>>> 
 
       final updatedList = currentList.map((n) {
         if (unreadIds.contains(n.id)) {
-          // Giả sử bạn đã thêm copyWith vào AppNotification
           return n.copyWith(read: true);
         }
         return n;
@@ -87,17 +84,16 @@ class ActivityNotifier extends StateNotifier<AsyncValue<List<AppNotification>>> 
     }
   }
   void upsertFromPush(AppNotification n) {
-    // ===== SỬA LỖI: Thêm kiểu tường minh List<AppNotification> =====
+
     final List<AppNotification> cur = [...(state.value ?? [])];
 
     final i = cur.indexWhere((x) => x.id == n.id);
 
-    // Cập nhật: Luôn đảm bảo item mới (hoặc được cập nhật) lên đầu danh sách
     if (i >= 0) {
-      cur.removeAt(i); // Xóa ở vị trí cũ
+      cur.removeAt(i);
     }
-    cur.insert(0, n); // Chèn lên đầu
+    cur.insert(0, n);
 
-    state = AsyncData(cur); // Sẽ hết lỗi
+    state = AsyncData(cur);
   }
 }

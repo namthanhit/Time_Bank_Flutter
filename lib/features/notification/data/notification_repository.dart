@@ -7,6 +7,7 @@ abstract class INotificationRepository {
   Future<List<AppNotification>> getActivity({String? cursor});
   Future<void> markRead(List<String> ids);
   Future<void> setFcmToken(String token);
+  Future<void> deactivateFcmToken(String token);
 }
 
 class NotificationRepository implements INotificationRepository {
@@ -39,6 +40,15 @@ class NotificationRepository implements INotificationRepository {
     final http.Response res = await _api.patch('/notifications/fcm-token', body: {'token': token});
     if (res.statusCode != 200) {
       throw Exception('Failed to set fcm token: ${res.statusCode}');
+    }
+  }
+
+  @override
+  Future<void> deactivateFcmToken(String token) async {
+    try {
+      await _api.patch('/notifications/fcm-token/deactivate', body: {'token': token});
+    } catch (e) {
+      print('Failed to deactivate FCM token (ignoring): $e');
     }
   }
 }

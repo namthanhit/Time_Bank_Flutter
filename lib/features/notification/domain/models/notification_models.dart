@@ -1,4 +1,4 @@
-import 'package:intl/intl.dart'; // <--- THÊM IMPORT NÀY
+import 'package:intl/intl.dart';
 
 enum NotificationType { transferOut, transferIn, systemAlert }
 
@@ -39,42 +39,51 @@ class AppNotification {
       title: j['title'] as String,
       body: j['body'] as String,
       type: _mapType(j['type'] as String),
-      createdAt: DateTime.parse(j['created_at'] as String),
+      createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
       read: (j['read'] as bool?) ?? false,
       data: d,
     );
   }
 
-  // ===== BẮT ĐẦU PHẦN THÊM VÀO =====
 
-  /// 'message' trong widget NotificationItem sẽ dùng 'body'
   String get message => body;
 
-  /// 'note' trong widget TransactionCard sẽ lấy từ data (nếu backend có gửi)
-  String? get note {
-    return data['note'] as String?;
-  }
-
-  /// 'change' trong TransactionCard sẽ dùng 'body'
-  String get change => body;
-
-  /// 'account' và 'balance' API không trả về, nên ta trả về rỗng
-  String get account => '';
-  String get balance => '';
-
-  // --- Format ngày giờ ---
   static final _dateFormatter = DateFormat('dd/MM/yyyy');
-  static final _timeFormatter = DateFormat('HH:mm');
-
   String get dateText {
     return _dateFormatter.format(createdAt);
   }
 
+  static final _timeFormatter = DateFormat('HH:mm');
   String get timeText {
     return _timeFormatter.format(createdAt);
   }
 
-  // ===== HÀM COPYWITH ĐỂ DÙNG TRONG PROVIDER =====
+
+  String? get note => data['memo'] as String?;
+
+  String get change {
+    final String sign = (type == NotificationType.transferIn) ? '+' : '-';
+    final String amount = data['amountHms'] as String? ?? '0:00:00';
+    return '$sign $amount';
+  }
+
+  String get account => data['accountPhone'] as String? ?? '';
+  String get balance => data['postBalanceHms'] as String? ?? '';
+
+  static final _dataDateTimeFormatter = DateFormat('d-M-yyyy HH:mm:ss');
+  String get dataDateTime {
+    final createdAtString = data['createdAt'] as String?;
+    if (createdAtString == null) return '';
+    try {
+      final utcTime = DateTime.parse(createdAtString);
+      final localTime = utcTime.toLocal();
+      return _dataDateTimeFormatter.format(localTime);
+    } catch (e) {
+      return '';
+    }
+  }
+
+
   AppNotification copyWith({
     String? id,
     String? title,
@@ -94,5 +103,4 @@ class AppNotification {
       data: data ?? this.data,
     );
   }
-// ===== KẾT THÚC PHẦN THÊM VÀO =====
 }

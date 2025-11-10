@@ -36,7 +36,6 @@ class _ActivityListState extends ConsumerState<ActivityList> {
   }
 
   void _onScroll() {
-    // Gọi loadMore khi cuộn gần đến cuối
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
       ref.read(activityNotificationsProvider.notifier).loadMore();
@@ -48,36 +47,29 @@ class _ActivityListState extends ConsumerState<ActivityList> {
     final state = widget.state;
     final onRefresh = widget.onRefresh;
 
-    // ===== BƯỚC 1: Đưa RefreshIndicator ra ngoài làm cha =====
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: Colors.white,
       backgroundColor: Colors.black54,
       child: state.when(
-        // ===== TRẠNG THÁI LOADING =====
-        loading: () => const AsyncShimmerList(), // ListView, đã scrollable
+        loading: () => const AsyncShimmerList(),
 
-        // ===== TRẠNG THÁI LỖI =====
         error: (e, _) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(), // Cho phép cuộn
+          physics: const AlwaysScrollableScrollPhysics(),
           child: SizedBox(
-            // Đặt chiều cao để căn giữa
             height: MediaQuery.of(context).size.height * 0.6,
             child: AsyncErrorView(
               message: e.toString(),
-              onRetry: onRefresh, // Nút "Thử lại" gọi hàm onRefresh
+              onRetry: onRefresh,
             ),
           ),
         ),
 
-        // ===== TRẠNG THÁI CÓ DATA =====
         data: (items) {
           if (items.isEmpty) {
-            // ----- 1. Data nhưng rỗng -----
             return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(), // Cho phép cuộn
+              physics: const AlwaysScrollableScrollPhysics(),
               child: SizedBox(
-                // Đặt chiều cao để căn giữa
                 height: MediaQuery.of(context).size.height * 0.6,
                 child: const AsyncEmptyView(
                   title: 'Chưa có biến động',
@@ -87,9 +79,8 @@ class _ActivityListState extends ConsumerState<ActivityList> {
             );
           }
 
-          // ----- 2. Data có nội dung -----
           return ListView.separated(
-            controller: _scrollController, // Gắn controller để tải thêm
+            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             itemCount: items.length,
