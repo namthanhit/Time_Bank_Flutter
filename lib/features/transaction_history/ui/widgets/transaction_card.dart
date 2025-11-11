@@ -68,10 +68,10 @@ class TransactionCard extends StatelessWidget {
   }
 
   Widget _description() {
-    // If out: sender (user) -> receiver, if in: sender -> receiver (user)
-    final text = entry.isOut
-        ? '${entry.senderName} chuyển đi thời gian cho ${entry.receiverName}'
-        : '${entry.senderName} chuyển thời gian đến ${entry.receiverName}';
+
+
+    final text = entry.note ?? '---';
+
     return Text(
       text,
       style: const TextStyle(

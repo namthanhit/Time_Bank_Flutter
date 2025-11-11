@@ -1,36 +1,31 @@
 import 'package:equatable/equatable.dart';
 
-/// Refined domain model for a transaction affecting the user's wallet.
-/// Aligns closer with DB concepts (transfer status, direction) while
-/// remaining UI friendly.
+
 class TransactionEntry extends Equatable {
   const TransactionEntry({
     required this.id,
     required this.direction,
-    required this.status,
+    this.status,
     required this.deltaSecs,
     this.balanceAfterSecs,
     required this.occurredAt,
-    // Retain detailed parties for bottom sheet
-    required this.senderName,
-    required this.senderAccount,
-    required this.receiverName,
-    required this.receiverAccount,
+    this.senderName,
+    this.senderAccount,
+    this.receiverName,
+    this.receiverAccount,
     this.note,
   });
 
-  final String id; // transfer id (stringified)
-  final TransactionDirection direction; // out / in
-  final TransferStatus status; // pending/completed/cancelled/failed
-  final int deltaSecs; // signed seconds (+ in, - out)
-  final int? balanceAfterSecs; // optional if repo computes rolling balance
-  final DateTime occurredAt; // completed_at ?? created_at
-
-  // Party details (could be collapsed later to counterparty only)
-  final String senderName;
-  final String senderAccount;
-  final String receiverName;
-  final String receiverAccount;
+  final String id;
+  final TransactionDirection direction;
+  final TransferStatus? status;
+  final int deltaSecs;
+  final int? balanceAfterSecs;
+  final DateTime occurredAt;
+  final String? senderName;
+  final String? senderAccount;
+  final String? receiverName;
+  final String? receiverAccount;
   final String? note;
 
   bool get isOut => direction == TransactionDirection.out;
