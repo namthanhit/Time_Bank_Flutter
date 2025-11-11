@@ -6,13 +6,6 @@ import '../../../data/mock_service_repository.dart';
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
 
-// Trang chi tiết cho dịch vụ thuộc về người dùng (My Services)
-// - Hiển thị header riêng (icon người gần title)
-// - Hiển thị progress/status của dịch vụ
-// - Hiển thị một box nổi chứa: mô  loại bỏ ở bản này theo chỉ thtả dịch vụ và ảnh (nếu có) — không dùng viền, chỉ dùng shadow để "nổi"
-// - Nút 'Xem chi tiết ứng viên' có icon thùng rác (trash) theo yêu cầu
-// Lưu ý: chức năng hủy yêu cầu đã đượcị.
-
 class MyServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
 
@@ -30,7 +23,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   PageController? _pageController;
   int _currentImageIndex = 0;
   int _currentStep =
-      1; // 0: Đã tạo, 1: Đang mở (mặc định), 2: Đang thực hiện, 3: Đã hoàn thành
+      0; // 0: Đã tạo, 1: Đang mở (mặc định), 2: Đang thực hiện, 3: Đã hoàn thành
   bool _isCancelled = false;
 
   @override
@@ -79,7 +72,20 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             if (service == null) {
               return const Center(child: Text('Không tìm thấy dịch vụ'));
             }
-            return _buildServiceContent(service);
+            // Wrap the scrollable content with RefreshIndicator to allow pull-to-refresh.
+            // AlwaysScrollableScrollPhysics ensures the indicator can appear even when content is short.
+            return RefreshIndicator(
+              onRefresh: () async {
+                // Invalidate the provider so it refetches.
+                ref.invalidate(serviceByIdProvider(widget.serviceId));
+                // Small delay to allow UI refresh and show indicator briefly.
+                await Future.delayed(const Duration(milliseconds: 300));
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: _buildServiceContent(service),
+              ),
+            );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Center(
@@ -109,6 +115,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
     // Nội dung chính: cuộn dọc
     return SingleChildScrollView(
+      // This SingleChildScrollView is nested inside the RefreshIndicator's scrollable,
+      // keep physics default here because the outer RefreshIndicator's SingleChildScrollView
+      // (in build) already sets AlwaysScrollableScrollPhysics.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,7 +261,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
         _buildDetailItem(
           Icons.location_on,
           'Địa điểm',
-          service.regionCode ?? 'Chưa xác định',
+          service.place ?? 'Chưa xác định',
         ),
 
         const SizedBox(height: 12),
@@ -360,11 +369,31 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildSpecializationInline(Service service) {
-    final specializationsList = MockServiceRepository.getSkillNamesFromIds(
-        service.skillIds ??
-            (service.skillId != null ? [service.skillId!] : null));
-    final specializations =
-        specializationsList.isNotEmpty ? specializationsList : ['Chưa có'];
+    // Debug: xem nội dung skillNames/providerSpecialization nếu cần
+    debugPrint('service.skillNames: ${service.skillNames}');
+    debugPrint(
+        'service.providerSpecialization: ${service.providerSpecialization}');
+
+    // Sử dụng trực tiếp skillNames nếu có, không map từ skillId
+    final List<String> fromSkillNames = (service.skillNames ?? <String>[])
+        .map((e) => e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    // Nếu không có skillNames, fallback tách chuỗi providerSpecialization (nếu backend gộp)
+    final List<String> fromProviderSpecialization =
+        (service.providerSpecialization ?? '')
+            .split(',')
+            .map((e) => e.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+
+    final List<String> specializationsList =
+        fromSkillNames.isNotEmpty ? fromSkillNames : fromProviderSpecialization;
+
+    final specializations = specializationsList.isNotEmpty
+        ? specializationsList.toSet().toList()
+        : ['Chưa có'];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -405,7 +434,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              spec.trim(),
+                              spec,
                               textAlign: TextAlign.center,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -426,14 +455,10 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   void _initializeStatus(Service service) {
-    // Normalize and map service.status (string) to the integer _currentStep
-    // Steps: 0=Đã tạo, 1=Đang mở, 2=Đang thực hiện, 3=Đã hoàn thành
-    // Accept both English backend values (e.g. 'open', 'in_progress',
-    // 'completed', 'cancelled') and Vietnamese labels used in some mocks.
-    if (_isCancelled) return; // keep cancelled state if already set by UI
+    if (_isCancelled) return;
 
     final s = service.status.toString().toLowerCase();
-
+    debugPrint('service.status: ${s}');
     if (s == 'open' || s == 'đang mở' || s == 'dang mo' || s == 'mở') {
       _currentStep = 1;
       _isCancelled = false;
@@ -466,7 +491,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
   Widget _buildProgressIndicator() {
     // Các bước cố định
-    final steps = ['Đã tạo', 'Đang mở', 'Đang thực hiện', 'Đã hoàn thành'];
+    final steps = ['Đã thanh toán', 'Đang mở', 'Đang thực hiện', 'Đã hoàn thành'];
 
     // Xử lý logic khi dịch vụ bị hủy
     final List<String> displaySteps = List<String>.from(steps);
@@ -503,27 +528,18 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
           // Thanh tiến trình
           Container(
-            // **ĐÃ SỬA LỖI CĂN CHỈNH:** Xóa `width: MediaQuery.of(context).size.width * 1`
-            // để Container này co lại theo padding 16px của cha.
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Thanh nền
-                // **ĐÃ SỬA LỖI CHIỀU DÀI:** Dùng FractionallySizedBox để co thanh nền
-                // vừa đúng bằng khoảng cách từ tâm mốc đầu đến tâm mốc cuối.
                 FractionallySizedBox(
                   widthFactor: (displaySteps.length - 1) / displaySteps.length,
                   child: Row(
                     children: List.generate(displaySteps.length - 1, (index) {
-                      // **ĐÃ SỬA LOGIC THANH NỀN:**
-                      // Thanh (index) chỉ hoàn thành khi bước TIẾP THEO (index + 1)
-                      // đã hoàn thành (tức là nhỏ hơn _currentStep)
                       final isCompleted = (index + 1) <= _currentStep;
 
                       return Expanded(
                         child: Container(
                           height: 6,
-                          // **ĐÃ SỬA LỖI NULL SAFETY:** Thêm `!`
                           color:
                               isCompleted ? completedColor : Colors.grey[300]!,
                         ),
@@ -649,6 +665,37 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildImageGallery(List<String> images) {
+    // Lọc và xác thực URL trước khi hiển thị
+    final validImages = images
+        .map((s) => s.trim())
+        .where((s) =>
+            s.isNotEmpty &&
+            (s.startsWith('http://') || s.startsWith('https://')) &&
+            Uri.tryParse(s) != null)
+        .toList();
+
+    // Đảm bảo _currentImageIndex nằm trong khoảng hợp lệ
+    if (_currentImageIndex >= validImages.length) {
+      _currentImageIndex = validImages.isEmpty ? 0 : validImages.length - 1;
+    }
+
+    if (validImages.isEmpty) {
+      return Container(
+        height: 200,
+        color: Colors.grey[100],
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('Không có hình ảnh hợp lệ'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -670,8 +717,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                 _currentImageIndex = index;
               });
             },
-            itemCount: images.length,
+            itemCount: validImages.length,
             itemBuilder: (context, index) {
+              final url = validImages[index];
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
@@ -687,14 +735,24 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    images[index],
+                    url,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      );
+                    },
                     errorBuilder: (context, error, stackTrace) {
+                      debugPrint('Image.network error for $url: $error');
                       return Container(
                         color: Colors.grey[300],
                         child: const Center(
                           child: Icon(
-                            Icons.image_not_supported,
+                            Icons.broken_image,
                             color: Colors.grey,
                             size: 50,
                           ),
@@ -707,9 +765,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             },
           ),
         ),
-        if (images.length > 1) ...[
+        if (validImages.length > 1) ...[
           const SizedBox(height: 12),
-          _buildImageIndicator(images.length),
+          _buildImageIndicator(validImages.length),
         ],
       ],
     );
@@ -747,8 +805,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFFBADBEF).withOpacity(
-                      0.82), // Màu #BADBEFD1 (bỏ D1 vì Flutter không hỗ trợ alpha trong hex)
-                  //foregroundColor: Colors.white,
+                      0.82),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -779,16 +836,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           ),
 
           const SizedBox(width: 12),
-
-          // Icon thùng rác bên cạnh
           Container(
             width: 48,
             height: 48,
-            // decoration: BoxDecoration(
-            //   color: Colors.red.withOpacity(0.1),
-            //   borderRadius: BorderRadius.circular(12),
-            //   border: Border.all(color: Colors.red.withOpacity(0.3)),
-            // ),
             child: IconButton(
               onPressed: () {
                 _showDeleteConfirmDialog(context, service);
@@ -874,9 +924,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  String _formatDuration(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:00';
+  static String _formatDuration(int seconds) {
+    print('Input seconds to _formatDurationHMS: $seconds');
+    final hours = seconds ~/ 3600;
+    final remainingSeconds = seconds % 3600;
+    final mins = remainingSeconds ~/ 60;
+    final secs = remainingSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }

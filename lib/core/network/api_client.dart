@@ -42,4 +42,11 @@ class ApiClient {
   Future<http.Response> delete(String path, {Object? body, Map<String, String>? headers}) {
     return _client.delete(_u(path), headers: _headers(headers), body: body is String ? body : jsonEncode(body ?? {}));
   }
+  
+  Future<http.Response> patch(String path,
+      {Object? body, Map<String, String>? headers}) {
+    return _client.patch(_u(path),
+        headers: _headers(headers),
+        body: body is String ? body : jsonEncode(body ?? {}));
+  }
 }

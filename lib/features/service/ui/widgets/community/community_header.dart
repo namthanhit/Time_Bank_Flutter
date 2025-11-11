@@ -286,7 +286,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
             children: [
               _buildFilterOption(Icons.public, 'Mọi người'),
               _buildFilterOption(Icons.group, 'Bạn bè'),
-              _buildFilterOption(Icons.person, 'Của tôi'),
             ],
           ),
           actions: [
@@ -326,7 +325,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
     switch (filter) {
       case 'Bạn bè':
         return Icons.group; // 👥
-      case 'Của tôi':
       case 'Yêu cầu của tôi':
         return Icons.assignment_ind; // 🧾 hoặc Icons.person_outline
       case 'Mọi người':

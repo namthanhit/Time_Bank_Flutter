@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../profile/providers/providers.dart';
-import '../../profile/domain/profile.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/profile_details.dart';
 import 'widgets/reviews_list.dart';
 import 'widgets/profile_action_tabs.dart';
 import 'edit_profile_page.dart';
 import '../../home/ui/widgets/activity_card.dart';
+
+const Color kPrimaryColor = Color(0xFF1A3870);
+const Color kAccentColor = Color(0xFF007BFF);
+const Color kLightBackgroundColor = Color(0xFFF0F2F5);
+const Color kDarkTextColor = Color(0xFF333333);
+const Color kGreyTextColor = Color(0xFF757575);
+const Color kLogoutButtonColor = Color(0xFFD81B3A);
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -42,11 +48,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       extendBodyBehindAppBar: false,
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('Trang cá nhân', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: kPrimaryColor, // Header màu xanh đậm
+        elevation: 0, // Bỏ đổ bóng cho AppBar
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
         toolbarHeight: 48,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         // mirror OtherProfilePage: no overflow/settings in AppBar; primary actions live in content

@@ -1,25 +1,21 @@
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../data/api_service_repository.dart';
+import '../domain/models/offer.dart';
+import '../domain/models/pagination.dart';
 import '../domain/models/service.dart';
 import '../domain/repositories/service_repository.dart';
-import '../data/mock_service_repository.dart';
 
-/// Provider gốc cho repository — có thể đổi sang HttpServiceRepository sau này
 final serviceRepositoryProvider = Provider<ServiceRepository>((ref) {
-  return MockServiceRepository();
+  final authedApi = ref.watch(authedApiClientProvider);
+  return ApiServiceRepository(authedApi);
 });
 
-/// Provider lấy danh sách dịch vụ public
-final publicServicesProvider = FutureProvider<List<Service>>((ref) async {
+final myJobsProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
   final repo = ref.watch(serviceRepositoryProvider);
-  return repo.fetchPublicServices();
-});
-
-/// Provider lấy danh sách dịch vụ của một user (ví dụ: "Của tôi")
-final servicesByUserProvider =
-    FutureProvider.family<List<Service>, String>((ref, userId) async {
-  final repo = ref.watch(serviceRepositoryProvider);
-  return repo.fetchServicesByUser(userId);
+  final pagingInfo = PaginationRequestDto(page: 1, pageSize: 10);
+  return repo.getMyJobs(pagingInfo: pagingInfo);
 });
 
 /// Provider lấy 1 dịch vụ theo ID
@@ -27,4 +23,33 @@ final serviceByIdProvider =
     FutureProvider.family<Service?, String>((ref, id) async {
   final repo = ref.watch(serviceRepositoryProvider);
   return repo.fetchServiceById(id);
+});
+
+/// Provider trạng thái (AsyncValue<List<Offer>>)
+final offerListProvider =
+    FutureProvider.family<List<Offer>, String>((ref, jobId) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  return repo.getOffersForMyJob(jobId);
+});
+
+/// Provider để cập nhật trạng thái offer
+final updateOfferStatusAcceptedProvider = FutureProvider.family<void,
+    ({String offerId, String jobId, String status})>((ref, params) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  return repo.updateOfferStatusAccepted(
+    offerId: params.offerId,
+    jobId: params.jobId,
+    status: params.status,
+  );
+});
+
+/// Provider để cập nhật trạng thái offer
+final updateOfferStatusRejectedProvider = FutureProvider.family<void,
+    ({String offerId, String jobId, String status})>((ref, params) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  return repo.updateOfferStatusRejected(
+    offerId: params.offerId,
+    jobId: params.jobId,
+    status: params.status,
+  );
 });
