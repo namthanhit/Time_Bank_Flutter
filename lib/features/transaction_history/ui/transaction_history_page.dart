@@ -24,9 +24,9 @@ class TransactionHistoryPage extends ConsumerWidget {
         foregroundColor: Colors.white,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).maybePop(),
-              )
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        )
             : null,
         title: const Text('Lịch sử giao dịch'),
       ),
@@ -56,7 +56,9 @@ class TransactionHistoryPage extends ConsumerWidget {
                     context: context,
                     initialDate: range.from,
                     firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                    lastDate: DateTime.now(),
+
+                    lastDate: range.to,
+
                     builder: (context, child) => Theme(
                       data: Theme.of(context).copyWith(
                         dialogBackgroundColor: Colors.white,
@@ -81,7 +83,9 @@ class TransactionHistoryPage extends ConsumerWidget {
                   final picked = await showDatePicker(
                     context: context,
                     initialDate: range.to,
-                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+
+                    firstDate: range.from,
+
                     lastDate: DateTime.now(),
                     builder: (context, child) => Theme(
                       data: Theme.of(context).copyWith(
@@ -104,50 +108,36 @@ class TransactionHistoryPage extends ConsumerWidget {
                   }
                 },
               ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBFD8E9),
-                    foregroundColor: const Color(0xFF0A3D66),
-                    elevation: 0,
-                    textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () => ref.refresh(transactionsProvider),
-                  child: const Text('Truy vấn giao dịch'),
-                ),
-              ),
+
+
+
               const SizedBox(height: 12),
               const Text(
                 'Hệ thống cho phép truy vấn giao dịch trong vòng thời gian 1 năm kể từ ngày hiện tại',
                 style: TextStyle(fontSize: 10.5, color: Color(0xFF546170), height: 1.3),
               ),
               const SizedBox(height: 20),
-              // Direction filter inside a single rounded white container; buttons without borders
               Consumer(
                 builder: (context, ref, _) {
                   final dir = ref.watch(transactionDirectionFilterProvider);
                   Widget _button(String label, TransactionDirection? value) => Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            backgroundColor: dir == value ? const Color(0xFF0A3D66) : Colors.transparent,
-                            foregroundColor: dir == value ? Colors.white : const Color(0xFF0A3D66),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 39), // reduce the button height
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                          ),
-                          onPressed: () => ref.read(transactionDirectionFilterProvider.notifier).state = value,
-                          child: Text(label),
-                        ),
-                      );
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: dir == value ? const Color(0xFF0A3D66) : Colors.transparent,
+                        foregroundColor: dir == value ? Colors.white : const Color(0xFF0A3D66),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 39), // reduce the button height
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      onPressed: () => ref.read(transactionDirectionFilterProvider.notifier).state = value,
+                      child: Text(label),
+                    ),
+                  );
 
                   return Container(
-                    height: 42, // make the whole filter box shorter
+                    height: 42,
                     padding: const EdgeInsets.all(0),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -171,10 +161,9 @@ class TransactionHistoryPage extends ConsumerWidget {
                   if (list.isEmpty) {
                     return _empty();
                   }
-                  // apply direction filter
-                  final selected = ref.watch(transactionDirectionFilterProvider);
-                  final filtered = selected == null ? list : list.where((e) => e.direction == selected).toList();
-                  final groupedFiltered = _groupByDate(filtered);
+
+                  final groupedFiltered = _groupByDate(list);
+
                   return Column(
                     children: [
                       for (final g in groupedFiltered.entries)
