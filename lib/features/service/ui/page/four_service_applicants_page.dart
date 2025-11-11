@@ -144,11 +144,8 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
             return Padding(
               padding: const EdgeInsets.all(0),
               child: ReceivedApplicants(
-                // For "Đã nhận" show approvals where I (current user) was
-                // approved by others across services.
-                statusFilter: 'approved',
                 showOnlyForCurrentUser: true,
-                onRefresh: () => setState(() {}),
+                // onRefresh: () => setState(() {}), // <-- XÓA DÒNG NÀY
               ),
             );
           }
@@ -163,12 +160,14 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
             return Padding(
                 padding: const EdgeInsets.all(0),
                 child: ServiceCompletedWidget());
-          };
+          }
+          ;
           if (tab == 'Đã hủy') {
             return Padding(
                 padding: const EdgeInsets.all(0),
                 child: ServiceCancelledWidget(showOnlyMyServices: true));
-          };
+          }
+          ;
           // Default placeholder for other tabs
           return Padding(
             padding: const EdgeInsets.all(16),
