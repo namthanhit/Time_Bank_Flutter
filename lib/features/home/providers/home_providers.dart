@@ -1,32 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/home_repository.dart';
-import '../data/mock_home_repository.dart';
-// Use service mock as source for "my services" -> map to Activity
-import '../../service/data/mock_service_repository.dart';
-import '../../service/domain/models/service.dart' as svc;
 import '../domain/models/home_models.dart';
-
-// Swap ở đây khi có API thật:
-// final homeRepoProvider = Provider<HomeRepository>((_) => HttpHomeRepository(dio));
-final homeRepoProvider = Provider<HomeRepository>((_) => MockHomeRepository());
+import '../../time_transfer/providers/transaction_providers.dart';
+import '../../service/providers/service_providers.dart';
+import '../../service/domain/models/service.dart' as svc;
+import '../../auth/providers/auth_providers.dart';
 
 final homeSummaryProvider = FutureProvider<HomeSummary>((ref) async {
-  final repo = ref.watch(homeRepoProvider);
-  return repo.fetchSummary();
+  try {
+    final wallet = await ref.watch(accountBalanceProvider.future);
+    // rating intentionally skipped for Home summary — set to 0.0 so UI can treat it as hidden
+    return HomeSummary(rating: 0.0, timeBalance: wallet.pretty);
+  } catch (e, st) {
+    print('homeSummaryProvider: failed to fetch wallet -> $e\n$st');
+    rethrow;
+  }
 });
 
+/// Activities for Home: use "my jobs" (jobs created by current user) and map Service -> Activity
 final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
-  final repo = ref.watch(homeRepoProvider);
-  return repo.fetchActivities();
-});
+  final userProfile = await ref.watch(userProfileProvider.future);
 
-/// Activities dedicated for the "My" section (phần của tôi)
-final myActivitiesProvider = FutureProvider<List<Activity>>((ref) async {
-  // Fetch services owned by current user from service mock repository
-  final List<svc.Service> services = await MockServiceRepository()
-      .fetchServicesByUser(MockServiceRepository.currentUserId);
+  // myJobsProvider returns Map with 'data' -> List<Service>
+  final jobsMap = await ref.watch(myJobsProvider(userProfile.id).future);
 
-  // Map Service -> Activity
+  final raw = jobsMap['data'];
+  final List<svc.Service> services =
+      (raw is List) ? List<svc.Service>.from(raw) : [];
+
   String _formatTimeAgo(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
@@ -37,28 +37,39 @@ final myActivitiesProvider = FutureProvider<List<Activity>>((ref) async {
     return '${diff.inDays ~/ 30} tháng trước';
   }
 
-  List<Activity> mapServiceToActivity(List<svc.Service> list) {
-    return list.map((s) {
-      final created = s.createdAt;
-      final taskTime =
-          '${created.hour.toString().padLeft(2, '0')}:${created.minute.toString().padLeft(2, '0')} ${created.day.toString().padLeft(2, '0')}/${created.month.toString().padLeft(2, '0')}/${created.year}';
-
-      return Activity(
-        user: s.providerName ?? MockServiceRepository.currentUserName,
-        // use relative time like ServiceCard
-        timeAgo: _formatTimeAgo(created),
-        title: s.title,
-        taskTime: taskTime,
-        duration: MockServiceRepository.formatDuration(s.time),
-        location: s.regionCode ?? s.place,
-        tags: MockServiceRepository.getSkillNamesFromIds(s.skillIds),
-        status: s.status,
-        avatarUrl: s.providerAvatar,
-      );
-    }).toList();
+  String _formatTaskTime(DateTime dt) {
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
   }
 
-  return mapServiceToActivity(services);
+  List<String> _skillNamesFromService(svc.Service s) {
+    if (s.skillNames != null && s.skillNames!.isNotEmpty) return s.skillNames!;
+    if (s.skillIds != null && s.skillIds!.isNotEmpty) return s.skillIds!;
+    return [];
+  }
+
+  List<Activity> mapped = services.map((s) {
+    final created = s.createdAt;
+    final taskTime = _formatTaskTime(created);
+    final duration = Duration(minutes: s.time);
+    final hh = duration.inHours.toString().padLeft(2, '0');
+    final mm = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final ss = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    final durationStr = '$hh:$mm:$ss';
+
+    return Activity(
+      user: s.providerName ?? userProfile.fullName,
+      timeAgo: _formatTimeAgo(created),
+      title: s.title,
+      taskTime: taskTime,
+      duration: durationStr,
+      location: s.regionCode ?? s.place,
+      tags: _skillNamesFromService(s),
+      status: s.status,
+      avatarUrl: s.providerAvatar,
+    );
+  }).toList();
+
+  return mapped;
 });
 
 /// Ẩn/hiện số dư

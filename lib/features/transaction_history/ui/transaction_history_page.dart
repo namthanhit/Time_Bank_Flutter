@@ -9,6 +9,12 @@ import 'package:time_bank_flutter/features/transaction_history/domain/models/tra
 
 class TransactionHistoryPage extends ConsumerWidget {
   const TransactionHistoryPage({super.key});
+  Future<void> _handleRefresh(WidgetRef ref) async {
+    await Future.wait([
+      ref.refresh(currentBalanceProvider.future),
+      ref.refresh(transactionsProvider.future),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,172 +30,157 @@ class TransactionHistoryPage extends ConsumerWidget {
         foregroundColor: Colors.white,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).maybePop(),
-              )
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        )
             : null,
         title: const Text('Lịch sử giao dịch'),
       ),
       backgroundColor: const Color(0xFFF4F6F9),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Text('SỐ DƯ TÀI KHOẢN HIỆN TẠI:', style: _secLabelStyle),
-              const SizedBox(height: 6),
-              balanceAsync.when(
-                data: (s) => BalanceBox(balanceText: _formatHms(s)),
-                error: (e, st) => _errorBox('Balance error'),
-                loading: () => const SizedBox(height: 72, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-              ),
-              const SizedBox(height: 24),
-              Text('Truy vấn lịch sử giao dịch', style: _secLabelStyle),
-              const SizedBox(height: 10),
-              DateRangeFilter(
-                from: range.from,
-                to: range.to,
-                onPickFrom: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: range.from,
-                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                    lastDate: DateTime.now(),
-                    builder: (context, child) => Theme(
-                      data: Theme.of(context).copyWith(
-                        dialogBackgroundColor: Colors.white,
-                        colorScheme: ColorScheme.light(
-                          primary: const Color(0xFF003E77),
-                          onPrimary: Colors.white,
-                          surface: Colors.white,
-                          surfaceVariant: Colors.white,
-                          background: Colors.white,
-                          onSurface: Colors.black,
-                          onBackground: Colors.black,
-                        ),
-                      ),
-                      child: child!,
-                    ),
-                  );
-                  if (picked != null) {
-                    ref.read(transactionRangeProvider.notifier).state = (from: picked, to: range.to);
-                  }
-                },
-                onPickTo: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: range.to,
-                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                    lastDate: DateTime.now(),
-                    builder: (context, child) => Theme(
-                      data: Theme.of(context).copyWith(
-                        dialogBackgroundColor: Colors.white,
-                        colorScheme: ColorScheme.light(
-                          primary: const Color(0xFF003E77),
-                          onPrimary: Colors.white,
-                          surface: Colors.white,
-                          surfaceVariant: Colors.white,
-                          background: Colors.white,
-                          onSurface: Colors.black,
-                          onBackground: Colors.black,
-                        ),
-                      ),
-                      child: child!,
-                    ),
-                  );
-                  if (picked != null) {
-                    ref.read(transactionRangeProvider.notifier).state = (from: range.from, to: picked);
-                  }
-                },
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBFD8E9),
-                    foregroundColor: const Color(0xFF0A3D66),
-                    elevation: 0,
-                    textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () => ref.refresh(transactionsProvider),
-                  child: const Text('Truy vấn giao dịch'),
+        child: RefreshIndicator(
+          onRefresh: () => _handleRefresh(ref),
+          color: const Color(0xFF003E77),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text('SỐ DƯ TÀI KHOẢN HIỆN TẠI:', style: _secLabelStyle),
+                const SizedBox(height: 6),
+                balanceAsync.when(
+                  data: (s) => BalanceBox(balanceText: _formatHms(s)),
+                  error: (e, st) => _errorBox('Balance error'),
+                  loading: () => const SizedBox(height: 72, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Hệ thống cho phép truy vấn giao dịch trong vòng thời gian 1 năm kể từ ngày hiện tại',
-                style: TextStyle(fontSize: 10.5, color: Color(0xFF546170), height: 1.3),
-              ),
-              const SizedBox(height: 20),
-              // Direction filter inside a single rounded white container; buttons without borders
-              Consumer(
-                builder: (context, ref, _) {
-                  final dir = ref.watch(transactionDirectionFilterProvider);
-                  Widget _button(String label, TransactionDirection? value) => Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            backgroundColor: dir == value ? const Color(0xFF0A3D66) : Colors.transparent,
-                            foregroundColor: dir == value ? Colors.white : const Color(0xFF0A3D66),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 39), // reduce the button height
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                const SizedBox(height: 24),
+                Text('Truy vấn lịch sử giao dịch', style: _secLabelStyle),
+                const SizedBox(height: 10),
+                DateRangeFilter(
+                  from: range.from,
+                  to: range.to,
+                  onPickFrom: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: range.from,
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: range.to,
+                      builder: (context, child) => Theme(
+                        data: Theme.of(context).copyWith(
+                          dialogBackgroundColor: Colors.white,
+                          colorScheme: ColorScheme.light(
+                            primary: const Color(0xFF003E77),
+                            onPrimary: Colors.white,
+                            surface: Colors.white,
+                            surfaceVariant: Colors.white,
+                            background: Colors.white,
+                            onSurface: Colors.black,
+                            onBackground: Colors.black,
                           ),
-                          onPressed: () => ref.read(transactionDirectionFilterProvider.notifier).state = value,
-                          child: Text(label),
                         ),
-                      );
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      ref.read(transactionRangeProvider.notifier).state = (from: picked, to: range.to);
+                    }
+                  },
+                  onPickTo: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: range.to,
+                      firstDate: range.from,
+                      lastDate: DateTime.now(),
+                      builder: (context, child) => Theme(
+                        data: Theme.of(context).copyWith(
+                          dialogBackgroundColor: Colors.white,
+                          colorScheme: ColorScheme.light(
+                            primary: const Color(0xFF003E77),
+                            onPrimary: Colors.white,
+                            surface: Colors.white,
+                            surfaceVariant: Colors.white,
+                            background: Colors.white,
+                            onSurface: Colors.black,
+                            onBackground: Colors.black,
+                          ),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      ref.read(transactionRangeProvider.notifier).state = (from: range.from, to: picked);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Hệ thống cho phép truy vấn giao dịch trong vòng thời gian 1 năm kể từ ngày hiện tại',
+                  style: TextStyle(fontSize: 10.5, color: Color(0xFF546170), height: 1.3),
+                ),
+                const SizedBox(height: 20),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final dir = ref.watch(transactionDirectionFilterProvider);
+                    Widget _button(String label, TransactionDirection? value) => Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: dir == value ? const Color(0xFF0A3D66) : Colors.transparent,
+                          foregroundColor: dir == value ? Colors.white : const Color(0xFF0A3D66),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 39),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                        onPressed: () => ref.read(transactionDirectionFilterProvider.notifier).state = value,
+                        child: Text(label),
+                      ),
+                    );
 
-                  return Container(
-                    height: 42, // make the whole filter box shorter
-                    padding: const EdgeInsets.all(0),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: const Color(0xFFE4E6EB)),
-                      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 6, offset: Offset(0,2))],
-                    ),
-                    child: Row(children: [
-                      _button('Tất cả', null),
-                      const SizedBox(width: 6),
-                      _button('Vào', TransactionDirection.incoming),
-                      const SizedBox(width: 6),
-                      _button('Ra', TransactionDirection.out),
-                    ]),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              txAsync.when(
-                data: (list) {
-                  if (list.isEmpty) {
-                    return _empty();
-                  }
-                  // apply direction filter
-                  final selected = ref.watch(transactionDirectionFilterProvider);
-                  final filtered = selected == null ? list : list.where((e) => e.direction == selected).toList();
-                  final groupedFiltered = _groupByDate(filtered);
-                  return Column(
-                    children: [
-                      for (final g in groupedFiltered.entries)
-                        DayGroupSection(
-                          dateLabel: g.key,
-                          entries: g.value,
-                          onTapEntry: (e) => _showDetail(context, e),
-                        ),
-                    ],
-                  );
-                },
-                error: (e, st) => _errorBox('Load error'),
-                loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-            ],
+                    return Container(
+                      height: 42,
+                      padding: const EdgeInsets.all(0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: const Color(0xFFE4E6EB)),
+                        boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 6, offset: Offset(0,2))],
+                      ),
+                      child: Row(children: [
+                        _button('Tất cả', null),
+                        const SizedBox(width: 6),
+                        _button('Vào', TransactionDirection.incoming),
+                        const SizedBox(width: 6),
+                        _button('Ra', TransactionDirection.out),
+                      ]),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                txAsync.when(
+                  data: (list) {
+                    if (list.isEmpty) {
+                      return _empty();
+                    }
+                    final groupedFiltered = _groupByDate(list);
+                    return Column(
+                      children: [
+                        for (final g in groupedFiltered.entries)
+                          DayGroupSection(
+                            dateLabel: g.key,
+                            entries: g.value,
+                            onTapEntry: (e) => _showDetail(context, e),
+                          ),
+                      ],
+                    );
+                  },
+                  error: (e, st) => _errorBox('Load error'),
+                  loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+              ],
+            ),
           ),
         ),
       ),

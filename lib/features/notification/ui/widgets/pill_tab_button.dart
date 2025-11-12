@@ -1,4 +1,3 @@
-// lib/features/notification/ui/widgets/pill_tab_button.dart
 import 'package:flutter/material.dart';
 
 class PillTabButton extends StatelessWidget {
@@ -15,7 +14,6 @@ class PillTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // KHÔNG dùng Expanded ở đây!
     return InkWell(
       borderRadius: BorderRadius.circular(24),
       onTap: onTap,

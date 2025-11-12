@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/service/data/api_service_repository.dart';
 import '../../../providers/service_providers.dart';
 import '../../../domain/models/service.dart';
 import '../../../data/mock_service_repository.dart';
@@ -922,9 +921,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  String _formatDuration(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:00';
+  static String _formatDuration(int seconds) {
+    print('Input seconds to _formatDurationHMS: $seconds');
+    final hours = seconds ~/ 3600;
+    final remainingSeconds = seconds % 3600;
+    final mins = remainingSeconds ~/ 60;
+    final secs = remainingSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }

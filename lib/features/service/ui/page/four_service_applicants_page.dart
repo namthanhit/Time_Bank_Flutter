@@ -124,9 +124,8 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
             return Padding(
               padding: const EdgeInsets.all(0),
               child: ReceivedApplicants(
-                statusFilter: 'approved',
                 showOnlyForCurrentUser: true,
-                onRefresh: () => setState(() {}),
+                // onRefresh: () => setState(() {}), // <-- XÓA DÒNG NÀY
               ),
             );
           }
@@ -138,8 +137,9 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
           }
           ;
           if (tab == 'Hoàn thành') {
-            return const Padding(
-                padding: EdgeInsets.all(0), child: ServiceCompletedWidget());
+            return Padding(
+                padding: const EdgeInsets.all(0),
+                child: ServiceCompletedWidget());
           }
           ;
           if (tab == 'Đã hủy') {
@@ -148,6 +148,7 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
                 child: ServiceCancelledWidget(showOnlyMyServices: true));
           }
           ;
+          // Default placeholder for other tabs
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Align(
