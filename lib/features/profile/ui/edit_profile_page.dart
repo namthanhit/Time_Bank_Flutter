@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../profile/domain/profile.dart';
+import '../../profile/providers/providers.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   final Profile profile;
@@ -22,23 +23,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   late final TextEditingController _studyCtrl;
   DateTime? _birthDate;
   late final TextEditingController _birthCtrl;
-  // visibility toggles for each field
   bool _showRegion = true;
   bool _showWork = true;
   bool _showStreet = true;
   bool _showBirthDate = true;
   bool _showStudy = true;
-  bool _showFacebook = true;
-  bool _showInstagram = true;
-  bool _showTiktok = true;
-  // editing mode flags (fields are read-only until the edit button is pressed)
   bool _editingStreet = false;
   bool _editingBirthDate = false;
-  // backups used for per-field cancel
   final Map<String, String> _backupText = {};
   final Map<String, DateTime?> _backupDate = {};
 
-  // focus nodes to support per-field "edit" button focusing
   late final FocusNode _nameFocus;
   late final FocusNode _descFocus;
   late final FocusNode _regionFocus;
@@ -49,21 +43,41 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   late final FocusNode _instaFocus;
   late final FocusNode _tiktokFocus;
 
+  bool _isSaving = false;
+  String _regionId = '';
+
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.profile.name);
     _descCtrl = TextEditingController(text: widget.profile.description ?? '');
-    _facebookCtrl = TextEditingController(text: widget.profile.socialNetwork?['facebook'] ?? '');
-    _instaCtrl = TextEditingController(text: widget.profile.socialNetwork?['instagram'] ?? '');
-    _tiktokCtrl = TextEditingController(text: widget.profile.socialNetwork?['tiktok'] ?? '');
-    _regionCtrl = TextEditingController(text: widget.profile.regionId ?? '');
+    _facebookCtrl = TextEditingController(
+        text: widget.profile.socialNetwork?['facebook'] ?? '');
+    _instaCtrl = TextEditingController(
+        text: widget.profile.socialNetwork?['instagram'] ?? '');
+    _tiktokCtrl = TextEditingController(
+        text: widget.profile.socialNetwork?['tiktok'] ?? '');
+
+    _regionId = widget.profile.regionId ?? '';
+    _regionCtrl = TextEditingController(
+        text: widget.profile.fullRegionAddress ??
+            widget.profile.regionName ??
+            _regionId);
+
     _workCtrl = TextEditingController(text: widget.profile.workAddress ?? '');
     _streetCtrl = TextEditingController(text: widget.profile.street ?? '');
     _studyCtrl = TextEditingController(text: widget.profile.studyAddress ?? '');
     _birthDate = widget.profile.birthDate;
-  _birthCtrl = TextEditingController(text: _birthDate == null ? '' : '${_birthDate!.day.toString().padLeft(2, '0')}/${_birthDate!.month.toString().padLeft(2, '0')}/${_birthDate!.year}');
-    // init focus nodes
+
+    if (_birthDate != null) {
+      final localDate = _birthDate!.toLocal();
+      _birthCtrl = TextEditingController(
+          text:
+          '${localDate.day.toString().padLeft(2, '0')}/${localDate.month.toString().padLeft(2, '0')}/${localDate.year}');
+    } else {
+      _birthCtrl = TextEditingController(text: '');
+    }
+
     _nameFocus = FocusNode();
     _descFocus = FocusNode();
     _regionFocus = FocusNode();
@@ -73,27 +87,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _facebookFocus = FocusNode();
     _instaFocus = FocusNode();
     _tiktokFocus = FocusNode();
-  // when a field gains/loses focus we rebuild so UI can show the inline
-  // editor (we treat focus as entering edit mode)
-  _nameFocus.addListener(() => setState(() {}));
-  _descFocus.addListener(() => setState(() {}));
-  _regionFocus.addListener(() => setState(() {}));
-  _workFocus.addListener(() => setState(() {}));
-  _streetFocus.addListener(() => setState(() {}));
-  _studyFocus.addListener(() => setState(() {}));
-  _facebookFocus.addListener(() => setState(() {}));
-  _instaFocus.addListener(() => setState(() {}));
-  _tiktokFocus.addListener(() => setState(() {}));
-  _descFocus.addListener(() => setState(() {}));
-    // initial visibility from profile if desired (default true)
+    _nameFocus.addListener(() => setState(() {}));
+    _descFocus.addListener(() => setState(() {}));
+    _regionFocus.addListener(() => setState(() {}));
+    _workFocus.addListener(() => setState(() {}));
+    _streetFocus.addListener(() => setState(() {}));
+    _studyFocus.addListener(() => setState(() {}));
+    _facebookFocus.addListener(() => setState(() {}));
+    _instaFocus.addListener(() => setState(() {}));
+    _tiktokFocus.addListener(() => setState(() {}));
+    _descFocus.addListener(() => setState(() {}));
     _showRegion = true;
     _showWork = true;
     _showStreet = true;
     _showBirthDate = true;
     _showStudy = true;
-    _showFacebook = _facebookCtrl.text.trim().isNotEmpty;
-    _showInstagram = _instaCtrl.text.trim().isNotEmpty;
-    _showTiktok = _tiktokCtrl.text.trim().isNotEmpty;
   }
 
   @override
@@ -107,7 +115,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _workCtrl.dispose();
     _streetCtrl.dispose();
     _studyCtrl.dispose();
-    // dispose focus nodes
     _nameFocus.dispose();
     _descFocus.dispose();
     _regionFocus.dispose();
@@ -122,48 +129,89 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   void _save() {
-    // Return a map of changed fields to the caller. Persistence can be handled
-    // by the caller or by a provider in a follow-up change.
-    final changes = <String, dynamic>{
-      'name': _nameCtrl.text.trim(),
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
+    final Map<String, dynamic> dto = {
+      'full_name': _nameCtrl.text.trim(),
+      'email': widget.profile.email,
+      'phone': widget.profile.phone,
       'description': _descCtrl.text.trim(),
-      'regionId': _regionCtrl.text.trim(),
-      'workAddress': _workCtrl.text.trim(),
+      'region_id': _regionId,
+      'work_address': _workCtrl.text.trim(),
       'street': _streetCtrl.text.trim(),
-      'studyAddress': _studyCtrl.text.trim(),
-      'birthDate': _birthDate?.toIso8601String(),
-      'social': {
-        if (_facebookCtrl.text.trim().isNotEmpty) 'facebook': _facebookCtrl.text.trim(),
-        if (_instaCtrl.text.trim().isNotEmpty) 'instagram': _instaCtrl.text.trim(),
-        if (_tiktokCtrl.text.trim().isNotEmpty) 'tiktok': _tiktokCtrl.text.trim(),
+      'study_address': _studyCtrl.text.trim(),
+      'birth_date': _birthDate?.toUtc().toIso8601String(),
+      'social_network': {
+        'facebook': _facebookCtrl.text.trim(),
+        'instagram': _instaCtrl.text.trim(),
+        'tiktok': _tiktokCtrl.text.trim(),
       },
-      'visibility': {
-        'region': _showRegion,
-        'work': _showWork,
-        'street': _showStreet,
-        'birthDate': _showBirthDate,
-        'study': _showStudy,
-        'facebook': _showFacebook,
-        'instagram': _showInstagram,
-        'tiktok': _showTiktok,
-      }
     };
-    Navigator.of(context).pop(changes);
+
+    final visibility = {
+      'region': _showRegion,
+      'work': _showWork,
+      'street': _showStreet,
+      'birthDate': _showBirthDate,
+      'study': _showStudy,
+    };
+
+    ref.read(updateProfileProvider(dto).future).then((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Đã lưu thay đổi')));
+        Navigator.of(context).pop({'visibility': visibility});
+      }
+    }).catchError((e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Lỗi khi lưu: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }).whenComplete(() {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    });
   }
 
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
-    final initial = _birthDate ?? DateTime(now.year - 25);
+    final initial = _birthDate?.toLocal() ?? DateTime(now.year - 25);
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(1900),
       lastDate: now,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            dialogBackgroundColor: Colors.white,
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF0D4C7B),
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Color(0xFF0D4C7B),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
-    if (picked != null) setState(() {
-      _birthDate = picked;
-      _birthCtrl.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
-    });
+
+    if (picked != null)
+      setState(() {
+        _birthDate = picked;
+        _birthCtrl.text =
+        '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      });
   }
 
   @override
@@ -171,10 +219,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chỉnh sửa hồ sơ'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Color(0xFF003E77),
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
+      backgroundColor: const Color(0xFFF0F2F5),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -191,27 +240,35 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 onToggle: (_) {},
                 onEdit: () {
                   _backupText['name'] = _nameCtrl.text;
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_nameFocus));
+                  Future.delayed(const Duration(milliseconds: 80),
+                          () => FocusScope.of(context).requestFocus(_nameFocus));
                 },
               ),
               const SizedBox(height: 12),
-              // description area - show plain text until user taps edit
               Card(
+                color: Colors.white,
                 elevation: 0,
                 margin: EdgeInsets.zero,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Expanded(child: Text('Mô tả ngắn', style: TextStyle(fontWeight: FontWeight.w500))),
+                          const Expanded(
+                              child: Text('Mô tả ngắn',
+                                  style:
+                                  TextStyle(fontWeight: FontWeight.w500))),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
                             onPressed: () {
                               _backupText['description'] = _descCtrl.text;
-                              Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_descFocus));
+                              Future.delayed(
+                                  const Duration(milliseconds: 80),
+                                      () => FocusScope.of(context)
+                                      .requestFocus(_descFocus));
                             },
                             splashRadius: 18,
                           ),
@@ -222,7 +279,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         TextFormField(
                           controller: _descCtrl,
                           focusNode: _descFocus,
-                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white),
                           maxLines: 3,
                         ),
                         const SizedBox(height: 8),
@@ -232,7 +292,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             TextButton(
                               onPressed: () {
                                 setState(() {
-                                  _descCtrl.text = _backupText['description'] ?? _descCtrl.text;
+                                  _descCtrl.text = _backupText['description'] ??
+                                      _descCtrl.text;
                                   FocusScope.of(context).unfocus();
                                   _backupText.remove('description');
                                 });
@@ -247,17 +308,24 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                   _backupText.remove('description');
                                 });
                               },
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D4C7B)),
-                              child: const Text('Lưu'),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0D4C7B)),
+                              child: const Text('Lưu',
+                                  style: TextStyle(color: Colors.white)
+                              ),
                             ),
                           ],
                         ),
                       ] else ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 6),
                           child: Text(
-                            _descCtrl.text.trim().isEmpty ? 'Chưa có' : _descCtrl.text.trim(),
-                            style: const TextStyle(fontSize: 14, color: Colors.black87),
+                            _descCtrl.text.trim().isEmpty
+                                ? 'Chưa có'
+                                : _descCtrl.text.trim(),
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.black87),
                           ),
                         ),
                       ],
@@ -266,7 +334,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 ),
               ),
               const SizedBox(height: 12),
-              // region with toggle + edit
               _buildFieldWithToggle(
                 fieldKey: 'region',
                 label: 'Đến từ',
@@ -274,15 +341,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 focusNode: _regionFocus,
                 isVisible: _showRegion,
                 isEditing: false,
+                readOnly: true,
                 onToggle: (v) => setState(() => _showRegion = v),
                 onEdit: () {
-                  _backupText['region'] = _regionCtrl.text;
-                  setState(() => _showRegion = true);
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_regionFocus));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Không thể sửa trường này')));
                 },
               ),
               const SizedBox(height: 8),
-              // work with toggle + edit
               _buildFieldWithToggle(
                 fieldKey: 'work',
                 label: 'Làm việc tại',
@@ -294,11 +360,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 onEdit: () {
                   _backupText['work'] = _workCtrl.text;
                   setState(() => _showWork = true);
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_workFocus));
+                  Future.delayed(const Duration(milliseconds: 80),
+                          () => FocusScope.of(context).requestFocus(_workFocus));
                 },
               ),
               const SizedBox(height: 8),
-              // Địa chỉ (full-width) with toggle + edit — initially read-only until edit pressed
               _buildFieldWithToggle(
                 fieldKey: 'street',
                 label: 'Địa chỉ',
@@ -313,11 +379,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     _showStreet = true;
                     _editingStreet = true;
                   });
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_streetFocus));
+                  Future.delayed(const Duration(milliseconds: 80),
+                          () => FocusScope.of(context).requestFocus(_streetFocus));
                 },
               ),
               const SizedBox(height: 8),
-              // Ngày sinh (full-width) with toggle + edit — tapping edit enables date editing
               _buildDateFieldWithToggle(
                 fieldKey: 'birthDate',
                 label: 'Ngày sinh',
@@ -334,8 +400,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     _showBirthDate = true;
                     _editingBirthDate = true;
                   });
-                  // open picker when entering edit mode
-                  Future.delayed(const Duration(milliseconds: 60), () => _pickBirthDate());
+                  Future.delayed(
+                      const Duration(milliseconds: 60), () => _pickBirthDate());
                 },
               ),
               const SizedBox(height: 8),
@@ -350,67 +416,29 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 onEdit: () {
                   _backupText['study'] = _studyCtrl.text;
                   setState(() => _showStudy = true);
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_studyFocus));
+                  Future.delayed(const Duration(milliseconds: 80),
+                          () => FocusScope.of(context).requestFocus(_studyFocus));
                 },
               ),
-              const SizedBox(height: 16),
-              const Text('Mạng xã hội', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              _buildFieldWithToggle(
-                fieldKey: 'facebook',
-                label: 'Facebook',
-                controller: _facebookCtrl,
-                focusNode: _facebookFocus,
-                prefix: 'facebook: ',
-                isVisible: _showFacebook,
-                isEditing: false,
-                onToggle: (v) => setState(() => _showFacebook = v),
-                onEdit: () {
-                  _backupText['facebook'] = _facebookCtrl.text;
-                  setState(() => _showFacebook = true);
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_facebookFocus));
-                },
-              ),
-              const SizedBox(height: 8),
-              _buildFieldWithToggle(
-                fieldKey: 'instagram',
-                label: 'Instagram',
-                controller: _instaCtrl,
-                focusNode: _instaFocus,
-                prefix: 'insta: ',
-                isVisible: _showInstagram,
-                isEditing: false,
-                onToggle: (v) => setState(() => _showInstagram = v),
-                onEdit: () {
-                  _backupText['instagram'] = _instaCtrl.text;
-                  setState(() => _showInstagram = true);
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_instaFocus));
-                },
-              ),
-              const SizedBox(height: 8),
-              _buildFieldWithToggle(
-                fieldKey: 'tiktok',
-                label: 'TikTok',
-                controller: _tiktokCtrl,
-                focusNode: _tiktokFocus,
-                prefix: 'tiktok: ',
-                isVisible: _showTiktok,
-                isEditing: false,
-                onToggle: (v) => setState(() => _showTiktok = v),
-                onEdit: () {
-                  _backupText['tiktok'] = _tiktokCtrl.text;
-                  setState(() => _showTiktok = true);
-                  Future.delayed(const Duration(milliseconds: 80), () => FocusScope.of(context).requestFocus(_tiktokFocus));
-                },
-              ),
+
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _save,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                  child: Text('Lưu thay đổi'),
+                onPressed: _isSaving ? null : _save,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: _isSaving
+                      ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ))
+                      : const Text('Lưu thay đổi'),
                 ),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D4C7B), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D4C7B),
+                    foregroundColor: Colors.white),
               ),
             ],
           ),
@@ -429,8 +457,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     required ValueChanged<bool> onToggle,
     required VoidCallback onEdit,
     String? prefix,
+    bool readOnly = false,
   }) {
     return Card(
+      color: Colors.white,
       elevation: 0,
       margin: EdgeInsets.zero,
       child: Padding(
@@ -440,23 +470,25 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           children: [
             Row(
               children: [
-                Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
+                Expanded(
+                    child: Text(label,
+                        style: const TextStyle(fontWeight: FontWeight.w500))),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Hiển thị', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                    const Text('Hiển thị',
+                        style: TextStyle(fontSize: 12, color: Colors.black,
+                        fontWeight: FontWeight.bold)),
                     Switch(
                       value: isVisible,
                       onChanged: onToggle,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    // when in edit mode (or focused) show Save/Cancel, otherwise show edit
                     if (isEditing || focusNode.hasFocus) ...[
                       IconButton(
                         icon: const Icon(Icons.check, size: 18),
                         onPressed: () {
                           setState(() {
-                            // commit: simply exit edit mode; controller already contains value
                             if (fieldKey == 'street') _editingStreet = false;
                             FocusScope.of(context).unfocus();
                             _backupText.remove(fieldKey);
@@ -466,7 +498,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       ),
                     ] else ...[
                       IconButton(
-                        icon: const Icon(Icons.edit, size: 18),
+                        icon: Icon(Icons.edit,
+                            size: 18,
+                            color: readOnly ? Colors.grey : Colors.black),
                         onPressed: onEdit,
                         splashRadius: 18,
                       ),
@@ -477,13 +511,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
             if (isVisible) ...[
               const SizedBox(height: 8),
-              // show editor when explicit editing flag is set OR when the
-              // corresponding focus node has focus (user pressed the edit icon)
               if (isEditing || focusNode.hasFocus) ...[
                 TextFormField(
                   controller: controller,
                   focusNode: focusNode,
-                  decoration: InputDecoration(labelText: label, prefixText: prefix, border: const OutlineInputBorder()),
+                  readOnly: readOnly,
+                  decoration: InputDecoration(
+                      labelText: label,
+                      prefixText: prefix,
+                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -492,8 +530,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          // cancel
-                          controller.text = _backupText[fieldKey] ?? controller.text;
+                          controller.text =
+                              _backupText[fieldKey] ?? controller.text;
                           if (fieldKey == 'street') _editingStreet = false;
                           FocusScope.of(context).unfocus();
                           _backupText.remove(fieldKey);
@@ -505,24 +543,30 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          // save per-field
                           if (fieldKey == 'street') _editingStreet = false;
                           FocusScope.of(context).unfocus();
                           _backupText.remove(fieldKey);
                         });
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D4C7B), foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D4C7B),
+                          foregroundColor: Colors.white),
                       child: const Text('Lưu'),
                     ),
                   ],
                 ),
               ] else ...[
-                // show plain text when not in edit mode
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                  padding:
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   child: Text(
-                    controller.text.trim().isEmpty ? 'Chưa có' : controller.text.trim(),
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    controller.text.trim().isEmpty
+                        ? 'Chưa có'
+                        : controller.text.trim(),
+                    style: TextStyle(
+                        fontSize: 14,
+                        color:
+                        readOnly ? Colors.black : Colors.black87),
                   ),
                 ),
               ],
@@ -544,6 +588,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     required VoidCallback onEdit,
   }) {
     return Card(
+      color: Colors.white,
       elevation: 0,
       margin: EdgeInsets.zero,
       child: Padding(
@@ -553,11 +598,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           children: [
             Row(
               children: [
-                Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
+                Expanded(
+                    child: Text(label,
+                        style: const TextStyle(fontWeight: FontWeight.w500))),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Hiển thị', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                    const Text('Hiển thị',
+                        style: TextStyle(fontSize: 12, color: Colors.black,
+                        fontWeight: FontWeight.bold)),
                     Switch(
                       value: isVisible,
                       onChanged: onToggle,
@@ -589,16 +638,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             if (isVisible) ...[
               const SizedBox(height: 8),
               if (isEditing) ...[
-                // read-only text field that shows the selected date and opens picker on tap
                 TextFormField(
                   controller: _birthCtrl,
                   readOnly: true,
                   onTap: onTap,
                   decoration: InputDecoration(
-                    labelText: label,
-                    border: const OutlineInputBorder(),
-                    suffixIcon: const Icon(Icons.calendar_today, size: 18),
-                  ),
+                      labelText: label,
+                      border: const OutlineInputBorder(),
+                      suffixIcon: const Icon(Icons.calendar_today, size: 18),
+                      filled: true,
+                      fillColor: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -607,9 +656,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          // cancel: restore original
                           _birthDate = _backupDate[fieldKey];
-                          _birthCtrl.text = _birthDate == null ? '' : '${_birthDate!.day.toString().padLeft(2, '0')}/${_birthDate!.month.toString().padLeft(2, '0')}/${_birthDate!.year}';
+                          final localDate = _birthDate?.toLocal();
+                          _birthCtrl.text = localDate == null
+                              ? ''
+                              : '${localDate.day.toString().padLeft(2, '0')}/${localDate.month.toString().padLeft(2, '0')}/${localDate.year}';
                           _editingBirthDate = false;
                           _backupDate.remove(fieldKey);
                         });
@@ -620,22 +671,27 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          // save
                           _editingBirthDate = false;
                           _backupDate.remove(fieldKey);
                         });
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D4C7B), foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D4C7B),
+                          foregroundColor: Colors.white),
                       child: const Text('Lưu'),
                     ),
                   ],
                 ),
               ] else
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                  padding:
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   child: Text(
-                    date == null ? 'Chưa có' : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}',
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    date == null
+                        ? 'Chưa có'
+                        : '${date.toLocal().day.toString().padLeft(2, '0')}/${date.toLocal().month.toString().padLeft(2, '0')}/${date.toLocal().year}',
+                    style:
+                    const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                 ),
             ],

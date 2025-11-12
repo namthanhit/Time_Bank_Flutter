@@ -1,34 +1,92 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../data/mock_profile_repository.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../data/api_profile.dart';
 import '../domain/profile.dart';
 import '../domain/review.dart';
+import '../domain/repositories/profile_repository.dart';
 import '../../home/domain/models/home_models.dart';
+import '../../service/providers/service_providers.dart';
+import '../../service/domain/models/service.dart' as svc;
 
-final profileRepositoryProvider = Provider<MockProfileRepository>((ref) {
-  return MockProfileRepository();
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  final authedApi = ref.watch(authedApiClientProvider);
+  return ApiProfileRepository(authedApi);
 });
 
-/// FutureProvider for the current user profile
 final myProfileProvider = FutureProvider<Profile>((ref) async {
   final repo = ref.watch(profileRepositoryProvider);
   return repo.fetchMyProfile();
 });
 
-/// FutureProvider.family to fetch an arbitrary user's profile by id
-final profileByIdProvider = FutureProvider.family<Profile, String>((ref, userId) async {
+final profileByIdProvider =
+FutureProvider.family<Profile, String>((ref, userId) async {
   final repo = ref.watch(profileRepositoryProvider);
   return repo.fetchProfileById(userId);
 });
 
-/// Reviews for a user (mock)
-final reviewsProvider = FutureProvider.family<List<Review>, String>((ref, userId) async {
+final reviewsProvider =
+FutureProvider.family<List<Review>, String>((ref, userId) async {
   final repo = ref.watch(profileRepositoryProvider);
   return repo.fetchReviews(userId);
 });
 
-/// Activities / services posted by a user (mock)
-final activitiesProvider = FutureProvider.family<List<Activity>, String>((ref, userId) async {
+final updateProfileProvider =
+FutureProvider.family<void, Map<String, dynamic>>((ref, updates) async {
   final repo = ref.watch(profileRepositoryProvider);
-  return repo.fetchActivities(userId);
+  await repo.updateMyProfile(updates);
+  ref.invalidate(myProfileProvider);
+});
+
+final servicesByUserProvider =
+FutureProvider.family<List<svc.Service>, String>((ref, userId) async {
+  final serviceRepo = ref.watch(serviceRepositoryProvider);
+  return serviceRepo.fetchServicesByUser(userId);
+});
+
+// Provider này trả về List<Activity> (dùng cho ActivityCard)
+final activitiesProvider =
+FutureProvider.family<List<Activity>, String>((ref, userId) async {
+  final serviceRepo = ref.watch(serviceRepositoryProvider);
+  final List<svc.Service> services = await serviceRepo.fetchServicesByUser(userId);
+
+  String _formatTimeAgo(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inSeconds < 60) return 'Vừa xong';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+    if (diff.inDays < 30) return '${diff.inDays} ngày trước';
+    return '${diff.inDays ~/ 30} tháng trước';
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final duration = Duration(seconds: totalSeconds); // 1. Sửa 'minutes' thành 'seconds'
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
+  List<Activity> mapServiceToActivity(List<svc.Service> list) {
+    return list.map((s) {
+      final created = s.createdAt;
+      final taskTime =
+          '${created.hour.toString().padLeft(2, '0')}:${created.minute.toString().padLeft(2, '0')} ${created.day.toString().padLeft(2, '0')}/${created.month.toString().padLeft(2, '0')}/${created.year}';
+
+      return Activity(
+        user: s.providerName ?? "...",
+        timeAgo: _formatTimeAgo(created),
+        title: s.title,
+        taskTime: taskTime,
+        duration: _formatDuration(s.time),
+        location: s.regionCode ?? s.place,
+        tags: s.skillNames ?? [],
+        status: s.status,
+        avatarUrl: s.providerAvatar,
+      );
+    }).toList();
+  }
+
+  return mapServiceToActivity(services);
 });

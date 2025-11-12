@@ -3,15 +3,19 @@ enum Gender { male, female, unknown }
 class Profile {
   final String id;
   final String name;
+  final String phone;
+  final String? email;
   final String? avatarUrl;
   final DateTime? birthDate;
   final Gender gender;
   final String? description;
   final String? regionId;
+  final String? regionName;
+  final String? fullRegionAddress;
   final String? street;
   final String? workAddress;
   final String? studyAddress;
-  final Map<String, String>? socialNetwork; // JSON-like map: {"facebook": "linkfb", "insta": "linkinsta"}
+  final Map<String, String>? socialNetwork;
   final DateTime updatedAt;
   final int followers;
   final int following;
@@ -20,11 +24,15 @@ class Profile {
   Profile({
     required this.id,
     required this.name,
+    required this.phone,
+    this.email,
     this.avatarUrl,
     this.birthDate,
     this.gender = Gender.unknown,
     this.description,
     this.regionId,
+    this.regionName,
+    this.fullRegionAddress,
     this.street,
     this.workAddress,
     this.studyAddress,
@@ -38,11 +46,15 @@ class Profile {
   Profile copyWith({
     String? id,
     String? name,
+    String? phone,
+    String? email,
     String? avatarUrl,
     DateTime? birthDate,
     Gender? gender,
     String? description,
     String? regionId,
+    String? regionName,
+    String? fullRegionAddress,
     String? street,
     String? workAddress,
     String? studyAddress,
@@ -52,11 +64,15 @@ class Profile {
     return Profile(
       id: id ?? this.id,
       name: name ?? this.name,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       birthDate: birthDate ?? this.birthDate,
       gender: gender ?? this.gender,
       description: description ?? this.description,
       regionId: regionId ?? this.regionId,
+      regionName: regionName ?? this.regionName,
+      fullRegionAddress: fullRegionAddress ?? this.fullRegionAddress,
       street: street ?? this.street,
       workAddress: workAddress ?? this.workAddress,
       studyAddress: studyAddress ?? this.studyAddress,
@@ -66,47 +82,87 @@ class Profile {
   }
 
   factory Profile.fromJson(Map<String, dynamic> json) {
-    Map<String, String>? sn;
-    if (json['socialNetwork'] != null) {
-      final raw = json['socialNetwork'] as Map<String, dynamic>;
-      sn = raw.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+    final userDetail = json['userDetail'] as Map<String, dynamic>? ?? {};
+    final region = json['region'] as Map<String, dynamic>? ?? {};
+    final parent = region['parent'] as Map<String, dynamic>? ?? {};
+    final grandParent = parent['parent'] as Map<String, dynamic>? ?? {};
+
+    final parts = [
+      region['name'] as String?,
+      parent['name'] as String?,
+      grandParent['name'] as String?,
+    ].where((s) => s != null && s.isNotEmpty).toList();
+
+    String? fullRegionAddress;
+    if (parts.isNotEmpty) {
+      fullRegionAddress = parts.join(', ');
     }
+
+    Map<String, String>? sn;
+    if (userDetail['social_network'] != null) {
+      final raw = userDetail['social_network'];
+      if (raw is Map) {
+        sn = raw.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      }
+    }
+
+    DateTime? tryParseTime(dynamic d) {
+      if (d == null) return null;
+      try {
+        return DateTime.parse(d.toString());
+      } catch (e) {
+        return null;
+      }
+    }
+
+    int tryParseInt(dynamic i) {
+      if (i == null) return 0;
+      if (i is int) return i;
+      return int.tryParse(i.toString()) ?? 0;
+    }
+
     return Profile(
       id: json['id'] as String,
-      name: json['name'] as String,
-      avatarUrl: json['avatarUrl'] as String?,
-      birthDate: json['birthDate'] != null ? DateTime.parse(json['birthDate'] as String) : null,
-      gender: _genderFromString(json['gender'] as String?),
-      description: json['description'] as String?,
-      regionId: json['regionId'] as String?,
-      street: json['street'] as String?,
-      workAddress: json['workAddress'] as String?,
-      studyAddress: json['studyAddress'] as String?,
+      name: json['full_name'] as String,
+      phone: json['phone'] as String,
+      email: json['email'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      birthDate: tryParseTime(userDetail['birth_date']),
+      gender: _genderFromString(userDetail['gender'] as String?),
+      description: userDetail['description'] as String?,
+      regionId: userDetail['region_id'] as String?,
+      regionName: region['name'] as String?,
+      fullRegionAddress: fullRegionAddress,
+      street: userDetail['street'] as String?,
+      workAddress: userDetail['work_address'] as String?,
+      studyAddress: userDetail['study_address'] as String?,
       socialNetwork: sn,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now(),
-      followers: (json['followers'] as int?) ?? 0,
-      following: (json['following'] as int?) ?? 0,
-      points: (json['points'] as int?) ?? 0,
+      updatedAt: tryParseTime(json['updated_at']) ?? DateTime.now(),
+      followers: tryParseInt(json['followers']),
+      following: tryParseInt(json['following']),
+      points: tryParseInt(json['points']),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'avatarUrl': avatarUrl,
-        'birthDate': birthDate?.toIso8601String(),
-        'gender': gender.name,
-        'description': description,
-        'regionId': regionId,
-        'street': street,
-        'workAddress': workAddress,
-        'studyAddress': studyAddress,
-    'socialNetwork': socialNetwork,
-    'updatedAt': updatedAt.toIso8601String(),
+    'id': id,
+    'full_name': name,
+    'phone': phone,
+    'email': email,
+    'avatar_url': avatarUrl,
+    'birth_date': birthDate?.toUtc().toIso8601String(),
+    'gender': gender.name,
+    'description': description,
+    'region_id': regionId,
+    'street': street,
+    'work_address': workAddress,
+    'study_address': studyAddress,
+    'social_network': socialNetwork,
+    'updated_at': updatedAt.toUtc().toIso8601String(),
     'followers': followers,
     'following': following,
     'points': points,
-      };
+  };
 }
 
 Gender _genderFromString(String? s) {

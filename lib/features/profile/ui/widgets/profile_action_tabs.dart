@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-/// Two circular action buttons with labels and a half-width sliding indicator below.
 class ProfileActionTabs extends StatefulWidget {
   const ProfileActionTabs({
     Key? key,
@@ -54,15 +53,12 @@ class _ProfileActionTabsState extends State<ProfileActionTabs>
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       final width = constraints.maxWidth;
-      // available space for the background line after horizontal margins (16 left + 16 right)
       final available = math.max(0.0, width - 32.0);
-      // each active segment should occupy half of the available space
       final halfAvailable = available / 2.0;
 
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // simplified layout: two halves each with a centered icon (no circular frame or label)
           Row(
             children: [
               Expanded(
@@ -75,7 +71,7 @@ class _ProfileActionTabsState extends State<ProfileActionTabs>
               ),
               Expanded(
                 child: Center(
-                  child: _buildIcon(Icons.handyman, () {
+                  child: _buildIcon(Icons.menu, () {
                     _setIndex(1);
                     widget.onRightTap();
                   }),
@@ -83,15 +79,12 @@ class _ProfileActionTabsState extends State<ProfileActionTabs>
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-          // indicator bar full-width with active half colored
           SizedBox(
             width: width,
             height: 6,
             child: Stack(
               children: [
-                // background line (with horizontal margin 16)
                 Positioned.fill(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -102,15 +95,15 @@ class _ProfileActionTabsState extends State<ProfileActionTabs>
                     ),
                   ),
                 ),
-
-                // active half indicator: use AnimatedAlign inside the padded background
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: AnimatedAlign(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOutCubic,
-                      alignment: _index == 0 ? Alignment.centerLeft : Alignment.centerRight,
+                      alignment: _index == 0
+                          ? Alignment.centerLeft
+                          : Alignment.centerRight,
                       child: Container(
                         width: halfAvailable,
                         height: 6,
@@ -118,7 +111,10 @@ class _ProfileActionTabsState extends State<ProfileActionTabs>
                           color: const Color(0xFF0D4C7B),
                           borderRadius: BorderRadius.circular(6),
                           boxShadow: [
-                            BoxShadow(color: const Color(0xFF0D4C7B).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4)),
+                            BoxShadow(
+                                color: const Color(0xFF0D4C7B).withOpacity(0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4)),
                           ],
                         ),
                       ),
