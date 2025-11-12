@@ -219,7 +219,6 @@ class ServiceCard extends StatelessWidget {
 
                 SizedBox(height: hasMultipleSkills ? 6 : 14),
 
-                // 🔧 CHỈNH PHẦN NÀY: Hiển thị trực tiếp skillNames từ API
                 Row(
                   children: [
                     Expanded(

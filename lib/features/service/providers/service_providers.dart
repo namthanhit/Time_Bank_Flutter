@@ -18,12 +18,29 @@ FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
   return repo.getMyJobs(pagingInfo: pagingInfo);
 });
 
+/// Provider để lấy danh sách dịch vụ cộng đồng
+final findJobCommunityProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  final pagingInfo = PaginationRequestDto(page: 1, pageSize: 10);
+  return repo.findJobCommunity(pagingInfo: pagingInfo);
+});
+
+/// Provider lấy 1 dịch vụ theo ID
 final serviceByIdProvider =
 FutureProvider.family<Service?, String>((ref, id) async {
   final repo = ref.watch(serviceRepositoryProvider);
   return repo.fetchServiceById(id);
 });
 
+/// Provider lấy chi tiết dịch vụ cộng đồng theo ID
+final detailJobCommunityByIdProvider =
+    FutureProvider.family<Service?, String>((ref, id) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  return repo.getdetaillJobCommunityById(id);
+});
+
+/// Provider trạng thái (AsyncValue<List<Offer>>)
 final offerListProvider =
 FutureProvider.family<List<Offer>, String>((ref, jobId) async {
   final repo = ref.watch(serviceRepositoryProvider);

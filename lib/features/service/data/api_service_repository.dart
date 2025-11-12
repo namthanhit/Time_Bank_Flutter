@@ -68,6 +68,52 @@ class ApiServiceRepository implements ServiceRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> findJobCommunity({
+    required PaginationRequestDto pagingInfo,
+  }) async {
+    try {
+      final queryString = Uri(queryParameters: {
+        'page': pagingInfo.page.toString(),
+        'pageSize': pagingInfo.pageSize.toString(),
+        if (pagingInfo.search != null) 'search': pagingInfo.search!,
+        if (pagingInfo.sortBy != null) 'sortBy': pagingInfo.sortBy!,
+        if (pagingInfo.sortOrder != null) 'sortOrder': pagingInfo.sortOrder!,
+        if (pagingInfo.type != null) 'type': pagingInfo.type!,
+      }).query;
+
+      final res = await _api.get('jobs?$queryString');
+
+      _ensureOK(res);
+
+      final body = json.decode(utf8.decode(res.bodyBytes));
+
+      final rawData = body['data'];
+      List<Service> services = [];
+      debugPrint('findJobCommunity: rawData type: ${rawData.toString()}');
+
+      if (rawData is List) {
+        services = rawData
+            .whereType<Map>()
+            .map((item) => Service.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+      } else if (rawData is Map) {
+        services = [Service.fromJson(Map<String, dynamic>.from(rawData))];
+      } else {
+        print('Unexpected data format: ${rawData.runtimeType}');
+      }
+
+      return {
+        'data': services,
+        'metadata': body['metadata'],
+        'fromCache': body['fromCache'] ?? false,
+      };
+    } catch (e) {
+      print('Error fetching services: $e');
+      rethrow;
+    }
+  }
+
+  @override
   Future<Service?> fetchServiceById(Object jobId) async {
     final id = jobId.toString();
     final path = '/jobs/me/detail-job/$id';
@@ -77,6 +123,36 @@ class ApiServiceRepository implements ServiceRepository {
       _ensureOK(res);
 
       final decoded = json.decode(utf8.decode(res.bodyBytes));
+      Map<String, dynamic>? serviceMap;
+      if (decoded is Map && decoded.containsKey('data')) {
+        final d = decoded['data'];
+        if (d is Map) serviceMap = Map<String, dynamic>.from(d);
+      } else if (decoded is Map && decoded.containsKey('id')) {
+        serviceMap = Map<String, dynamic>.from(decoded);
+      } else {
+        debugPrint(
+            'fetchServiceById: unexpected response shape: ${decoded.runtimeType}');
+      }
+
+      if (serviceMap == null) return null;
+      return Service.fromJson(serviceMap);
+    } catch (e, st) {
+      debugPrint('fetchServiceById: error fetching $path -> $e\n$st');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Service?> getdetaillJobCommunityById(Object jobId) async {
+    final id = jobId.toString();
+    final path = '/jobs/$id';
+    try {
+      final res = await _api.get(path);
+
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+      debugPrint('getdetaillJobCommunityById: decoded type: ${decoded.runtimeType}');
       Map<String, dynamic>? serviceMap;
       if (decoded is Map && decoded.containsKey('data')) {
         final d = decoded['data'];

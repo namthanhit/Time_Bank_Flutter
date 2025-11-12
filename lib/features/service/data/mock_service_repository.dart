@@ -60,6 +60,36 @@ class MockServiceRepository implements ServiceRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> findJobCommunity({
+    required PaginationRequestDto pagingInfo,
+  }) async {
+    final path = 'jobs?$pagingInfo';
+    // For mock, filter the mock data to only include community-available services
+    final communityServices = _mockData
+        .where((s) => s.visibility == 'public' && s.status == 'open')
+        .toList();
+    // Simulate pagination
+    final startIndex = (pagingInfo.page - 1) * pagingInfo.pageSize;
+    final pagedServices =
+        communityServices.skip(startIndex).take(pagingInfo.pageSize).toList();
+    return {
+      'data': pagedServices,
+      'total': communityServices.length,
+    };
+  }
+
+  @override
+  Future<Service?> getdetaillJobCommunityById(Object jobId) async {
+    final id = jobId.toString();
+    final path = '/jobs/$id';
+    try {
+    } catch (e, st) {
+      debugPrint('getdetaillJobCommunityById: error fetching $path -> $e\n$st');
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> updateOfferStatusRejected(
       {required String offerId,
       required String jobId,

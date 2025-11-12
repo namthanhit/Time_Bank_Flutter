@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../../domain/models/service.dart';
-import '../../../providers/service_providers.dart';
+import '../../../providers/service_providers.dart'; // Đảm bảo provider mới của bạn ở đây
 import 'service_detail_header.dart';
 
 class CommunityServiceDetailPage extends ConsumerStatefulWidget {
@@ -23,9 +23,9 @@ class _CommunityServiceDetailPageState
     extends ConsumerState<CommunityServiceDetailPage>
     with WidgetsBindingObserver {
   int _requestState =
-      0; // 0: not requested, 1: sent request, 2: cancelled, 3: approved
+      0; // 0: None, 1: Pending, 2: Cancelled, 3: Approved
   bool _isFavorited = false;
-  int _currentImageIndex = 0; // Track current image index
+  int _currentImageIndex = 0;
   PageController? _pageController;
 
   final TextEditingController _noteController = TextEditingController();
@@ -33,58 +33,47 @@ class _CommunityServiceDetailPageState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Add observer
+    WidgetsBinding.instance.addObserver(this);
     _pageController =
-        PageController(viewportFraction: 1.0); // Chiếm toàn bộ width
-    _loadSavedStates(); // Đã bao gồm logic check MockServiceRepository
-    //_resetAllStates(); // Chỉ dùng cho mục đích test
+        PageController(viewportFraction: 1.0);
+    _loadSavedStates();
   }
 
-  // Load trạng thái ứng tuyển từ MockServiceRepository
   void _loadApplicationStatus() {
     final status = MockServiceRepository.getApplicationStatus(widget.serviceId);
-    // print(
-    //   '🔍 Loading status for serviceId ${widget.serviceId}: $status'); // Debug
-    setState(() {
-      switch (status) {
-        case 'pending':
-          _requestState = 1;
-          // print('📤 Set to pending state (1)');
-          break;
-        case 'approved':
-          _requestState = 3; // approved state
-          // print('✅ Set to approved state (3)');
-          break;
-        case 'cancelled':
-          _requestState = 2; // cancelled state (hiển thị "Đã hủy")
-          // print('❌ Set to cancelled state (2)');
-          break;
-        case 'none':
-        default:
-          _requestState = 0; // not requested (hiển thị "Chấp nhận công việc")
-        //print('⚪ Set to not requested state (0)');
-      }
-    });
+    if (mounted) {
+      setState(() {
+        switch (status) {
+          case 'pending':
+            _requestState = 1;
+            break;
+          case 'approved':
+            _requestState = 3;
+            break;
+          case 'cancelled':
+            _requestState = 2;
+            break;
+          case 'none':
+          default:
+            _requestState = 0;
+        }
+      });
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh trạng thái mỗi khi widget được rebuild
     _loadApplicationStatus();
   }
 
-  // (test helper removed) If you need a reset helper keep it in test/debug-only code.
-
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // Remove observer
+    WidgetsBinding.instance.removeObserver(this);
     _pageController?.dispose();
     _noteController.dispose();
     super.dispose();
   }
-
-  // Public method để refresh status từ bên ngoài
   void refreshApplicationStatus() {
     _loadApplicationStatus();
   }
@@ -92,42 +81,37 @@ class _CommunityServiceDetailPageState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Reload trạng thái khi quay lại app hoặc từ page khác
       _loadApplicationStatus();
     }
   }
 
   Future<void> _loadSavedStates() async {
     final prefs = await SharedPreferences.getInstance();
+    final isFavorited = prefs.getBool('favorite_${widget.serviceId}') ?? false;
 
-    // Kiểm tra MockServiceRepository trước
     final applicationStatus =
         MockServiceRepository.getApplicationStatus(widget.serviceId);
 
-    setState(() {
-      // Load favorite state từ SharedPreferences
-      _isFavorited = prefs.getBool('favorite_${widget.serviceId}') ?? false;
+    if (mounted) {
+      setState(() {
+        _isFavorited = isFavorited;
 
-      // Request state: LUÔN LUÔN ưu tiên MockServiceRepository
-      switch (applicationStatus) {
-        case 'pending':
-          _requestState = 1;
-          break;
-        case 'approved':
-          _requestState = 3;
-          break;
-        case 'cancelled':
-          _requestState = 2;
-          break;
-        case 'none':
-        default:
-          _requestState = 0;
-      }
-      // print(
-      //  '📱 Loaded from MockServiceRepository: $applicationStatus -> $_requestState');
-
-      // Không fallback sang SharedPreferences nữa, vì MockServiceRepository là source of truth
-    });
+        switch (applicationStatus) {
+          case 'pending':
+            _requestState = 1;
+            break;
+          case 'approved':
+            _requestState = 3;
+            break;
+          case 'cancelled':
+            _requestState = 2;
+            break;
+          case 'none':
+          default:
+            _requestState = 0;
+        }
+      });
+    }
   }
 
   Future<void> _saveFavoriteState() async {
@@ -142,8 +126,7 @@ class _CommunityServiceDetailPageState
 
   @override
   Widget build(BuildContext context) {
-    // print('🔄 Building UI with _requestState: $_requestState'); // Debug
-    final serviceAsync = ref.watch(serviceByIdProvider(widget.serviceId));
+    final serviceAsync = ref.watch(detailJobCommunityByIdProvider(widget.serviceId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -159,17 +142,25 @@ class _CommunityServiceDetailPageState
       body: serviceAsync.when(
         data: (service) => service != null
             ? _buildContent(service)
-            : const Center(child: Text('Dịch vụ không tồn tại')),
+            : const Center(child: Text('Không tìm thấy dịch vụ.')), 
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text('Lỗi: $error'),
+              Text('Đã xảy ra lỗi: $error'),
               const SizedBox(height: 16),
               ElevatedButton(
+                onPressed: () {
+                  // Cung cấp cách refresh lại provider
+                  ref.refresh(detailJobCommunityByIdProvider(widget.serviceId));
+                },
+                child: const Text('Thử lại'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Quay lại'),
               ),
@@ -202,9 +193,6 @@ class _CommunityServiceDetailPageState
           const SizedBox(height: 30),
           _buildActionRow(service),
           const SizedBox(height: 16),
-          // Note: UI for displaying received/pending cards is handled by
-          // the dedicated `ReceivedApplicants` widget. Community page
-          // manages application state only and does not render the card.
         ],
       ),
     );
@@ -245,10 +233,10 @@ class _CommunityServiceDetailPageState
               CircleAvatar(
                 radius: 20,
                 backgroundColor: const Color(0xFF003E77),
-                backgroundImage: service.providerAvatar != null
+                backgroundImage: service.providerAvatar != null && service.providerAvatar!.isNotEmpty
                     ? NetworkImage(service.providerAvatar!)
                     : null,
-                child: service.providerAvatar == null
+                child: (service.providerAvatar == null || service.providerAvatar!.isEmpty)
                     ? Text(
                         service.providerName?.substring(0, 1).toUpperCase() ??
                             'U',
@@ -317,7 +305,7 @@ class _CommunityServiceDetailPageState
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Đã follow', '125'),
+                child: _buildStatItem('Đã follow', '125'), // TODO: Cần API
               ),
               Container(
                 width: 1,
@@ -325,7 +313,7 @@ class _CommunityServiceDetailPageState
                 color: Colors.grey[300],
               ),
               Expanded(
-                child: _buildStatItem('Chất lượng', '4.8'),
+                child: _buildStatItem('Chất lượng', '4.8'), // TODO: Cần API
               ),
               Container(
                 width: 1,
@@ -333,7 +321,7 @@ class _CommunityServiceDetailPageState
                 color: Colors.grey[300],
               ),
               Expanded(
-                child: _buildStatItem('Follower', '1.2K'),
+                child: _buildStatItem('Follower', '1.2K'), // TODO: Cần API
               ),
             ],
           ),
@@ -453,7 +441,6 @@ class _CommunityServiceDetailPageState
                 },
               ),
             ),
-            // Chỉ hiển thị dots indicator nếu có nhiều hơn 1 ảnh
             if (service.serviceImages!.length > 1) ...[
               const SizedBox(height: 8),
               Center(
@@ -478,35 +465,6 @@ class _CommunityServiceDetailPageState
             ],
             const SizedBox(height: 20),
           ],
-
-          // Work details placeholder
-          // Container(
-          //   width: double.infinity,
-          //   height: 80,
-          //   decoration: BoxDecoration(
-          //     color: Colors.grey[50],
-          //     borderRadius: BorderRadius.circular(8),
-          //     border: Border.all(color: Colors.grey[200]!),
-          //   ),
-          //   // child: Column(
-          //   //   mainAxisAlignment: MainAxisAlignment.center,
-          //   //   children: [
-          //   //     Icon(
-          //   //       Icons.image_outlined,
-          //   //       size: 40,
-          //   //       color: Colors.grey[400],
-          //   //     ),
-          //   //     const SizedBox(height: 8),
-          //   //     Text(
-          //   //       'Hình ảnh minh họa công việc',
-          //   //       style: TextStyle(
-          //   //         color: Colors.grey[500],
-          //   //         fontSize: 14,
-          //   //       ),
-          //   //     ),
-          //   //   ],
-          //   // ),
-          // ),
         ],
       ),
     );
@@ -536,10 +494,7 @@ class _CommunityServiceDetailPageState
   }
 
   Widget _buildActionRow(Service service) {
-    // print('🔧 Building action row with _requestState: $_requestState'); // Debug
-
-    // Đã được duyệt
-    if (_requestState == 3) {
+    if (_requestState == 3) { // Approved
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -563,57 +518,7 @@ class _CommunityServiceDetailPageState
             const SizedBox(width: 8),
             IconButton(
               onPressed: () {
-                showDialog(
-                  context: context,
-                  barrierDismissible: true,
-                  builder: (context) {
-                    return AlertDialog(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      title: const Text(
-                        'Xác nhận hủy yêu cầu',
-                        style: TextStyle(
-                          color: Color(0xFF003E77),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                      content: const Text(
-                        'Bạn có chắc muốn hủy yêu cầu ứng tuyển chứ?',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text(
-                            'Hủy',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _cancelRequest();
-                          },
-                          child: const Text(
-                            'Đồng ý',
-                            style: TextStyle(
-                              color: Color(0xFF003E77),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
+                _showCancelConfirmationDialog();
               },
               icon: const Icon(
                 Icons.delete_outline,
@@ -625,8 +530,7 @@ class _CommunityServiceDetailPageState
         ),
       );
     }
-    // Reset để bắt đầu lại
-    if (_requestState == 2) {
+    if (_requestState == 2) { // Cancelled
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         width: double.infinity,
@@ -649,14 +553,14 @@ class _CommunityServiceDetailPageState
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: _requestState == 1
+      child: _requestState == 1 // Pending
           ? Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.green, // Đã gửi nên dùng màu xanh
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       shape: RoundedRectangleBorder(
@@ -672,57 +576,7 @@ class _CommunityServiceDetailPageState
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: true,
-                      builder: (context) {
-                        return AlertDialog(
-                          backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          title: const Text(
-                            'Xác nhận hủy yêu cầu',
-                            style: TextStyle(
-                              color: Color(0xFF003E77),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                          content: const Text(
-                            'Bạn có chắc muốn hủy yêu cầu ứng tuyển chứ?',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text(
-                                'Hủy',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                _cancelRequest();
-                              },
-                              child: const Text(
-                                'Đồng ý',
-                                style: TextStyle(
-                                  color: Color(0xFF003E77),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    );
+                    _showCancelConfirmationDialog();
                   },
                   icon: const Icon(
                     Icons.delete_outline,
@@ -732,12 +586,12 @@ class _CommunityServiceDetailPageState
                 ),
               ],
             )
-          : SizedBox(
+          : SizedBox( // State 0: None
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => _showConfirmationDialog(service),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Colors.green, // Nút "Chấp nhận"
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   shape: RoundedRectangleBorder(
@@ -751,6 +605,61 @@ class _CommunityServiceDetailPageState
             ),
     );
   }
+  
+  void _showCancelConfirmationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Xác nhận hủy yêu cầu',
+            style: TextStyle(
+              color: Color(0xFF003E77),
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: const Text(
+            'Bạn có chắc muốn hủy yêu cầu ứng tuyển chứ?',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _cancelRequest();
+              },
+              child: const Text(
+                'Đồng ý',
+                style: TextStyle(
+                  color: Color(0xFF003E77),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   void _showConfirmationDialog(Service service) {
     showModalBottomSheet(
@@ -897,41 +806,22 @@ class _CommunityServiceDetailPageState
     setState(() {
       _isFavorited = !_isFavorited;
     });
-    _saveFavoriteState();
+    _saveFavoriteState(); 
   }
 
   void _requestService() {
-    // Gửi yêu cầu qua MockServiceRepository
     MockServiceRepository.applyForJob(widget.serviceId);
 
     setState(() {
       _requestState = 1;
     });
-    _saveRequestState();
-
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text('Đã gửi yêu cầu dịch vụ')),
-    // );
   }
 
   void _cancelRequest() {
-    //print('🗑️ Cancelling request for serviceId: ${widget.serviceId}');
-
-    // Debug: (applicants info available via MockServiceRepository.mockApplicants)
-
-    // Hủy yêu cầu qua MockServiceRepository
     MockServiceRepository.cancelApplication(widget.serviceId);
-
-    // Debug: (applicants info available via MockServiceRepository.mockApplicants)
-
     setState(() {
-      _requestState = 2;
+      _requestState = 2; // Cập nhật UI ngay lập tức
     });
-    _saveRequestState();
-
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text('Đã hủy yêu cầu dịch vụ')),
-    // );
   }
 
   String _formatTimeAgo(DateTime dt) {
@@ -947,7 +837,10 @@ class _CommunityServiceDetailPageState
     } else if (diff.inDays < 30) {
       return '${diff.inDays} ngày trước';
     } else {
-      return '${diff.inDays ~/ 30} tháng trước';
+      // Làm tròn tháng
+      final months = (diff.inDays / 30).round();
+      if (months <= 0) return '${diff.inDays} ngày trước';
+      return '$months tháng trước';
     }
   }
 }

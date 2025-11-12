@@ -15,8 +15,14 @@ abstract class ServiceRepository {
     required PaginationRequestDto pagingInfo,
   });
 
+  Future<Map<String, dynamic>> findJobCommunity({
+    required PaginationRequestDto pagingInfo,
+  });
+
   /// Lấy chi tiết dịch vụ theo ID (accepts int or String)
   Future<Service?> fetchServiceById(Object jobId);
+
+  Future<Service?> getdetaillJobCommunityById(Object jobId);
 
   Future<List<Offer>> getOffersForMyJob(Object jobId);
 
