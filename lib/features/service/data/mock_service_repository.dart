@@ -44,6 +44,12 @@ class MockServiceRepository implements ServiceRepository {
     if (skillId == null) return null;
     return skillNames[skillId];
   }
+  @override
+  Future<List<Offer>> fetchMyPendingOffers() async {
+    // Trả về một danh sách rỗng để mô phỏng
+    await Future.delayed(const Duration(milliseconds: 300));
+    return [];
+  }
 
   @override
   Future<void> updateOfferStatusAccepted(
@@ -51,6 +57,36 @@ class MockServiceRepository implements ServiceRepository {
       required String jobId,
       required String status}) async {
     final path = 'offers/$offerId/me-job/$jobId/accept-offer';
+  }
+
+  @override
+  Future<Map<String, dynamic>> findJobCommunity({
+    required PaginationRequestDto pagingInfo,
+  }) async {
+    final path = 'jobs?$pagingInfo';
+    // For mock, filter the mock data to only include community-available services
+    final communityServices = _mockData
+        .where((s) => s.visibility == 'public' && s.status == 'open')
+        .toList();
+    // Simulate pagination
+    final startIndex = (pagingInfo.page - 1) * pagingInfo.pageSize;
+    final pagedServices =
+        communityServices.skip(startIndex).take(pagingInfo.pageSize).toList();
+    return {
+      'data': pagedServices,
+      'total': communityServices.length,
+    };
+  }
+
+  @override
+  Future<Service?> getdetaillJobCommunityById(Object jobId) async {
+    final id = jobId.toString();
+    final path = '/jobs/$id';
+    try {
+    } catch (e, st) {
+      debugPrint('getdetaillJobCommunityById: error fetching $path -> $e\n$st');
+      rethrow;
+    }
   }
 
   @override

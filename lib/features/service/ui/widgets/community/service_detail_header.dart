@@ -1,7 +1,5 @@
-// lib/features/service/ui/widgets/service_detail_header.dart
 import 'package:flutter/material.dart';
 import '../../../domain/models/service.dart';
-import '../../../data/mock_service_repository.dart';
 
 class ServiceDetailHeader extends StatelessWidget {
   final Service service;
@@ -16,18 +14,39 @@ class ServiceDetailHeader extends StatelessWidget {
     this.isFavorited = false,
     this.onFavoritePressed,
     this.isMyService = false,
-    this.showAllSpecializations = false, // Mặc định không hiển thị tất cả
+    this.showAllSpecializations = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // visibility label
     final visibilityIcon = service.isPublic ? Icons.people : Icons.group;
+
+    debugPrint('service.skillNames: ${service.skillNames}');
+    debugPrint(
+        'service.providerSpecialization: ${service.providerSpecialization}');
+
+    final List<String> fromSkillNames = (service.skillNames ?? <String>[])
+        .map((e) => e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    final List<String> fromProviderSpecialization =
+        (service.providerSpecialization ?? '')
+            .split(',')
+            .map((e) => e.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+
+    final List<String> specializationsList =
+        fromSkillNames.isNotEmpty ? fromSkillNames : fromProviderSpecialization;
+
+    final specializations = specializationsList.isNotEmpty
+        ? specializationsList.toSet().toList()
+        : ['Chưa có'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title row with people icon và nút ba chấm
         Row(
           children: [
             Expanded(
@@ -154,14 +173,13 @@ class ServiceDetailHeader extends StatelessWidget {
                           size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 6),
                       Text(
-                        'Địa điểm: ${service.regionCode ?? 'Chưa xác định'}',
+                        'Địa điểm: ${service.place ?? 'Chưa xác định'}',
                         style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
 
-                  // Chuyên môn with background
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -173,22 +191,16 @@ class ServiceDetailHeader extends StatelessWidget {
                       ),
                       Flexible(
                         child: _buildSpecializationTags(
-                            context,
-                            MockServiceRepository.skillNamesAsString(
-                                service.skillIds ??
-                                    (service.skillId != null
-                                        ? [service.skillId!]
-                                        : null)),
-                            showAllSpecializations),
+                          context,
+                          specializations,
+                          showAllSpecializations,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-
-            // Heart icon with circular border (positioned between location and specialization)
-            // Chỉ hiển thị khi onFavoritePressed được truyền vào
             if (onFavoritePressed != null)
               Container(
                 margin: const EdgeInsets.only(left: 8),
@@ -212,60 +224,34 @@ class ServiceDetailHeader extends StatelessWidget {
   }
 
   Widget _buildSpecializationTags(
-      BuildContext context, String? specialization, bool showAll) {
-    if (specialization == null || specialization.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE0DC06),
-          borderRadius: BorderRadius.circular(5),
-          //border: Border.all(color: const Color(0xFF003E77).withOpacity(0.5)),
-        ),
-        child: const Text(
-          'Chưa xác định',
-          style: TextStyle(
-            fontSize: 10,
-            color: Color(0xFF003E77),
-          ),
-        ),
-      );
-    }
+      BuildContext context, List<String> tags, bool showAll) {
+    const double maxChipWidth = 100;
+    const double chipHeight = 20;
+    const Color chipColor = Color(0xFFE0DC06);
+    const Color textColor = Color(0xFF000000);
+    const double fontSize = 12;
+    final BorderRadius borderRadius = BorderRadius.circular(6);
 
-    // Tách chuỗi chuyên môn thành danh sách
-    List<String> tags = specialization
-        .split(RegExp(r'[,;|\n]'))
-        .map((tag) => tag.trim())
-        .where((tag) => tag.isNotEmpty)
-        .toList();
-
-    // Nếu chỉ có 1 tag, hiển thị inline
-    if (tags.length == 1) {
-      // --- Sao chép hằng số từ block 'showAll' ---
-      // Đảm bảo các thẻ y hệt nhau
-      const double maxChipWidth = 72;
-      const double chipHeight = 20;
-      // --- Hết sao chép ---
-
+    if (tags.isEmpty || (tags.length == 1 && tags[0] == 'Chưa có')) {
       return ConstrainedBox(
-        // 1. Thêm ConstrainedBox để giới hạn chiều dài
         constraints: BoxConstraints(maxWidth: maxChipWidth),
         child: SizedBox(
-          height: chipHeight, // 2. Cố định chiều cao là 20
+          height: chipHeight,
           child: Container(
-            alignment: Alignment.center, // 3. Thêm alignment
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0), // 4. Dùng padding y hệt
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0DC06),
-              borderRadius: BorderRadius.circular(6), // 5. Đồng bộ border radius là 6
+              color: chipColor,
+              borderRadius: borderRadius,
             ),
-            child: Text(
-              tags[0], // Dùng tag đầu tiên
-              textAlign: TextAlign.center, // 6. Đồng bộ Text properties
+            child: const Text(
+              'Chưa có', // Tên tag
+              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Color(0xFF000000),
+              style: TextStyle(
+                fontSize: fontSize,
+                color: textColor,
               ),
             ),
           ),
@@ -273,17 +259,10 @@ class ServiceDetailHeader extends StatelessWidget {
       );
     }
 
-    // Nếu có nhiều tag
-    if (showAll) {
-      // Hiển thị TẤT CẢ chuyên môn theo HÀNG NGANG (trong trang chi tiết)
-      // Đảm bảo mỗi thẻ có cùng độ rộng bằng cách dùng SizedBox với width cố định
+    if (showAll || tags.length == 1) {
       return LayoutBuilder(builder: (context, constraints) {
-        // Tính width hợp lý cho từng thẻ — tối đa 1/3 width hoặc 72
-        // Giảm min width để các thẻ co lại vừa nội dung, và giới hạn tối đa
-        final double maxChipWidth = 72;
         final double chipWidth =
-            (constraints.maxWidth / 3).clamp(40, maxChipWidth);
-        const double chipHeight = 20; // nhỏ hơn để gọn hơn trong detail
+            (constraints.maxWidth / 3).clamp(50, maxChipWidth);
 
         return Wrap(
           spacing: 8.0,
@@ -298,8 +277,8 @@ class ServiceDetailHeader extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 4, vertical: 0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0DC06),
-                          borderRadius: BorderRadius.circular(6),
+                          color: chipColor,
+                          borderRadius: borderRadius,
                         ),
                         child: Text(
                           tag,
@@ -307,8 +286,8 @@ class ServiceDetailHeader extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFF000000),
+                            fontSize: fontSize,
+                            color: textColor,
                           ),
                         ),
                       ),
@@ -318,32 +297,30 @@ class ServiceDetailHeader extends StatelessWidget {
         );
       });
     } else {
-      // condensed mode (first + ...+N) — define a sensible max width for chips
-      final double chipWidth = 72;
-      // Chỉ hiển thị thẻ đầu tiên + thẻ "...+số" (trong danh sách)
-      // Dùng IntrinsicWidth để buộc cả hai thẻ có cùng độ dài (chiều rộng bằng nhau)
       return IntrinsicWidth(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: chipWidth),
+              constraints: BoxConstraints(maxWidth: maxChipWidth),
               child: SizedBox(
-                height: 20,
+                height: chipHeight,
                 child: Container(
                   alignment: Alignment.center,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0DC06),
-                    borderRadius: BorderRadius.circular(6),
+                    color: chipColor,
+                    borderRadius: borderRadius,
                   ),
                   child: Text(
                     tags[0],
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF000000),
+                      fontSize: fontSize,
+                      color: textColor,
                     ),
                   ),
                 ),
@@ -353,23 +330,23 @@ class ServiceDetailHeader extends StatelessWidget {
             GestureDetector(
               onTap: () => _showAllSpecializations(context, tags),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: chipWidth),
+                constraints: BoxConstraints(maxWidth: maxChipWidth),
                 child: SizedBox(
-                  height: 20,
+                  height: chipHeight,
                   child: Container(
                     alignment: Alignment.center,
                     padding:
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0DC06),
-                      borderRadius: BorderRadius.circular(6),
+                      color: chipColor,
+                      borderRadius: borderRadius,
                     ),
                     child: Text(
                       '...+${tags.length - 1}',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF000000),
+                        fontSize: fontSize,
+                        color: textColor,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -388,6 +365,7 @@ class ServiceDetailHeader extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text(
             'Tất cả chuyên môn',
             style: TextStyle(
@@ -395,31 +373,31 @@ class ServiceDetailHeader extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: tags
-                .map((tag) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0DC06),
-                          borderRadius: BorderRadius.circular(8),
-                          // border: Border.all(
-                          //     color: const Color(0xFF003E77).withOpacity(0.5)),
-                        ),
-                        child: Text(
-                          tag,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF003E77),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: tags
+                  .map((tag) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0DC06), // Nền vàng
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tag,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF000000), // Chữ đen
+                            ),
                           ),
                         ),
-                      ),
-                    ))
-                .toList(),
+                      ))
+                  .toList(),
+            ),
           ),
           actions: [
             TextButton(
@@ -435,10 +413,12 @@ class ServiceDetailHeader extends StatelessWidget {
     );
   }
 
-  static String _formatDurationHMS(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:00';
+  static String _formatDurationHMS(int seconds) {
+    final hours = seconds ~/ 3600;
+    final remainingSeconds = seconds % 3600;
+    final mins = remainingSeconds ~/ 60;
+    final secs = remainingSeconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   String _formatDateTime(DateTime? dt) {
