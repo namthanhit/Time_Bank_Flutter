@@ -68,9 +68,7 @@ class TransactionCard extends StatelessWidget {
   }
 
   Widget _description() {
-
-
-    final text = entry.note ?? '---';
+    final text = entry.note ?? '---'; // Dự phòng '---' nếu note bị null
 
     return Text(
       text,

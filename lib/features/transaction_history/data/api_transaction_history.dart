@@ -5,12 +5,10 @@ import 'package:time_bank_flutter/features/transaction_history/domain/models/tra
 import 'package:time_bank_flutter/features/transaction_history/domain/repositories/transaction_history_repository.dart';
 import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
 
-
 final remoteTransactionHistoryRepositoryProvider = Provider<RemoteTransactionHistoryRepository>((ref) {
   final authApiClient = ref.watch(authedApiClientProvider);
   return RemoteTransactionHistoryRepository(authApiClient);
 });
-
 
 class RemoteTransactionHistoryRepository implements TransactionHistoryRepository {
   RemoteTransactionHistoryRepository(this._apiClient);
@@ -40,15 +38,12 @@ class RemoteTransactionHistoryRepository implements TransactionHistoryRepository
 
     try {
       final response = await _apiClient.get('/me/ledger', query: query);
-
       final data = jsonDecode(response.body);
 
       if (data['items'] == null) {
         throw Exception('API response does not contain "items"');
       }
-
       final items = data['items'] as List;
-
       return items.map((item) => _mapJsonToEntry(item as Map<String, dynamic>)).toList();
 
     } catch (e) {
@@ -61,7 +56,6 @@ class RemoteTransactionHistoryRepository implements TransactionHistoryRepository
 
     final direction = item['direction'] as String?;
     final secs = (item['secs'] as num? ?? 0).toInt();
-
     final int deltaSecs = (direction == 'credit') ? secs : -secs;
 
     final rawString = item['created_at'] as String? ?? '';
@@ -73,28 +67,30 @@ class RemoteTransactionHistoryRepository implements TransactionHistoryRepository
       parsedTime = DateTime.now();
     }
 
+    final transferData = item['transfer'] as Map<String, dynamic>?;
+    final fromWallet = transferData?['fromWallet'] as Map<String, dynamic>?;
+    final toWallet = transferData?['toWallet'] as Map<String, dynamic>?;
+    final fromUser = fromWallet?['user'] as Map<String, dynamic>?;
+    final toUser = toWallet?['user'] as Map<String, dynamic>?;
+
     return TransactionEntry(
       id: item['id'] as String? ?? 'unknown_id',
-
       direction: direction == 'credit'
           ? TransactionDirection.incoming
           : TransactionDirection.out,
-
       deltaSecs: deltaSecs,
-
       occurredAt: parsedTime,
 
       note: item['memo'] as String?,
 
-      balanceAfterSecs: (item as Map).containsKey('balance_after_secs')
-          ? (item['balance_after_secs'] as num? ?? 0).toInt()
-          : null,
+      balanceAfterSecs: null,
 
       status: TransferStatus.completed,
-      senderName: null,
-      senderAccount: null,
-      receiverName: null,
-      receiverAccount: null,
+
+      senderName: fromUser?['full_name'] as String?,
+      senderAccount: fromUser?['phone'] as String?,
+      receiverName: toUser?['full_name'] as String?,
+      receiverAccount: toUser?['phone'] as String?,
     );
   }
 }
