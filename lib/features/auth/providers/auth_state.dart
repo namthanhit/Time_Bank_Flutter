@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../data/auth_repository.dart';
 import '../../chat/providers/chat_providers.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../../notification/providers/notification_providers.dart';
 
 @immutable
 class AuthState {
@@ -187,8 +189,18 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     state = state.copyWith(loading: true);
 
-    final String? currentUid = _ref.read(currentUidProvider);
+    try {
 
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await _ref.read(notificationRepositoryProvider).deactivateFcmToken(fcmToken);
+        debugPrint('FCM token deactivated on logout.');
+      }
+    } catch (e) {
+      debugPrint('Error deactivating FCM token during logout: $e');
+    }
+
+    final String? currentUid = _ref.read(currentUidProvider);
     try {
       if (currentUid != null) {
         final db = FirebaseDatabase.instance;

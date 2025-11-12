@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_bank_flutter/features/home/providers/home_providers.dart';
+import '../../providers/home_providers.dart';
 import '../widgets/hero_section.dart';
 import '../../../notification/ui/notification_page.dart';
 

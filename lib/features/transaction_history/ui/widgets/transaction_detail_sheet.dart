@@ -67,12 +67,12 @@ class TransactionDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _sectionTitle('Chuyển khoản từ'),
-              _kv('Tên tài khoản', entry.senderName),
-              _kv('Số tài khoản', entry.senderAccount),
+              _kv('Tên tài khoản', entry.senderName ?? '---'),
+              _kv('Số tài khoản', entry.senderAccount ?? '---'),
               const SizedBox(height: 12),
               _sectionTitle('Chuyển khoản đến'),
-              _kv('Tên tài khoản', entry.receiverName),
-              _kv('Số tài khoản', entry.receiverAccount),
+              _kv('Tên tài khoản', entry.receiverName ?? '---'),
+              _kv('Số tài khoản', entry.receiverAccount ?? '---'),
               _kv('Nội dung', entry.note ?? '-'),
               const SizedBox(height: 12),
               _kv('Thời gian', '${entry.formattedDate}   ${entry.formattedTime}'),
@@ -113,7 +113,7 @@ class TransactionDetailSheet extends StatelessWidget {
     ),
   );
 
-  String _statusLabel(TransferStatus s) {
+  String _statusLabel(TransferStatus? s) {
     switch (s) {
       case TransferStatus.pending:
         return 'Đang xử lý';
@@ -123,6 +123,8 @@ class TransactionDetailSheet extends StatelessWidget {
         return 'Đã hủy';
       case TransferStatus.failed:
         return 'Thất bại';
+      case null:
+        return 'Hoàn tất';
     }
   }
 }

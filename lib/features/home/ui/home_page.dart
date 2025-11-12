@@ -10,6 +10,7 @@ import 'package:time_bank_flutter/features/qr/ui/qr_scanner_page.dart';
 import 'package:time_bank_flutter/features/home/providers/home_providers.dart';
 import 'package:time_bank_flutter/features/service/providers/service_providers.dart';
 import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
+import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -36,17 +37,14 @@ class HomePage extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Trigger provider refresh and wait for both to complete (silently ignore errors)
         try {
-          // Invalidate summary and activities. Also invalidate the user's jobs
-          // provider so the service API is forced to reload immediately.
-          ref.invalidate(homeSummaryProvider);
+          ref.invalidate(accountBalanceProvider);
 
           try {
             final user = await ref.read(userProfileProvider.future);
             ref.invalidate(myJobsProvider(user.id));
           } catch (_) {
-            // ignore if user not logged in or profile fetch failed
+
           }
 
           ref.invalidate(activitiesProvider);
@@ -56,14 +54,13 @@ class HomePage extends ConsumerWidget {
             ref.read(activitiesProvider.future),
           ]);
         } catch (_) {
-          // ignore errors here; HeroSection will show retry UI if needed
         }
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
-            const HeroSectionContainer(), // lo fetch + error/loading
+            const HeroSectionContainer(),
             Transform.translate(
               offset: const Offset(0, -26),
               child: Container(
@@ -87,7 +84,6 @@ class HomePage extends ConsumerWidget {
                       onTransfer: () {
                         Navigator.push(
                           context,
-                          // Mở trang Transfer không có SĐT
                           MaterialPageRoute(
                               builder: (_) => const TransferPage()),
                         );
@@ -95,10 +91,10 @@ class HomePage extends ConsumerWidget {
                       onQr: () => _openQrScanner(context),
                     ),
                     const SizedBox(height: 12),
-                    // new promo banners section between QuickActions and Activities
+
                     const PromoBanners(),
                     ShadowSeparator(),
-                    ActivitiesSectionContainer(), // lo fetch + error/loading
+                    ActivitiesSectionContainer(),
                   ],
                 ),
               ),
