@@ -1,39 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:time_bank_flutter/features/service/data/mock_service_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:time_bank_flutter/features/service/domain/models/offer.dart';
+import 'package:time_bank_flutter/features/service/providers/service_providers.dart';
 
-class ApplicantDetailFullPage extends StatelessWidget {
-  final Map<String, dynamic> applicant;
+class ApplicantDetailFullPage extends ConsumerStatefulWidget {
+  final Offer offer;
 
-  const ApplicantDetailFullPage({super.key, required this.applicant});
+  const ApplicantDetailFullPage({super.key, required this.offer});
+
+  @override
+  ConsumerState<ApplicantDetailFullPage> createState() =>
+      _ApplicantDetailFullPageState();
+}
+
+class _ApplicantDetailFullPageState
+    extends ConsumerState<ApplicantDetailFullPage> {
+  bool _isLoading = false;
+  String _formatDuration(int totalMinutes) {
+    final duration = Duration(minutes: totalMinutes);
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
+  String _formatDateTime(DateTime dt) {
+    return DateFormat('HH:mm dd/MM/yyyy').format(dt);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final requestType = (applicant['requestType'] ?? 'receive').toString();
-    final appBarTitle = requestType == 'receive'
-        ? 'Yêu cầu nhận dịch vụ'
-        : 'Yêu cầu hủy dịch vụ';
+    final refLocal = ref;
+    final offer = widget.offer;
 
-    final service =
-        MockServiceRepository.getServiceById(applicant['serviceId']);
-    final serviceName = service?.title ?? 'Chưa có thông tin';
-    final duration = service != null
-        ? MockServiceRepository.formatDuration(service.minSlotMinutes)
-        : '00:00:00';
+    final bool isWithdrawRequest = offer.status == 'withdrawn';
 
-    // Detail page location fallback (place or regionCode)
-    String detailLocation = '';
-    if (service != null) {
-      detailLocation = (service.place.trim().isNotEmpty)
-          ? service.place
-          : (service.regionCode ?? '');
-    }
+    final appBarTitle = isWithdrawRequest
+        ? 'Yêu cầu hủy dịch vụ'
+        : 'Yêu cầu nhận dịch vụ';
 
-    String jobCreatedTime = 'Chưa có thông tin';
-    if (service?.createdAt != null) {
-      final createdAt = service!.createdAt;
-      jobCreatedTime =
-          '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}';
-    }
+    final greenButtonText = isWithdrawRequest ? 'Duyệt hủy' : 'Duyệt yêu cầu';
+    final redButtonText = isWithdrawRequest ? 'Từ chối hủy' : 'Từ chối';
+
+    final serviceName = offer.jobTitle;
+    final duration = _formatDuration(offer.time);
+    final detailLocation =
+    offer.place.trim().isNotEmpty ? offer.place : offer.regionCode;
+    final jobCreatedTime = _formatDateTime(offer.preferredStart);
 
     return Scaffold(
       appBar: AppBar(
@@ -60,12 +75,12 @@ class ApplicantDetailFullPage extends StatelessWidget {
                   CircleAvatar(
                     radius: 35,
                     backgroundColor: const Color(0xFF003E77),
-                    backgroundImage: applicant['avatar'] != null
-                        ? NetworkImage(applicant['avatar'])
+                    backgroundImage: offer.offerUserAvatar != null
+                        ? NetworkImage(offer.offerUserAvatar!)
                         : null,
-                    child: applicant['avatar'] == null
+                    child: offer.offerUserAvatar == null
                         ? const Icon(Icons.person,
-                            color: Colors.white, size: 35)
+                        color: Colors.white, size: 35)
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -73,43 +88,12 @@ class ApplicantDetailFullPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(applicant['name'] ?? '',
+                        Text(offer.offerUserName,
                             style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF003E77))),
                         const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Text('Chuyên môn:',
-                                style: TextStyle(
-                                    fontSize: 12, color: Color(0xFF003E77))),
-                            const SizedBox(width: 6),
-                            Expanded(
-                                child: _SpecializationTagsInline(
-                                    specializations:
-                                        applicant['specialization'])),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            ...List.generate(5, (starIndex) {
-                              return Icon(
-                                  starIndex < (applicant['rating'] ?? 0).floor()
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  size: 16,
-                                  color: const Color(0xFFE6E609));
-                            }),
-                            const SizedBox(width: 8),
-                            Text('${applicant['rating'] ?? 0}',
-                                style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF003E77))),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -127,7 +111,7 @@ class ApplicantDetailFullPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration:
-                    BoxDecoration(borderRadius: BorderRadius.circular(12)),
+                BoxDecoration(borderRadius: BorderRadius.circular(12)),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -153,29 +137,29 @@ class ApplicantDetailFullPage extends StatelessWidget {
                           valueStyle: const TextStyle(
                               fontSize: 20,
                               color: Color(0xFFCC0404),
-                              fontWeight: FontWeight.bold
-                          )),
+                              fontWeight: FontWeight.bold)),
                       const SizedBox(height: 14),
                       if (detailLocation.isNotEmpty) ...[
                         _InfoRow(label: 'Địa điểm:', value: detailLocation),
                         const SizedBox(height: 14),
                       ],
-                      // const SizedBox(height: 14),
                       const Text('Ghi chú:',
                           style: TextStyle(
                               fontSize: 16, color: Color(0xFF003E77))),
                       const SizedBox(height: 8),
                       TextField(
+                          controller: TextEditingController(text: offer.note),
+                          readOnly: true,
                           maxLines: 4,
                           decoration: InputDecoration(
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide:
-                                      BorderSide(color: Colors.grey[300]!)),
+                                  BorderSide(color: Colors.grey[300]!)),
                               focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide:
-                                      BorderSide(color: Colors.grey[300]!)),
+                                  BorderSide(color: Colors.grey[300]!)),
                               contentPadding: const EdgeInsets.all(12))),
                     ]),
               ),
@@ -183,62 +167,108 @@ class ApplicantDetailFullPage extends StatelessWidget {
               Row(children: [
                 Expanded(
                     child: ElevatedButton.icon(
-                        onPressed: () {
-                          // Approve logic
-                          final requestType =
-                              applicant['requestType'] ?? 'receive';
-                          final isReceiveRequest = requestType == 'receive';
-                          Navigator.pop(context);
-                          if (isReceiveRequest) {
-                            MockServiceRepository.approveApplicant(
-                                applicant['serviceId'], applicant);
-                          } else {
-                            MockServiceRepository.approveCancelRequest(
-                                applicant['serviceId']);
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                          setState(() => _isLoading = true);
+                          try {
+                            final statusToUpdate = isWithdrawRequest
+                                ? 'cancelled'
+                                : 'accepted';
+
+                            await refLocal.read(
+                                updateOfferStatusAcceptedProvider((
+                                offerId: offer.id,
+                                jobId: offer.jobId,
+                                status: statusToUpdate
+                                )).future);
+                            Navigator.pop(context);
+                            refLocal.invalidate(allMyPendingOffersProvider);
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'Lỗi duyệt yêu cầu: ${e.toString()}')));
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isLoading = false);
+                            }
                           }
                         },
-                        label: const Text('Duyệt yêu cầu',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold,
+                        icon: _isLoading
+                            ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const SizedBox.shrink(),
+                        label: Text(greenButtonText,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                                 color: Colors.white)),
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ))),
-
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            )))),
               ]),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                       child: ElevatedButton(
-                          onPressed: () {
-                            final requestType =
-                                applicant['requestType'] ?? 'receive';
-                            final isReceiveRequest = requestType == 'receive';
-                            Navigator.pop(context);
-                            if (isReceiveRequest) {
-                              MockServiceRepository.resetApplication(
-                                  applicant['serviceId']);
-                            } else {
-                              MockServiceRepository.rejectCancelRequest(
-                                  applicant['serviceId']);
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                            setState(() => _isLoading = true);
+                            try {
+                              final statusToUpdate = isWithdrawRequest
+                                  ? 'accepted'
+                                  : 'rejected';
+
+                              await refLocal.read(
+                                  updateOfferStatusRejectedProvider((
+                                  offerId: offer.id,
+                                  jobId: offer.jobId,
+                                  status: statusToUpdate
+                                  )).future);
+                              Navigator.pop(context);
+                              refLocal.invalidate(allMyPendingOffersProvider);
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'Lỗi từ chối yêu cầu: ${e.toString()}')));
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isLoading = false);
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8))
-                          ),
-                          child: const Text('Từ chối',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold,
-                                  color: Colors.white),
-
+                                  borderRadius: BorderRadius.circular(8))),
+                          child: _isLoading
+                              ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : Text(
+                            redButtonText,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
                           ))),
-
                 ],
               )
             ],
@@ -272,32 +302,5 @@ class _InfoRow extends StatelessWidget {
               softWrap: false,
               overflow: TextOverflow.ellipsis)),
     ]);
-  }
-}
-
-class _SpecializationTagsInline extends StatelessWidget {
-  final String? specializations;
-  const _SpecializationTagsInline({this.specializations});
-
-  @override
-  Widget build(BuildContext context) {
-    if (specializations == null || specializations!.isEmpty) {
-      return const Text('Chưa có thông tin',
-          style: TextStyle(color: Colors.grey));
-    }
-    final tags = specializations!.split(',').map((e) => e.trim()).toList();
-    return Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        children: tags
-            .map((t) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                    color: const Color(0xFFE0DC06),
-                    borderRadius: BorderRadius.circular(5)),
-                child: Text(t,
-                    style: const TextStyle(
-                        fontSize: 10, color: Color(0xFF000000)))))
-            .toList());
   }
 }

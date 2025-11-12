@@ -44,6 +44,12 @@ class MockServiceRepository implements ServiceRepository {
     if (skillId == null) return null;
     return skillNames[skillId];
   }
+  @override
+  Future<List<Offer>> fetchMyPendingOffers() async {
+    // Trả về một danh sách rỗng để mô phỏng
+    await Future.delayed(const Duration(milliseconds: 300));
+    return [];
+  }
 
   @override
   Future<void> updateOfferStatusAccepted(

@@ -113,10 +113,29 @@ class ApiServiceRepository implements ServiceRepository {
   }
 
   @override
+  Future<List<Offer>> fetchMyPendingOffers() async {
+    const path = '/offers/me/pending-offers';
+    final res = await _api.get(path);
+
+    _ensureOK(res);
+
+    final List<dynamic> jobList = json.decode(utf8.decode(res.bodyBytes));
+
+    final List<Offer> allOffers = [];
+    for (final jobJson in jobList) {
+      if (jobJson is Map<String, dynamic>) {
+        allOffers.addAll(Offer.fromJobJsonList(jobJson));
+      }
+    }
+
+    return allOffers;
+  }
+
+  @override
   Future<void> updateOfferStatusAccepted(
       {required String offerId,
-      required String jobId,
-      required String status}) async {
+        required String jobId,
+        required String status}) async {
     final path = 'offers/$offerId/me-job/$jobId/accept-offer';
     final res = await _api.patch(
       path,
@@ -129,8 +148,8 @@ class ApiServiceRepository implements ServiceRepository {
   @override
   Future<void> updateOfferStatusRejected(
       {required String offerId,
-      required String jobId,
-      required String status}) async {
+        required String jobId,
+        required String status}) async {
     final path = '/offers/$offerId/me-job/$jobId/reject-offer';
     final res = await _api.patch(
       path,
@@ -140,7 +159,6 @@ class ApiServiceRepository implements ServiceRepository {
     debugPrint('Offer status updated successfully: ${res.statusCode}');
   }
 
-  ///---------------
   @override
   Future<List<Service>> fetchPublicServices() async {
     final res = await _api.get('/services/public');

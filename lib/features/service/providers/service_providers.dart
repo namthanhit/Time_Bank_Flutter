@@ -12,27 +12,29 @@ final serviceRepositoryProvider = Provider<ServiceRepository>((ref) {
 });
 
 final myJobsProvider =
-    FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
+FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
   final repo = ref.watch(serviceRepositoryProvider);
   final pagingInfo = PaginationRequestDto(page: 1, pageSize: 10);
   return repo.getMyJobs(pagingInfo: pagingInfo);
 });
 
-/// Provider lấy 1 dịch vụ theo ID
 final serviceByIdProvider =
-    FutureProvider.family<Service?, String>((ref, id) async {
+FutureProvider.family<Service?, String>((ref, id) async {
   final repo = ref.watch(serviceRepositoryProvider);
   return repo.fetchServiceById(id);
 });
 
-/// Provider trạng thái (AsyncValue<List<Offer>>)
 final offerListProvider =
-    FutureProvider.family<List<Offer>, String>((ref, jobId) async {
+FutureProvider.family<List<Offer>, String>((ref, jobId) async {
   final repo = ref.watch(serviceRepositoryProvider);
   return repo.getOffersForMyJob(jobId);
 });
 
-/// Provider để cập nhật trạng thái offer
+final allMyPendingOffersProvider = FutureProvider<List<Offer>>((ref) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  return repo.fetchMyPendingOffers();
+});
+
 final updateOfferStatusAcceptedProvider = FutureProvider.family<void,
     ({String offerId, String jobId, String status})>((ref, params) async {
   final repo = ref.watch(serviceRepositoryProvider);
@@ -43,7 +45,6 @@ final updateOfferStatusAcceptedProvider = FutureProvider.family<void,
   );
 });
 
-/// Provider để cập nhật trạng thái offer
 final updateOfferStatusRejectedProvider = FutureProvider.family<void,
     ({String offerId, String jobId, String status})>((ref, params) async {
   final repo = ref.watch(serviceRepositoryProvider);

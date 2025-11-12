@@ -20,6 +20,8 @@ abstract class ServiceRepository {
 
   Future<List<Offer>> getOffersForMyJob(Object jobId);
 
+  Future<List<Offer>> fetchMyPendingOffers();
+
   Future<void> updateOfferStatusAccepted({
     required String offerId,
     required String jobId,
