@@ -115,9 +115,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
     // Nội dung chính: cuộn dọc
     return SingleChildScrollView(
-      // This SingleChildScrollView is nested inside the RefreshIndicator's scrollable,
-      // keep physics default here because the outer RefreshIndicator's SingleChildScrollView
-      // (in build) already sets AlwaysScrollableScrollPhysics.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
