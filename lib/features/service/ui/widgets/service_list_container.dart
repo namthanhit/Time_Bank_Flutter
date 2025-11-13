@@ -17,7 +17,7 @@ class ServiceListContainer extends ConsumerStatefulWidget {
     this.query,
     this.filter,
     this.socialFilter,
-    this.isMyServiceTab = false,
+    this.isMyServiceTab = true,
   });
 
   @override

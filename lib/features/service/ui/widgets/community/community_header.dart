@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:time_bank_flutter/features/service/ui/page/four_service_applicants_page.dart';
 import 'package:time_bank_flutter/features/service/ui/page/rating_page.dart';
-import '../create_page/service_create_page.dart';
+import '../../page/service_create_page.dart';
 
 class CommunityHeader extends StatefulWidget {
   final bool isMyTab;

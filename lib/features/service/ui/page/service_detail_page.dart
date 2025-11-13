@@ -17,9 +17,9 @@ class ServiceDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isMyService) {
-      return CommunityServiceDetailPage(serviceId: serviceId);
-    } else {
       return MyServiceDetailPage(serviceId: serviceId);
+    } else {
+      return CommunityServiceDetailPage(serviceId: serviceId);
     }
   }
 }

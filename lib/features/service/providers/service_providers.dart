@@ -12,7 +12,7 @@ final serviceRepositoryProvider = Provider<ServiceRepository>((ref) {
 });
 
 final myJobsProvider =
-FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
+    FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
   final repo = ref.watch(serviceRepositoryProvider);
   final pagingInfo = PaginationRequestDto(page: 1, pageSize: 10);
   return repo.getMyJobs(pagingInfo: pagingInfo);
@@ -28,7 +28,7 @@ final findJobCommunityProvider =
 
 /// Provider lấy 1 dịch vụ theo ID
 final serviceByIdProvider =
-FutureProvider.family<Service?, String>((ref, id) async {
+    FutureProvider.family<Service?, String>((ref, id) async {
   final repo = ref.watch(serviceRepositoryProvider);
   return repo.fetchServiceById(id);
 });
@@ -42,7 +42,7 @@ final detailJobCommunityByIdProvider =
 
 /// Provider trạng thái (AsyncValue<List<Offer>>)
 final offerListProvider =
-FutureProvider.family<List<Offer>, String>((ref, jobId) async {
+    FutureProvider.family<List<Offer>, String>((ref, jobId) async {
   final repo = ref.watch(serviceRepositoryProvider);
   return repo.getOffersForMyJob(jobId);
 });
@@ -69,5 +69,29 @@ final updateOfferStatusRejectedProvider = FutureProvider.family<void,
     offerId: params.offerId,
     jobId: params.jobId,
     status: params.status,
+  );
+});
+
+/// Provider gọi API tạo job
+final createJobProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+        (ref, params) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  final dynamic imageUrlsParam = params['imageUrls'];
+  List<String>? imageUrls;
+  if (imageUrlsParam is List) {
+    imageUrls = imageUrlsParam.cast<String>();
+  }
+  return repo.createJob(
+    title: params['title'],
+    description: params['description'],
+    regionCode: params['regionCode'],
+    place: params['place'],
+    time: params['time'],
+    slot: params['slot'],
+    visibility: params['visibility'],
+    skills: (params['skills'] as List<dynamic>).cast<String>(),
+    preferredStartTime: params['preferredStartTime'],
+    imageUrls: imageUrls,
   );
 });

@@ -44,6 +44,7 @@ class MockServiceRepository implements ServiceRepository {
     if (skillId == null) return null;
     return skillNames[skillId];
   }
+
   @override
   Future<List<Offer>> fetchMyPendingOffers() async {
     // Trả về một danh sách rỗng để mô phỏng
@@ -79,11 +80,27 @@ class MockServiceRepository implements ServiceRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> createJob({
+    required String title,
+    required String description,
+    required String regionCode,
+    required String place,
+    required int time,
+    required int slot,
+    required String visibility,
+    required List<String> skills,
+    required String preferredStartTime,
+    List<String>? imageUrls,
+  }) async {
+      const path = '/jobs';
+      return {};
+  }
+
+  @override
   Future<Service?> getdetaillJobCommunityById(Object jobId) async {
     final id = jobId.toString();
     final path = '/jobs/$id';
-    try {
-    } catch (e, st) {
+    try {} catch (e, st) {
       debugPrint('getdetaillJobCommunityById: error fetching $path -> $e\n$st');
       rethrow;
     }

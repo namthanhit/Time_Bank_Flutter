@@ -2,7 +2,7 @@
 import 'package:time_bank_flutter/features/service/ui/page/search_page.dart';
 import '../widgets/service_list_container.dart';
 import '../widgets/community/community_header.dart';
-import '../widgets/create_page/service_create_page.dart';
+import 'service_create_page.dart';
 import '../widgets/service_list_container_community.dart';
 
 class ServicePage extends StatefulWidget {
