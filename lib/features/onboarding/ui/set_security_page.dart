@@ -37,11 +37,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         SnackBar(content: Text('Tạo tài khoản thành công: $userId')),
       );
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-            (route) => false,
-      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
     }
   }
