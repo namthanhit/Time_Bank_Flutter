@@ -109,9 +109,19 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
                           ? e.toString().replaceFirst("Exception: ", "")
                           : 'Lỗi không xác định';
 
-                      if (rawError.toLowerCase().contains('pin không đúng') || rawError.toLowerCase().contains('403')) {
+                      if (rawError.contains("Sai PIN quá 5 lần") ||
+                          rawError.contains("Khóa 5 phút")) {
+                        errorMsg = "Bạn đã nhập sai PIN nhiều lần. Vui lòng thử lại sau 5 phút.";
+                      }
+                      else if (rawError.toLowerCase().contains('PIN đang bị khóa tạm thời, thử lại sau') ||
+                          rawError.toLowerCase().contains('403')) {
+                        errorMsg = "PIN đang bị khóa tạm thời, thử lại sau";
+                      }
+                      else if (rawError.toLowerCase().contains('pin không đúng') ||
+                          rawError.toLowerCase().contains('403')) {
                         errorMsg = "Sai mã PIN. Vui lòng thử lại.";
-                      } else {
+                      }
+                      else {
                         errorMsg = "Đã xảy ra lỗi. Vui lòng thử lại.";
                       }
                     }
