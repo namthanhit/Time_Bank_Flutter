@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 class PinVerificationDialog extends StatefulWidget {
-
   final Future<void> Function(String pin)? onSubmit;
 
   const PinVerificationDialog({super.key, this.onSubmit});
@@ -100,21 +99,26 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
                     try {
                       print('PIN DIALOG: Calling widget.onSubmit...');
                       await widget.onSubmit?.call(value);
-                      print('PIN DIALOG: widget.onSubmit finished successfully.');
+                      print(
+                          'PIN DIALOG: widget.onSubmit finished successfully.');
                       success = true;
-
-
                     } catch (e) {
                       print('PIN DIALOG: Error caught: $e');
                       success = false;
-                      errorMsg = (e is Exception)
+                      final rawError = (e is Exception)
                           ? e.toString().replaceFirst("Exception: ", "")
                           : 'Lỗi không xác định';
+
+                      if (rawError.toLowerCase().contains('pin không đúng') || rawError.toLowerCase().contains('403')) {
+                        errorMsg = "Sai mã PIN. Vui lòng thử lại.";
+                      } else {
+                        errorMsg = "Đã xảy ra lỗi. Vui lòng thử lại.";
+                      }
                     }
 
-
                     if (!mounted) {
-                      print('PIN DIALOG: Widget unmounted after await, skipping UI updates.');
+                      print(
+                          'PIN DIALOG: Widget unmounted after await, skipping UI updates.');
                       return;
                     }
 
@@ -135,7 +139,9 @@ class _PinVerificationDialogState extends State<PinVerificationDialog> {
               ] else ...[
                 const SizedBox(height: 24),
                 Text(
-                  hasError ? _errorMessage : 'Vui lòng nhập mã PIN để xác thực giao dịch',
+                  hasError
+                      ? _errorMessage
+                      : 'Vui lòng nhập mã PIN để xác thực giao dịch',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: hasError ? Colors.red : Colors.black87,
