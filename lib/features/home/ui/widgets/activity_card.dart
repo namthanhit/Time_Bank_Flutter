@@ -9,18 +9,25 @@ class ActivityCard extends StatelessWidget {
     required this.activity,
     this.onTap,
     this.onMoreTap,
+    this.horizontalPadding = 16.0,
+    this.verticalPadding = 8.0,
+    this.compact = false,
   });
 
   final Activity activity;
   final VoidCallback? onTap;
   final VoidCallback? onMoreTap;
+  // Optional layout tweaks for compact mode (used by profile services list)
+  final double horizontalPadding;
+  final double verticalPadding;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     // status removed for this card; keep helper in case needed later
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
@@ -49,7 +56,12 @@ class ActivityCard extends StatelessWidget {
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                  padding: EdgeInsets.fromLTRB(
+                    compact ? 12 : 14,
+                    compact ? 10 : 12,
+                    compact ? 12 : 14,
+                    compact ? 8 : 10,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -58,7 +70,7 @@ class ActivityCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           CircleAvatar(
-                            radius: 24,
+                            radius: compact ? 20 : 24,
                             backgroundColor: Colors.blue.shade100,
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
@@ -96,7 +108,7 @@ class ActivityCard extends StatelessWidget {
                                     ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: compact ? 8 : 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

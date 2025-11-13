@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:time_bank_flutter/features/profile/ui/other_profile_page.dart';
+import 'package:time_bank_flutter/features/profile/ui/profile_page.dart';
+import 'package:time_bank_flutter/features/profile/providers/providers.dart';
+import 'package:time_bank_flutter/features/profile/domain/profile.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../../domain/models/service.dart';
 import '../../../providers/service_providers.dart';
@@ -24,8 +28,7 @@ class CommunityServiceDetailPage extends ConsumerStatefulWidget {
 class _CommunityServiceDetailPageState
     extends ConsumerState<CommunityServiceDetailPage>
     with WidgetsBindingObserver {
-  int _requestState =
-      0; // 0: None, 1: Pending, 2: Cancelled, 3: Approved
+  int _requestState = 0;
   bool _isFavorited = false;
   int _currentImageIndex = 0;
   PageController? _pageController;
@@ -36,8 +39,7 @@ class _CommunityServiceDetailPageState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _pageController =
-        PageController(viewportFraction: 1.0);
+    _pageController = PageController(viewportFraction: 1.0);
     _loadSavedStates();
   }
 
@@ -76,6 +78,7 @@ class _CommunityServiceDetailPageState
     _noteController.dispose();
     super.dispose();
   }
+
   void refreshApplicationStatus() {
     _loadApplicationStatus();
   }
@@ -128,7 +131,8 @@ class _CommunityServiceDetailPageState
 
   @override
   Widget build(BuildContext context) {
-    final serviceAsync = ref.watch(detailJobCommunityByIdProvider(widget.serviceId));
+    final serviceAsync =
+        ref.watch(detailJobCommunityByIdProvider(widget.serviceId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -144,7 +148,7 @@ class _CommunityServiceDetailPageState
       body: serviceAsync.when(
         data: (service) => service != null
             ? _buildContent(service)
-            : const Center(child: Text('Không tìm thấy dịch vụ.')), 
+            : const Center(child: Text('Không tìm thấy dịch vụ.')),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
@@ -156,7 +160,6 @@ class _CommunityServiceDetailPageState
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  // Cung cấp cách refresh lại provider
                   ref.refresh(detailJobCommunityByIdProvider(widget.serviceId));
                 },
                 child: const Text('Thử lại'),
@@ -178,7 +181,7 @@ class _CommunityServiceDetailPageState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16), // Khoảng cách từ AppBar
+          const SizedBox(height: 16),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             child: ServiceDetailHeader(
@@ -186,8 +189,7 @@ class _CommunityServiceDetailPageState
               isMyService: false,
               isFavorited: _isFavorited,
               onFavoritePressed: _toggleFavorite,
-              showAllSpecializations:
-                  true, // Hiển thị tất cả trong trang chi tiết
+              showAllSpecializations: true,
             ),
           ),
           const SizedBox(height: 20),
@@ -200,7 +202,52 @@ class _CommunityServiceDetailPageState
     );
   }
 
+  void _goToProfile(BuildContext context, String serviceUserId,
+      {String? providerName, String? providerAvatar, String? description}) {
+    final myProfileId = ref.read(myProfileProvider).value?.id;
+    debugPrint(
+        'Profile navigation: serviceUserId=$serviceUserId, myProfileId=$myProfileId');
+
+    if (myProfileId != null && serviceUserId == myProfileId) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ProfilePage(),
+        ),
+      );
+    } else {
+      debugPrint('Navigating to OtherProfilePage: userId=$serviceUserId, '
+          'providerName=${providerName ?? '<null>'}, '
+          'providerAvatar=${providerAvatar ?? '<null>'}');
+
+      final previewProfile = Profile(
+        id: serviceUserId,
+        name: providerName ?? 'Người dùng',
+        phone: '',
+        avatarUrl: providerAvatar,
+        description: description ?? '',
+        points: 0,
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OtherProfilePage(
+            userId: serviceUserId,
+            initialName: providerName,
+            initialAvatarUrl: providerAvatar,
+            initialDescription: description,
+            initialProfile: previewProfile,
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildServiceBox(Service service) {
+    final followersAsync = ref.watch(followersCountProvider(service.userId));
+    final followingAsync = ref.watch(followingCountProvider(service.userId));
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -229,55 +276,71 @@ class _CommunityServiceDetailPageState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User info row
           Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: const Color(0xFF003E77),
-                backgroundImage: service.providerAvatar != null && service.providerAvatar!.isNotEmpty
-                    ? NetworkImage(service.providerAvatar!)
-                    : null,
-                child: (service.providerAvatar == null || service.providerAvatar!.isEmpty)
-                    ? Text(
-                        service.providerName?.substring(0, 1).toUpperCase() ??
-                            'U',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      )
-                    : null,
+              GestureDetector(
+                onTap: () => _goToProfile(context, service.userId,
+                    providerName: service.providerName,
+                    providerAvatar: service.providerAvatar,
+                    description:
+                        service.providerSpecialization ?? service.description),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: const Color(0xFF003E77),
+                  backgroundImage: service.providerAvatar != null &&
+                          service.providerAvatar!.isNotEmpty
+                      ? NetworkImage(service.providerAvatar!)
+                      : null,
+                  child: (service.providerAvatar == null ||
+                          service.providerAvatar!.isEmpty)
+                      ? Text(
+                          service.providerName?.substring(0, 1).toUpperCase() ??
+                              'U',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        )
+                      : null,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      service.providerName ??
-                          'Người cung cấp #${service.userId}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        color: Color(0xFF003E77),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _goToProfile(context, service.userId,
+                      providerName: service.providerName,
+                      providerAvatar: service.providerAvatar,
+                      description: service.providerSpecialization ??
+                          service.description),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service.providerName ??
+                            'Người cung cấp #${service.userId}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: Color(0xFF003E77),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatTimeAgo(service.createdAt),
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatTimeAgo(service.createdAt),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8), // Nền trắng mờ
+                  color: Colors.white.withOpacity(0.8),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
@@ -285,25 +348,23 @@ class _CommunityServiceDetailPageState
                   _navigateToChat(service);
                 },
                   icon: const Icon(
-                    Icons.chat_bubble_outline, // Icon chat như ban đầu
+                    Icons.chat_bubble_outline,
                     color: Color(0xFF003E77),
                     size: 25,
                   ),
-                  splashRadius: 20, // Giảm hiệu ứng splash
-                  highlightColor: Colors.transparent, // Loại bỏ highlight
-                  splashColor: Colors.grey.withOpacity(0.1), // Splash nhẹ
+                  splashRadius: 20,
+                  highlightColor: Colors.transparent,
+                  splashColor: Colors.grey.withOpacity(0.1),
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Stats row
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Đã follow', '125'), // TODO: Cần API
+                child: _buildStatItem(
+                    'Đã follow', followingAsync.value?.toString() ?? '...'),
               ),
               Container(
                 width: 1,
@@ -319,14 +380,12 @@ class _CommunityServiceDetailPageState
                 color: Colors.grey[300],
               ),
               Expanded(
-                child: _buildStatItem('Follower', '1.2K'), // TODO: Cần API
+                child: _buildStatItem(
+                    'Follower', followersAsync.value?.toString() ?? '...'),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Description section
           const Text(
             'Mô tả:',
             style: TextStyle(
@@ -344,12 +403,9 @@ class _CommunityServiceDetailPageState
               height: 1.5,
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Service images (hiển thị có điều kiện - chỉ khi có ảnh)
           if (service.serviceImages != null &&
               service.serviceImages!.isNotEmpty) ...[
+            const SizedBox(height: 16),
             const Text(
               'Hình ảnh minh họa:',
               style: TextStyle(
@@ -360,7 +416,7 @@ class _CommunityServiceDetailPageState
             ),
             const SizedBox(height: 12),
             Container(
-              height: 200, // Tăng chiều cao từ 120 lên 200
+              height: 200,
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (index) {
@@ -373,7 +429,7 @@ class _CommunityServiceDetailPageState
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      width: double.infinity, // Chiếm toàn bộ chiều rộng
+                      width: double.infinity,
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: const Color(0xFF003E77).withOpacity(0.1),
@@ -492,7 +548,7 @@ class _CommunityServiceDetailPageState
   }
 
   Widget _buildActionRow(Service service) {
-    if (_requestState == 3) { // Approved
+    if (_requestState == 3) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -528,7 +584,7 @@ class _CommunityServiceDetailPageState
         ),
       );
     }
-    if (_requestState == 2) { // Cancelled
+    if (_requestState == 2) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         width: double.infinity,
@@ -551,14 +607,14 @@ class _CommunityServiceDetailPageState
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: _requestState == 1 // Pending
+      child: _requestState == 1
           ? Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green, // Đã gửi nên dùng màu xanh
+                      backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       shape: RoundedRectangleBorder(
@@ -584,12 +640,12 @@ class _CommunityServiceDetailPageState
                 ),
               ],
             )
-          : SizedBox( // State 0: None
+          : SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => _showConfirmationDialog(service),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // Nút "Chấp nhận"
+                  backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   shape: RoundedRectangleBorder(
@@ -603,7 +659,7 @@ class _CommunityServiceDetailPageState
             ),
     );
   }
-  
+
   void _showCancelConfirmationDialog() {
     showDialog(
       context: context,
@@ -658,7 +714,6 @@ class _CommunityServiceDetailPageState
     );
   }
 
-
   void _showConfirmationDialog(Service service) {
     showModalBottomSheet(
       context: context,
@@ -681,7 +736,6 @@ class _CommunityServiceDetailPageState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Handle bar
                 Container(
                   width: 40,
                   height: 4,
@@ -700,7 +754,6 @@ class _CommunityServiceDetailPageState
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Local asset image
                 Image.asset(
                   'assets/images/image 2.png',
                   width: 100,
@@ -804,7 +857,7 @@ class _CommunityServiceDetailPageState
     setState(() {
       _isFavorited = !_isFavorited;
     });
-    _saveFavoriteState(); 
+    _saveFavoriteState();
   }
 
   void _requestService() {
@@ -887,7 +940,6 @@ class _CommunityServiceDetailPageState
     } else if (diff.inDays < 30) {
       return '${diff.inDays} ngày trước';
     } else {
-      // Làm tròn tháng
       final months = (diff.inDays / 30).round();
       if (months <= 0) return '${diff.inDays} ngày trước';
       return '$months tháng trước';

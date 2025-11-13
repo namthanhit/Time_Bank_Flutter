@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'widgets/account_header.dart';
-
 import 'change_password_page.dart';
 import 'change_pin_flow.dart';
 import '../../auth/providers/auth_providers.dart';
-
+import '../../profile/ui/profile_page.dart';
 
 const Color kPrimaryColor = Color(0xFF1A3870);
 const Color kAccentColor = Color(0xFF007BFF);
@@ -69,7 +67,11 @@ class SettingsPage extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.person_outline,
                       title: 'Hồ sơ cá nhân',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const ProfilePage()),
+                        );
+                      },
                     ),
                     _SettingsTile(
                       icon: Icons.notifications_none,

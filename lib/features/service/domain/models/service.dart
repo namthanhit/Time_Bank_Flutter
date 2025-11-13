@@ -83,16 +83,19 @@ class Service {
 
     final user = json['user'];
     final providerName =
-        user is Map<String, dynamic> ? user['full_name'] as String? : null;
+    user is Map<String, dynamic> ? user['full_name'] as String? : null;
     final providerAvatar =
-        user is Map<String, dynamic> ? user['avatar_url'] as String? : null;
+    user is Map<String, dynamic> ? user['avatar_url'] as String? : null;
+
+    final providerId =
+    user is Map<String, dynamic> ? user['id'] as String? : null;
 
     List<String>? skillIds;
     List<String>? skillNames;
 
     if (json['skills'] is List) {
       final skills =
-          (json['skills'] as List).whereType<Map<String, dynamic>>().toList();
+      (json['skills'] as List).whereType<Map<String, dynamic>>().toList();
       skillIds = skills.map((e) => e['id']?.toString() ?? '').toList();
       skillNames = skills
           .map((e) => e['name']?.toString() ?? '')
@@ -100,7 +103,6 @@ class Service {
           .toList();
     }
 
-    // Convert skillNames to a readable specialization string
     final providerSpecialization = (skillNames != null && skillNames.isNotEmpty)
         ? skillNames.join(', ')
         : null;
@@ -110,9 +112,9 @@ class Service {
       images = (json['serviceImages'] as List)
           .whereType<Map<String, dynamic>>()
           .map((e) {
-            final dynamic urlCandidate = e['url'] ?? e['image']?['url'];
-            return urlCandidate?.toString() ?? '';
-          })
+        final dynamic urlCandidate = e['url'] ?? e['image']?['url'];
+        return urlCandidate?.toString() ?? '';
+      })
           .where((url) => url.isNotEmpty)
           .toList();
     }
@@ -120,7 +122,7 @@ class Service {
     return Service(
       id: parseId(json['id'] ?? json['service_id']),
       userId:
-          parseId(json['user_id'] ?? json['provider_id'] ?? json['owner_id']),
+      parseId(providerId ?? json['user_id'] ?? json['provider_id'] ?? json['owner_id']),
       skillIds: skillIds,
       skillNames: skillNames,
       title: (json['title'] ?? '') as String,
@@ -143,7 +145,7 @@ class Service {
       serviceImages: images,
       minSlotMinutes: parseInt(json['min_slot_minutes']),
       isPublic:
-          json['is_public'] == true || (json['visibility'] ?? '') == 'public',
+      json['is_public'] == true || (json['visibility'] ?? '') == 'public',
     );
   }
 
