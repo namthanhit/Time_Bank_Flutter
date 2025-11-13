@@ -25,7 +25,7 @@ class _CommunityServiceDetailPageState
     extends ConsumerState<CommunityServiceDetailPage>
     with WidgetsBindingObserver {
   int _requestState =
-      0; // 0: None, 1: Pending, 2: Cancelled, 3: Approved
+      0;
   bool _isFavorited = false;
   int _currentImageIndex = 0;
   PageController? _pageController;
