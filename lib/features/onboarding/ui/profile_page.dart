@@ -46,7 +46,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
-  // ---------- Reset helpers ----------
   void _resetRegionSelections() {
     ref.read(selectedProvinceIdProvider.notifier).state = null;
     ref.read(selectedDistrictIdProvider.notifier).state = null;
@@ -84,7 +83,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() {});
   }
 
-  // ---------- UI helpers ----------
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -582,13 +580,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onPressed: state.loading
                                 ? null
                                 : () {
-                              _resetForm();
-                              Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginPage(),
-                                ),
-                                    (route) => false,
-                              );
+                              Navigator.of(context)
+                                  .popUntil((route) => route.isFirst);
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF0D1B4C),

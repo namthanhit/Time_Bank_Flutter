@@ -31,7 +31,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void dispose() {
     _resendTimer?.cancel();
-    _pinController.dispose();
     super.dispose();
   }
 
