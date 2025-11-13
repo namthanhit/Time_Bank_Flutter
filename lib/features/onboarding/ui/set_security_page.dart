@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class PinSetupScreen extends ConsumerStatefulWidget {
@@ -29,16 +28,86 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     ref.read(onboardingControllerProvider.notifier).setSecurity(pin: _pin);
 
     try {
-      final userId =
       await ref.read(onboardingControllerProvider.notifier).submitCreateAccount();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tạo tài khoản thành công: $userId')),
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.0),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                    size: 60.0,
+                  ),
+                  const SizedBox(height: 16.0),
+
+                  // 2. Tiêu đề
+                  const Text(
+                    'Thành công!',
+                    style: TextStyle(
+                      fontSize: 22.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                  const Text(
+                    'Bạn đã tạo tài khoản thành công.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24.0),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(dialogContext).pop();
+                      if (mounted) {
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0D1B4C), Color(0xFF0F58A1)],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        "OK",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       );
 
-      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Đã xảy ra lỗi: ${e.toString()}'),
+        ),
+      );
     }
   }
 

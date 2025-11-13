@@ -14,13 +14,13 @@ class OtpScreen extends ConsumerStatefulWidget {
 }
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
-  /// thời gian chờ để được bấm "Gửi lại mã" (giây)
   static const int _resendCooldownSec = 60;
 
   int _resendLeft = _resendCooldownSec;
   Timer? _resendTimer;
 
   String _otp = "";
+  final _pinController = TextEditingController();
 
   @override
   void initState() {
@@ -31,10 +31,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void dispose() {
     _resendTimer?.cancel();
+    _pinController.dispose();
     super.dispose();
   }
 
-  // ---------------- cooldown resend ----------------
   void _startResendCooldown() {
     _resendTimer?.cancel();
     setState(() => _resendLeft = _resendCooldownSec);
@@ -61,15 +61,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       );
       return;
     }
-    // gọi lại startWithPhone để Firebase gửi OTP + cập nhật verificationId/phoneToken
     try {
-      await ref.read(onboardingControllerProvider.notifier).startWithPhone(phone);
+      await ref
+          .read(onboardingControllerProvider.notifier)
+          .startWithPhone(phone);
+      _pinController.clear();
+      _otp = "";
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Đã gửi lại mã OTP")),
       );
-      _otp = "";
-      _startResendCooldown(); // reset đếm chờ resend
+      _startResendCooldown();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,12 +81,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     }
   }
 
-  // ---------------- verify ----------------
   Future<void> _verifyOtp() async {
     if (_otp.isEmpty || _otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng nhập đủ 6 số OTP")),
-      );
+      ref.read(onboardingControllerProvider.notifier).setManualError("Vui lòng nhập đủ 6 số OTP");
       return;
     }
 
@@ -91,7 +91,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
     final state = ref.read(onboardingControllerProvider);
     if (state.error == null && mounted) {
-      // OTP đã verify local → sang trang nhập thông tin
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -103,15 +102,21 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
 
-    // Lắng nghe lỗi để show SnackBar
-    ref.listen(onboardingControllerProvider, (prev, next) {
-      if (next.error != null && mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(next.error!)));
+    String? friendlyError;
+    if (state.error != null && !state.loading) {
+      if (state.error!.contains('invalid-verification-code')) {
+        friendlyError = "Mã OTP không đúng. Vui lòng thử lại.";
+      } else if (state.error!.contains('session-expired')) {
+        friendlyError = "Phiên xác thực hết hạn. Vui lòng gửi lại mã.";
+      } else if (state.error!.contains('Vui lòng nhập đủ 6 số OTP')) {
+        friendlyError = "Vui lòng nhập đủ 6 số OTP";
       }
-    });
+      else {
+        friendlyError = "Đã xảy ra lỗi không xác định. Vui lòng thử lại.";
+      }
+    }
 
-    final bool isBusy = state.loading; // loading chung từ controller
+    final bool isBusy = state.loading;
     final bool canResend = _resendLeft == 0 && !isBusy;
 
     return Scaffold(
@@ -129,7 +134,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Tiêu đề
                 const Text(
                   "Xác Thực OTP",
                   style: TextStyle(
@@ -151,8 +155,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       PinCodeTextField(
                         length: 6,
                         appContext: context,
+                        controller: _pinController,
                         onChanged: (value) {
                           _otp = value;
+                          if (state.error != null) {
+                            ref.read(onboardingControllerProvider.notifier).clearError();
+                          }
                         },
                         keyboardType: TextInputType.number,
                         inputFormatters: [
@@ -174,6 +182,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         ),
                       ),
 
+                      if (friendlyError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            friendlyError,
+                            style: const TextStyle(color: Colors.red, fontSize: 14),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
+
                       const SizedBox(height: 8),
 
                       Column(
@@ -184,7 +204,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 4),
-                          // hiển thị đếm để được gửi lại
                           Text(
                             _resendLeft > 0
                                 ? "Bạn có thể gửi lại OTP sau: ${_resendLeft}s"

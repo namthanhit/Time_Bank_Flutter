@@ -110,4 +110,19 @@ class OnboardingController extends StateNotifier<OnboardingState> {
       rethrow;
     }
   }
+
+  // --- BẮT ĐẦU CODE THÊM MỚI ---
+
+  /// Dùng để set lỗi thủ công từ UI (ví dụ: validate form)
+  void setManualError(String errorMsg) {
+    state = state.copyWith(error: errorMsg, loading: false);
+  }
+
+  /// Xóa lỗi hiện tại (ví dụ: khi người dùng bắt đầu nhập lại)
+  void clearError() {
+    // Chỉ set lại error, giữ nguyên các state khác
+    state = state.copyWith(error: null);
+  }
+
+// --- KẾT THÚC CODE THÊM MỚI ---
 }
