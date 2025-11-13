@@ -5,8 +5,8 @@ import 'package:time_bank_flutter/features/profile/ui/other_profile_page.dart';
 import 'package:time_bank_flutter/features/profile/ui/profile_page.dart';
 import 'package:time_bank_flutter/features/profile/providers/providers.dart';
 import 'package:time_bank_flutter/features/profile/domain/profile.dart';
-import '../../../data/mock_service_repository.dart';
 import '../../../domain/models/service.dart';
+import '../../../providers/offer_provider.dart';
 import '../../../providers/service_providers.dart';
 import 'service_detail_header.dart';
 import '../../../../chat/providers/chat_providers.dart';
@@ -28,7 +28,6 @@ class CommunityServiceDetailPage extends ConsumerStatefulWidget {
 class _CommunityServiceDetailPageState
     extends ConsumerState<CommunityServiceDetailPage>
     with WidgetsBindingObserver {
-  int _requestState = 0;
   bool _isFavorited = false;
   int _currentImageIndex = 0;
   PageController? _pageController;
@@ -43,34 +42,6 @@ class _CommunityServiceDetailPageState
     _loadSavedStates();
   }
 
-  void _loadApplicationStatus() {
-    final status = MockServiceRepository.getApplicationStatus(widget.serviceId);
-    if (mounted) {
-      setState(() {
-        switch (status) {
-          case 'pending':
-            _requestState = 1;
-            break;
-          case 'approved':
-            _requestState = 3;
-            break;
-          case 'cancelled':
-            _requestState = 2;
-            break;
-          case 'none':
-          default:
-            _requestState = 0;
-        }
-      });
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadApplicationStatus();
-  }
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -79,14 +50,10 @@ class _CommunityServiceDetailPageState
     super.dispose();
   }
 
-  void refreshApplicationStatus() {
-    _loadApplicationStatus();
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _loadApplicationStatus();
+      ref.invalidate(offerStatusProvider(widget.serviceId));
     }
   }
 
@@ -94,27 +61,9 @@ class _CommunityServiceDetailPageState
     final prefs = await SharedPreferences.getInstance();
     final isFavorited = prefs.getBool('favorite_${widget.serviceId}') ?? false;
 
-    final applicationStatus =
-        MockServiceRepository.getApplicationStatus(widget.serviceId);
-
     if (mounted) {
       setState(() {
         _isFavorited = isFavorited;
-
-        switch (applicationStatus) {
-          case 'pending':
-            _requestState = 1;
-            break;
-          case 'approved':
-            _requestState = 3;
-            break;
-          case 'cancelled':
-            _requestState = 2;
-            break;
-          case 'none':
-          default:
-            _requestState = 0;
-        }
       });
     }
   }
@@ -124,15 +73,17 @@ class _CommunityServiceDetailPageState
     await prefs.setBool('favorite_${widget.serviceId}', _isFavorited);
   }
 
-  Future<void> _saveRequestState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('request_state_${widget.serviceId}', _requestState);
+  Future<void> _handleRefresh() async {
+    ref.refresh(detailJobCommunityByIdProvider(widget.serviceId));
+    ref.invalidate(offerStatusProvider(widget.serviceId));
+    await ref.read(detailJobCommunityByIdProvider(widget.serviceId).future);
   }
 
   @override
   Widget build(BuildContext context) {
     final serviceAsync =
         ref.watch(detailJobCommunityByIdProvider(widget.serviceId));
+    final offerStatusAsync = ref.watch(offerStatusProvider(widget.serviceId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -147,7 +98,7 @@ class _CommunityServiceDetailPageState
       ),
       body: serviceAsync.when(
         data: (service) => service != null
-            ? _buildContent(service)
+            ? _buildContent(service, offerStatusAsync)
             : const Center(child: Text('Không tìm thấy dịch vụ.')),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -176,28 +127,33 @@ class _CommunityServiceDetailPageState
     );
   }
 
-  Widget _buildContent(Service service) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: ServiceDetailHeader(
-              service: service,
-              isMyService: false,
-              isFavorited: _isFavorited,
-              onFavoritePressed: _toggleFavorite,
-              showAllSpecializations: true,
+  Widget _buildContent(Service service, AsyncValue<dynamic> offerStatusAsync) {
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: const Color(0xFF003E77),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: ServiceDetailHeader(
+                service: service,
+                isMyService: false,
+                isFavorited: _isFavorited,
+                onFavoritePressed: _toggleFavorite,
+                showAllSpecializations: true,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildServiceBox(service),
-          const SizedBox(height: 30),
-          _buildActionRow(service),
-          const SizedBox(height: 16),
-        ],
+            const SizedBox(height: 20),
+            _buildServiceBox(service),
+            const SizedBox(height: 30),
+            _buildActionRow(service, offerStatusAsync),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -345,8 +301,8 @@ class _CommunityServiceDetailPageState
                 ),
                 child: IconButton(
                   onPressed: () {
-                  _navigateToChat(service);
-                },
+                    _navigateToChat(service);
+                  },
                   icon: const Icon(
                     Icons.chat_bubble_outline,
                     color: Color(0xFF003E77),
@@ -370,9 +326,6 @@ class _CommunityServiceDetailPageState
                 width: 1,
                 height: 30,
                 color: Colors.grey[300],
-              ),
-              Expanded(
-                child: _buildStatItem('Chất lượng', '4.8'), // TODO: Cần API
               ),
               Container(
                 width: 1,
@@ -547,116 +500,196 @@ class _CommunityServiceDetailPageState
     );
   }
 
-  Widget _buildActionRow(Service service) {
-    if (_requestState == 3) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text(
-                  'Đã được duyệt',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: () {
-                _showCancelConfirmationDialog();
-              },
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.red,
-                size: 35,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    if (_requestState == 2) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text(
-            'Đã hủy',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-        ),
-      );
-    }
+  Widget _buildActionRow(
+      Service service, AsyncValue<dynamic> offerStatusAsync) {
+    return offerStatusAsync.when(
+      data: (statusData) {
+        debugPrint('--- [DEBUG] API Offer Status Data: $statusData ---');
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: _requestState == 1
-          ? Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text(
-                      'Đã gửi yêu cầu',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+        String? status;
+        if (statusData is Map<String, dynamic>) {
+          // Sửa lỗi ép kiểu an toàn
+          final offerValue = statusData['offer'];
+          if (offerValue is String) {
+            status = offerValue;
+          } else {
+            status = null;
+          }
+        } else if (statusData == false) {
+          status = null;
+        } else {
+          status = null;
+        }
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: switch (status) {
+            'pending' => Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {}, // Đã gửi nên không cần action
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        'Đã gửi yêu cầu',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 18),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () {
-                    _showCancelConfirmationDialog();
-                  },
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                    size: 35,
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      _showCancelConfirmationDialog();
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 35,
+                    ),
                   ),
-                ),
-              ],
-            )
-          : SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _showConfirmationDialog(service),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text(
-                  'Chấp nhận công việc',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                ],
+              ),
+            'accepted' => Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {}, // Đã duyệt
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        'Đã được duyệt',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      _showCancelConfirmationDialog();
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 35,
+                    ),
+                  ),
+                ],
+              ),
+            'withdrawn' => Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {}, // Đã duyệt
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        'Đang chờ xét duyệt hủy',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      _showCancelConfirmationDialog();
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 35,
+                    ),
+                  ),
+                ],
+              ),
+            'rejected' => SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {}, // Bị từ chối, không action
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Đã bị từ chối',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
                 ),
               ),
-            ),
+            'cancelled' => SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {}, // Đã hủy, không action
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Đã hủy',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
+                ),
+              ),
+            null || _ => SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _showConfirmationDialog(service),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Chấp nhận công việc',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                  ),
+                ),
+              ),
+          },
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.0),
+        child: Center(
+            child: CircularProgressIndicator(
+          color: Color(0xFF003E77),
+        )),
+      ),
+      error: (error, stack) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Center(
+          child: Text(
+            'Lỗi tải trạng thái: $error',
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 
@@ -697,7 +730,7 @@ class _CommunityServiceDetailPageState
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _cancelRequest();
+                _cancelRequest(); // <-- Nút này gọi hàm _cancelRequest
               },
               child: const Text(
                 'Đồng ý',
@@ -860,19 +893,65 @@ class _CommunityServiceDetailPageState
     _saveFavoriteState();
   }
 
-  void _requestService() {
-    MockServiceRepository.applyForJob(widget.serviceId);
+  void _requestService() async {
+    // Giữ nguyên logic API thật (từ local)
+    try {
+      final note = _noteController.text;
+      final repo = ref.read(offerRepositoryProvider);
 
-    setState(() {
-      _requestState = 1;
-    });
+      await repo.createOffer(
+        jobId: widget.serviceId,
+        note: note,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gửi yêu cầu thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      ref.invalidate(offerStatusProvider(widget.serviceId));
+      _noteController.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gửi yêu cầu thất bại: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  void _cancelRequest() {
-    MockServiceRepository.cancelApplication(widget.serviceId);
-    setState(() {
-      _requestState = 2;
-    });
+  void _cancelRequest() async {
+    try {
+      final repo = ref.read(offerRepositoryProvider);
+      await repo.cancelMyOffer(widget.serviceId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã hủy yêu cầu thành công.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      ref.invalidate(offerStatusProvider(widget.serviceId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hủy yêu cầu thất bại: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _navigateToChat(Service service) async {
@@ -898,11 +977,11 @@ class _CommunityServiceDetailPageState
 
     try {
       final threadId = await ref.read(ensureDmThreadProvider(
-        (peerUid: peerUid!, peerName: peerName),
+        (peerUid: peerUid, peerName: peerName), // (Provider này phải tồn tại)
       ).future);
 
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        Navigator.of(context, rootNavigator: true).pop(); // Đóng dialog loading
       }
 
       if (mounted) {
@@ -917,7 +996,7 @@ class _CommunityServiceDetailPageState
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        Navigator.of(context, rootNavigator: true).pop(); // Đóng dialog loading
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
