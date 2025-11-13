@@ -176,3 +176,5 @@ final presenceProvider = StreamProvider.family<bool, String>((ref, uid) {
         (e) => e.snapshot.value == 'online',
   );
 });
+
+final chatSearchQueryProvider = StateProvider<String>((_) => '');

@@ -18,28 +18,51 @@ class ChatListContainer extends ConsumerWidget {
     }
   }
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final threadsAsync = ref.watch(threadsProvider);
     final myUid = ref.watch(currentUidProvider);
+    final searchQuery = ref.watch(chatSearchQueryProvider).toLowerCase().trim();
 
     return threadsAsync.when(
-      data: (threads) => ChatList(
-        threads: threads,
-        onTap: (thread) {
+      data: (threads) {
+
+        final filteredThreads = threads.where((thread) {
+          if (searchQuery.isEmpty) return true;
+
           final peerUid = _getPeerUid(thread, myUid);
           String threadName;
 
           if (peerUid != null && thread.memberNames.containsKey(peerUid)) {
             threadName = thread.memberNames[peerUid]!;
           } else {
-            threadName = thread.name ?? 'Group Chat';
+            threadName = thread.name ?? '';
           }
 
-          onThreadTap(thread.id, threadName);
-        },
-      ),
+          return threadName.toLowerCase().contains(searchQuery);
+
+        }).toList();
+
+        if (filteredThreads.isEmpty) {
+          return const Center(child: Text('Không tìm thấy kết quả.'));
+        }
+
+        return ChatList(
+          threads: filteredThreads,
+          onTap: (thread) {
+            final peerUid = _getPeerUid(thread, myUid);
+            String threadName;
+
+            if (peerUid != null && thread.memberNames.containsKey(peerUid)) {
+              threadName = thread.memberNames[peerUid]!;
+            } else {
+              threadName = thread.name ?? 'Group Chat';
+            }
+
+            onThreadTap(thread.id, threadName);
+          },
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, st) => Center(child: Text('Lỗi tải danh sách: $e')),
     );
