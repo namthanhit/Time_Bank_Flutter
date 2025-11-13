@@ -37,7 +37,7 @@ class _ProfileDetailsState extends State<ProfileDetails> {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = Theme.of(context).primaryColor;
+    final iconColor = Color(0xFF003E77);
     bool isVisibleKey(String key) =>
         widget.visibility == null ? true : (widget.visibility![key] ?? true);
 
@@ -71,12 +71,10 @@ class _ProfileDetailsState extends State<ProfileDetails> {
               ],
             ),
             const SizedBox(height: 12),
-
             if (isVisibleKey('region') && regionText != null) ...[
               _row(context, Icons.location_on, 'Đến từ', regionText, iconColor),
               const SizedBox(height: 8),
             ],
-
             if (isVisibleKey('work') &&
                 widget.profile.workAddress != null &&
                 widget.profile.workAddress!.isNotEmpty) ...[
@@ -84,28 +82,24 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                   widget.profile.workAddress!, iconColor),
               const SizedBox(height: 8),
             ],
-
             if (isVisibleKey('birthDate') &&
                 widget.profile.birthDate != null) ...[
               _row(context, Icons.cake, 'Ngày sinh',
                   _formatDate(widget.profile.birthDate!), iconColor),
               const SizedBox(height: 8),
             ],
-
             if (widget.profile.description != null &&
                 widget.profile.description!.isNotEmpty) ...[
               _row(context, Icons.info_outline, 'Mô tả',
                   widget.profile.description!, iconColor),
               const SizedBox(height: 8),
             ],
-
             if (isVisibleKey('street') &&
                 streetText != null &&
                 streetText.isNotEmpty) ...[
               _row(context, Icons.home, 'Địa chỉ', streetText, iconColor),
               const SizedBox(height: 8),
             ],
-
             if (isVisibleKey('study') &&
                 widget.profile.studyAddress != null &&
                 widget.profile.studyAddress!.isNotEmpty) ...[
@@ -113,7 +107,6 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                   widget.profile.studyAddress!, iconColor),
               const SizedBox(height: 8),
             ],
-
             if (widget.profile.socialNetwork != null &&
                 widget.profile.socialNetwork!.isNotEmpty) ...[
               for (final e in widget.profile.socialNetwork!.entries) ...[
@@ -128,24 +121,26 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                 ],
               ],
             ],
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: widget.onEdit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE6F5FB),
-                  foregroundColor: const Color(0xFF0D4C7B),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24)),
-                  elevation: 0,
+            if (widget.showEditButton) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onEdit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE6F5FB),
+                    foregroundColor: const Color(0xFF0D4C7B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Chỉnh sửa thông tin',
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
-                child: const Text('Chỉnh sửa thông tin',
-                    style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
-            ),
+            ]
           ],
         ),
       ),

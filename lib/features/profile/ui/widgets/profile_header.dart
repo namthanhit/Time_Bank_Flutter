@@ -103,10 +103,12 @@ class ProfileHeader extends StatelessWidget {
                   style: const TextStyle(color: Colors.black54, fontSize: 13)),
               const SizedBox(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _statColumn(following, 'Đã follow'),
+                  const SizedBox(width: 22),
                   Container(height: 44, width: 1, color: Colors.grey[300]),
+                  const SizedBox(width: 22),
                   _statColumn(followers, 'Follower'),
                 ],
               ),

@@ -1,160 +1,136 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../profile/providers/providers.dart';
-import 'widgets/profile_header.dart';
-import 'widgets/profile_action_tabs.dart';
-import '../../service/ui/widgets/service_card.dart';
+import 'dart:math' as math;
 
-class ProfileServicesPage extends ConsumerWidget {
-  const ProfileServicesPage({Key? key}) : super(key: key);
+class ProfileHeader extends StatelessWidget {
+  final String name;
+  final String subtitle;
+  final String? avatarUrl;
+  final bool isSelf;
+  final double appBarHeight;
+  final int followers;
+  final int points;
+  final int following;
+
+  const ProfileHeader({
+    Key? key,
+    required this.name,
+    required this.subtitle,
+    this.avatarUrl,
+    this.isSelf = false,
+    this.followers = 0,
+    this.points = 0,
+    this.following = 0,
+    this.appBarHeight = 64,
+  }) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(myProfileProvider);
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D4C7B),
-        elevation: 0,
-        toolbarHeight: 64,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: profileAsync.when(
-        data: (profile) {
-          final servicesAsync = ref.watch(servicesByUserProvider(profile.id));
-          return RefreshIndicator(
-            onRefresh: () async {
-              // Invalidate the provider so it refetches from the repository.
-              ref.invalidate(servicesByUserProvider(profile.id));
-              // Give the UI a moment to start loading; the provider will trigger a rebuild.
-              await Future.delayed(const Duration(milliseconds: 300));
-            },
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                Column(
+  Widget build(BuildContext context) {
+    const headerBlue = Colors.white;
+    const double bandHeight = 140.0;
+    const double outerSize = 112.0;
+    const double outerPadding = 2.0;
+
+    final statusBar = MediaQuery.of(context).padding.top;
+    final safeTop = statusBar + 8;
+    final preferredTop = bandHeight - (outerSize / 2);
+    final double avatarTop = math.max(preferredTop, safeTop);
+
+    final avatarBottom = avatarTop + outerSize;
+    final contentSpacing = math.max(0.0, avatarBottom - bandHeight + 6.0);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Container(
+              height: bandHeight,
+              width: double.infinity,
+              color: headerBlue,
+            ),
+            Positioned(
+              top: avatarTop,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Stack(
-                      alignment: Alignment.topCenter,
-                      children: [
-                        Container(height: 110, color: const Color(0xFF0D4C7B)),
-                        ProfileHeader(
-                          name: profile.name,
-                          subtitle: 'Các dịch vụ của tôi',
-                          avatarUrl: profile.avatarUrl,
-                          isSelf: true,
-                          followers: profile.followers,
-                          following: profile.following,
-                          points: profile.points,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ProfileActionTabs(
-                            initialIndex: 1,
-                            leftLabel: 'Chi tiết\n& Đánh giá',
-                            rightLabel: 'Dịch vụ',
-                            onLeftTap: () => Navigator.of(context).pop(),
-                            onRightTap: () {},
-                          ),
-                          const SizedBox(height: 12),
-                          servicesAsync.when(
-                            data: (services) => services.isEmpty
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 24),
-                                    child: Center(
-                                      child: Column(
-                                        children: [
-                                          const Text(
-                                              'Bạn chưa có dịch vụ nào.'),
-                                          const SizedBox(height: 8),
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              ref.invalidate(
-                                                  servicesByUserProvider(
-                                                      profile.id));
-                                            },
-                                            child: const Text('Tải lại'),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                : Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      // quick debug count
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 8.0),
-                                        child: Text(
-                                            'Tìm thấy ${services.length} dịch vụ'),
-                                      ),
-                                      ...services
-                                          .map((s) => Padding(
-                                                padding: const EdgeInsets.only(
-                                                    bottom: 12.0),
-                                                child: ServiceCard(
-                                                  service: s,
-                                                  isMyService: true,
-                                                ),
-                                              ))
-                                          .toList(),
-                                    ],
-                                  ),
-                            loading: () => const Center(
-                                child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 24),
-                              child: CircularProgressIndicator(),
-                            )),
-                            error: (e, st) {
-                              // log the error for debugging
-                              debugPrint('servicesByUserProvider error: $e');
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 24),
-                                child: Center(
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                          'Lỗi khi tải dịch vụ: ${e.toString()}'),
-                                      const SizedBox(height: 8),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          ref.invalidate(servicesByUserProvider(
-                                              profile.id));
-                                        },
-                                        child: const Text('Thử lại'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                    Container(
+                      width: outerSize,
+                      height: outerSize,
+                      padding: const EdgeInsets.all(outerPadding),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: Offset(0, 2)),
                         ],
+                      ),
+                      child: CircleAvatar(
+                        radius: (outerSize / 2) - outerPadding,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: avatarUrl != null
+                            ? NetworkImage(avatarUrl!)
+                            : const AssetImage('assets/images/avatar.png')
+                        as ImageProvider,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => const Center(child: Text('Lỗi khi tải hồ sơ')),
-      ),
+          ],
+        ),
+        SizedBox(height: contentSpacing),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Column(
+            children: [
+              Text(name,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87)),
+              const SizedBox(height: 6),
+              Text(subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.black54, fontSize: 13)),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _statColumn(following, 'Đã follow'),
+                  const SizedBox(width: 24),
+                  Container(height: 44, width: 1, color: Colors.grey[300]),
+                  const SizedBox(width: 24),
+                  _statColumn(followers, 'Follower'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statColumn(int value, String label) {
+    final display = value >= 1000000
+        ? '${(value / 1000000).toStringAsFixed(0)}M'
+        : value.toString();
+    return Column(
+      children: [
+        Text(display,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 4),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: Colors.black54)),
+      ],
     );
   }
 }

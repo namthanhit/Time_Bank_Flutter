@@ -17,9 +17,8 @@ class Profile {
   final String? studyAddress;
   final Map<String, String>? socialNetwork;
   final DateTime updatedAt;
-  final int followers;
-  final int following;
   final int points;
+  final bool isFollowing;
 
   Profile({
     required this.id,
@@ -38,9 +37,8 @@ class Profile {
     this.studyAddress,
     this.socialNetwork,
     DateTime? updatedAt,
-    this.followers = 0,
-    this.following = 0,
     this.points = 0,
+    this.isFollowing = false,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   Profile copyWith({
@@ -60,6 +58,8 @@ class Profile {
     String? studyAddress,
     Map<String, String>? socialNetwork,
     DateTime? updatedAt,
+    int? points,
+    bool? isFollowing,
   }) {
     return Profile(
       id: id ?? this.id,
@@ -78,6 +78,8 @@ class Profile {
       studyAddress: studyAddress ?? this.studyAddress,
       socialNetwork: socialNetwork ?? this.socialNetwork,
       updatedAt: updatedAt ?? DateTime.now(),
+      points: points ?? this.points,
+      isFollowing: isFollowing ?? this.isFollowing,
     );
   }
 
@@ -108,11 +110,8 @@ class Profile {
 
     DateTime? tryParseTime(dynamic d) {
       if (d == null) return null;
-      try {
-        return DateTime.parse(d.toString());
-      } catch (e) {
-        return null;
-      }
+      try { return DateTime.parse(d.toString()); }
+      catch (e) { return null; }
     }
 
     int tryParseInt(dynamic i) {
@@ -127,6 +126,7 @@ class Profile {
       phone: json['phone'] as String,
       email: json['email'] as String?,
       avatarUrl: json['avatar_url'] as String?,
+
       birthDate: tryParseTime(userDetail['birth_date']),
       gender: _genderFromString(userDetail['gender'] as String?),
       description: userDetail['description'] as String?,
@@ -137,10 +137,11 @@ class Profile {
       workAddress: userDetail['work_address'] as String?,
       studyAddress: userDetail['study_address'] as String?,
       socialNetwork: sn,
+
       updatedAt: tryParseTime(json['updated_at']) ?? DateTime.now(),
-      followers: tryParseInt(json['followers']),
-      following: tryParseInt(json['following']),
+
       points: tryParseInt(json['points']),
+      isFollowing: json['isFollowing'] as bool? ?? false,
     );
   }
 
@@ -159,8 +160,6 @@ class Profile {
     'study_address': studyAddress,
     'social_network': socialNetwork,
     'updated_at': updatedAt.toUtc().toIso8601String(),
-    'followers': followers,
-    'following': following,
     'points': points,
   };
 }

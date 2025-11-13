@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/service/data/mock_service_repository.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../data/api_profile.dart';
 import '../domain/profile.dart';
 import '../domain/review.dart';
 import '../domain/repositories/profile_repository.dart';
 import '../../home/domain/models/home_models.dart';
+import '../../service/domain/repositories/service_repository.dart';
 import '../../service/providers/service_providers.dart';
 import '../../service/domain/models/service.dart' as svc;
 
@@ -18,8 +20,7 @@ final myProfileProvider = FutureProvider<Profile>((ref) async {
   return repo.fetchMyProfile();
 });
 
-final profileByIdProvider =
-FutureProvider.family<Profile, String>((ref, userId) async {
+final profileByIdProvider = FutureProvider.family<Profile, String>((ref, userId) async {
   final repo = ref.watch(profileRepositoryProvider);
   return repo.fetchProfileById(userId);
 });
@@ -37,13 +38,57 @@ FutureProvider.family<void, Map<String, dynamic>>((ref, updates) async {
   ref.invalidate(myProfileProvider);
 });
 
+final followersCountProvider =
+FutureProvider.family<int, String>((ref, userId) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.getFollowersCount(userId);
+});
+
+final followingCountProvider =
+FutureProvider.family<int, String>((ref, userId) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.getFollowingCount(userId);
+});
+
+final myFollowersCountProvider = FutureProvider<int>((ref) async {
+  final profile = await ref.watch(myProfileProvider.future);
+  return ref.watch(followersCountProvider(profile.id).future);
+});
+
+final myFollowingCountProvider = FutureProvider<int>((ref) async {
+  final profile = await ref.watch(myProfileProvider.future);
+  return ref.watch(followingCountProvider(profile.id).future);
+});
+
+final followUserProvider =
+FutureProvider.family<void, String>((ref, userId) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  await repo.followUser(userId);
+
+  ref.invalidate(profileByIdProvider(userId));
+  ref.invalidate(followersCountProvider(userId));
+  ref.invalidate(myFollowingCountProvider);
+  ref.invalidate(myProfileProvider);
+});
+
+final unfollowUserProvider =
+FutureProvider.family<void, String>((ref, userId) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  await repo.unfollowUser(userId);
+
+  ref.invalidate(profileByIdProvider(userId));
+  ref.invalidate(followersCountProvider(userId));
+  ref.invalidate(myFollowingCountProvider);
+  ref.invalidate(myProfileProvider);
+});
+
+
 final servicesByUserProvider =
 FutureProvider.family<List<svc.Service>, String>((ref, userId) async {
   final serviceRepo = ref.watch(serviceRepositoryProvider);
   return serviceRepo.fetchServicesByUser(userId);
 });
 
-// Provider này trả về List<Activity> (dùng cho ActivityCard)
 final activitiesProvider =
 FutureProvider.family<List<Activity>, String>((ref, userId) async {
   final serviceRepo = ref.watch(serviceRepositoryProvider);
@@ -59,8 +104,8 @@ FutureProvider.family<List<Activity>, String>((ref, userId) async {
     return '${diff.inDays ~/ 30} tháng trước';
   }
 
-  String _formatDuration(int totalSeconds) {
-    final duration = Duration(seconds: totalSeconds); // 1. Sửa 'minutes' thành 'seconds'
+  String _formatDuration(int totalMinutes) {
+    final duration = Duration(minutes: totalMinutes);
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));

@@ -23,7 +23,8 @@ class ProfilePage extends ConsumerStatefulWidget {
   ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends ConsumerState<ProfilePage> {
+class _ProfilePageState extends ConsumerState<ProfilePage>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _detailsKey = GlobalKey();
   int _tabIndex = 0;
@@ -31,8 +32,41 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _refreshProfileCounts());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _refreshProfileCounts());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _refreshProfileCounts();
+    }
+  }
+
+  Future<void> _refreshProfileCounts() async {
+    try {
+      ref.invalidate(myProfileProvider);
+      ref.invalidate(myFollowersCountProvider);
+      ref.invalidate(myFollowingCountProvider);
+      await ref.read(myProfileProvider.future);
+    } catch (_) {}
   }
 
   void _scrollToDetails() {
@@ -69,122 +103,127 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myProfileProvider);
+          ref.invalidate(myFollowersCountProvider);
+          ref.invalidate(myFollowingCountProvider);
           await ref.read(myProfileProvider.future);
         },
         child: profileAsync.when(
-          data: (profile) => Transform.translate(
-            // move the whole profile content up so it sits closer to the AppBar
-            // increased per request to nudge the content a bit more
-            offset: const Offset(0, -60),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              controller: _scrollController,
-              padding: EdgeInsets.only(top: 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Profile header (the whole page is shifted up)
-                  ProfileHeader(
-                    name: profile.name,
-                    subtitle: profile.description ?? '',
-                    avatarUrl: profile.avatarUrl,
-                    isSelf: true,
-                    followers: profile.followers,
-                    following: profile.following,
-                    points: profile.points,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        ProfileActionTabs(
-                          key: ValueKey(_tabIndex),
-                          initialIndex: _tabIndex,
-                          leftLabel: 'Chi tiết\\n& Đánh giá',
-                          rightLabel: 'Dịch vụ',
-                          onLeftTap: _scrollToDetails,
-                          onRightTap: () {
-                            setState(() => _tabIndex = 1);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        if (_tabIndex == 0) ...[
-                          ProfileDetails(
-                            key: _detailsKey,
-                            profile: profile,
-                            visibility:
-                            _visibility.isEmpty ? null : _visibility,
-                            onEdit: () async {
-                              final result = await Navigator.of(context)
-                                  .push(MaterialPageRoute(
-                                builder: (_) =>
-                                    EditProfilePage(profile: profile),
-                              ));
-                              if (result != null) {
-                                if (result is Map &&
-                                    result.containsKey('visibility')) {
-                                  final vis = result['visibility'];
-                                  if (vis is Map) {
-                                    setState(() {
-                                      _visibility =
-                                      Map<String, bool>.fromEntries(
-                                        vis.entries.map((e) => MapEntry(
-                                            e.key.toString(), e.value == true)),
-                                      );
-                                    });
-                                  }
-                                }
-                              }
+          data: (profile) {
+            final followersAsync = ref.watch(myFollowersCountProvider);
+            final followingAsync = ref.watch(myFollowingCountProvider);
+
+            return Transform.translate(
+              offset: const Offset(0, -60),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                controller: _scrollController,
+                padding: EdgeInsets.only(top: 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ProfileHeader(
+                      name: profile.name,
+                      subtitle: profile.description ?? '',
+                      avatarUrl: profile.avatarUrl,
+                      isSelf: true,
+                      followers: followersAsync.value ?? 0,
+                      following: followingAsync.value ?? 0,
+                      points: profile.points,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 8),
+                          ProfileActionTabs(
+                            key: ValueKey(_tabIndex),
+                            initialIndex: _tabIndex,
+                            leftLabel: 'Chi tiết\n& Đánh giá',
+                            rightLabel: 'Dịch vụ',
+                            onLeftTap: _scrollToDetails,
+                            onRightTap: () {
+                              setState(() => _tabIndex = 1);
                             },
                           ),
                           const SizedBox(height: 12),
-                          const ReviewsList(),
-                        ] else ...[
-                          Consumer(
-                            builder: (context, ref2, _) {
-                              final activitiesAsync =
-                              ref2.watch(activitiesProvider(profile.id));
-                              return activitiesAsync.when(
-                                data: (activities) => Column(
-                                  children: activities
-                                      .map((a) => Padding(
-                                    padding: const EdgeInsets.only(
-                                        bottom: 12.0),
-                                    child: ActivityCard(
-                                      activity: a,
-                                      onTap: () {},
-                                      onMoreTap: () {},
-                                      compact: true,
-                                      horizontalPadding: 0,
-                                      verticalPadding: 6,
-                                    ),
-                                  ))
-                                      .toList(),
-                                ),
-                                loading: () => const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 24),
-                                      child: CircularProgressIndicator(),
-                                    )),
-                                error: (e, st) => const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 24),
-                                  child: Center(
-                                      child: Text('Lỗi khi tải dịch vụ')),
-                                ),
-                              );
-                            },
-                          ),
+                          if (_tabIndex == 0) ...[
+                            ProfileDetails(
+                              key: _detailsKey,
+                              profile: profile,
+                              visibility:
+                              _visibility.isEmpty ? null : _visibility,
+                              onEdit: () async {
+                                final result = await Navigator.of(context)
+                                    .push(MaterialPageRoute(
+                                  builder: (_) =>
+                                      EditProfilePage(profile: profile),
+                                ));
+                                if (result != null) {
+                                  if (result is Map &&
+                                      result.containsKey('visibility')) {
+                                    final vis = result['visibility'];
+                                    if (vis is Map) {
+                                      setState(() {
+                                        _visibility =
+                                        Map<String, bool>.fromEntries(
+                                          vis.entries.map((e) => MapEntry(
+                                              e.key.toString(),
+                                              e.value == true)),
+                                        );
+                                      });
+                                    }
+                                  }
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            const ReviewsList(),
+                          ] else ...[
+                            Consumer(
+                              builder: (context, ref2, _) {
+                                final activitiesAsync =
+                                ref2.watch(activitiesProvider(profile.id));
+                                return activitiesAsync.when(
+                                  data: (activities) => Column(
+                                    children: activities
+                                        .map((a) => Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 12.0),
+                                      child: ActivityCard(
+                                        activity: a,
+                                        onTap: () {},
+                                        onMoreTap: () {},
+                                        compact: true,
+                                        horizontalPadding: 0,
+                                        verticalPadding: 6,
+                                      ),
+                                    ))
+                                        .toList(),
+                                  ),
+                                  loading: () => const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 24),
+                                        child: CircularProgressIndicator(),
+                                      )),
+                                  error: (e, st) => const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 24),
+                                    child: Center(
+                                        child: Text('Lỗi khi tải dịch vụ')),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 24),
                         ],
-                        const SizedBox(height: 24),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
           loading: () => SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Container(
