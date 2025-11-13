@@ -9,6 +9,8 @@ import '../../../data/mock_service_repository.dart';
 import '../../../domain/models/service.dart';
 import '../../../providers/service_providers.dart';
 import 'service_detail_header.dart';
+import '../../../../chat/providers/chat_providers.dart';
+import '../../../../chat/ui/chat_conversation_page.dart';
 
 class CommunityServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
@@ -343,11 +345,8 @@ class _CommunityServiceDetailPageState
                 ),
                 child: IconButton(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Chức năng chat đang phát triển')),
-                    );
-                  },
+                  _navigateToChat(service);
+                },
                   icon: const Icon(
                     Icons.chat_bubble_outline,
                     color: Color(0xFF003E77),
@@ -874,6 +873,58 @@ class _CommunityServiceDetailPageState
     setState(() {
       _requestState = 2;
     });
+  }
+
+  Future<void> _navigateToChat(Service service) async {
+    final peerUid = service.userId;
+    final peerName = service.providerName ?? 'Người cung cấp #${service.userId}';
+
+    final myUid = ref.read(currentUidProvider);
+
+    if (peerUid == myUid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bạn không thể tự chat với chính mình.')),
+        );
+      }
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final threadId = await ref.read(ensureDmThreadProvider(
+        (peerUid: peerUid!, peerName: peerName),
+      ).future);
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ChatConversationPage(
+              threadId: threadId,
+              fallbackName: peerName,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tạo phòng chat: $e')),
+        );
+      }
+    }
   }
 
   String _formatTimeAgo(DateTime dt) {

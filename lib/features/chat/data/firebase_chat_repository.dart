@@ -20,7 +20,6 @@ class FirebaseChatRepository implements ChatRepository {
   final FirebaseStorage _storage;
   final FirebaseDatabase _rtdb;
 
-  // ----------------- Threads -----------------
   @override
   Stream<List<Thread>> watchThreads(String myUid) {
     final q = _fs
@@ -28,13 +27,27 @@ class FirebaseChatRepository implements ChatRepository {
         .where('members', arrayContains: myUid)
         .orderBy('updatedAt', descending: true);
 
-    return q.snapshots().map((snap) => snap.docs.map(Thread.fromFirestore).toList());
+    return q.snapshots().map((snap) {
+      return snap.docs.map((doc) {
+        try {
+          return Thread.fromFirestore(doc);
+        } catch (e, st) {
+          print('🔥 Lỗi parse Thread ${doc.id}: $e');
+          print(st);
+          return null;
+        }
+      }).whereType<Thread>().toList();
+    });
   }
 
   @override
-  Future<String> ensureDmThread(String uidA, String uidB) async {
-    // roomId ổn định từ 2 uid
-    final roomId = ([uidA, uidB]..sort()).join('_');
+  Future<String> ensureDmThread(
+      String myUid,
+      String peerUid,
+      String myName,
+      String peerName,
+      ) async {
+    final roomId = ([myUid, peerUid]..sort()).join('_');
     final roomRef = _fs.collection('rooms').doc(roomId);
 
     await _fs.runTransaction((tx) async {
@@ -42,9 +55,13 @@ class FirebaseChatRepository implements ChatRepository {
       if (!s.exists) {
         tx.set(roomRef, {
           'type': 'dm',
-          'members': [uidA, uidB],
+          'members': [myUid, peerUid],
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
+          'memberNames': {
+            myUid: myName,
+            peerUid: peerName,
+          },
         });
       }
     });
@@ -52,7 +69,6 @@ class FirebaseChatRepository implements ChatRepository {
     return roomId;
   }
 
-  // ----------------- Messages -----------------
   @override
   Stream<List<Message>> watchMessages(String threadId, {int limit = 30}) {
     final q = _fs
@@ -60,8 +76,19 @@ class FirebaseChatRepository implements ChatRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit);
 
-    return q.snapshots().map((snap) => snap.docs.map((d) => Message.fromFirestore(threadId, d)).toList());
+    return q.snapshots().map((snap) {
+      return snap.docs.map((d) {
+        try {
+          return Message.fromFirestore(threadId, d);
+        } catch (e, st) {
+          print('🔥 Lỗi parse Message ${d.id}: $e');
+          print(st);
+          return null;
+        }
+      }).whereType<Message>().toList();
+    });
   }
+
 
   @override
   Future<void> sendText({
@@ -99,15 +126,15 @@ class FirebaseChatRepository implements ChatRepository {
   @override
   Future<void> sendImage({
     required String threadId,
-    required List<int> bytes,
+    required Uint8List bytes,
     required String senderId,
     String mime = 'image/jpeg',
+    required String localId,
   }) async {
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$senderId.jpg';
-    final path = 'rooms/$threadId/$fileName';
+    final path = 'rooms/$threadId/${senderId}_$localId.jpg';
     final ref = _storage.ref().child(path);
 
-    await ref.putData(Uint8List.fromList(bytes), SettableMetadata(contentType: mime));
+    await ref.putData(bytes, SettableMetadata(contentType: mime));
     final url = await ref.getDownloadURL();
 
     final msgRef = _fs.collection('rooms/$threadId/messages').doc();
@@ -119,21 +146,22 @@ class FirebaseChatRepository implements ChatRepository {
         'mediaUrl': url,
         'mediaMime': mime,
         'createdAt': FieldValue.serverTimestamp(),
+        'localId': localId,
         'readBy': {senderId: FieldValue.serverTimestamp()},
       });
       tx.update(roomRef, {
         'lastMessage': {
-          'text': null,
+          'text': '[image]',
           'type': 'image',
           'senderId': senderId,
           'at': FieldValue.serverTimestamp(),
+          'localId': localId,
         },
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
   }
 
-  // ----------------- Presence -----------------
   @override
   Future<void> startPresence(String myUid) async {
     final ref = _rtdb.ref('status/$myUid');
@@ -156,5 +184,4 @@ class FirebaseChatRepository implements ChatRepository {
       return v == true;
     });
   }
-
 }
