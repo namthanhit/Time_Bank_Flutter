@@ -246,10 +246,10 @@ class ApiServiceRepository implements ServiceRepository {
 
   @override
   Future<List<Service>> fetchServicesByUser(Object userId) async {
-    final res = await _api.get('/users/$userId/services');
-    _ensureOK(res);
-    final body = json.decode(utf8.decode(res.bodyBytes));
-    final List<dynamic> items = body['data'];
-    return items.map((item) => Service.fromJson(item)).toList();
+    final pagingInfo = PaginationRequestDto(page: 1, pageSize: 20);
+
+    final Map<String, dynamic> result = await getMyJobs(pagingInfo: pagingInfo);
+
+    return result['data'] as List<Service>;
   }
 }
