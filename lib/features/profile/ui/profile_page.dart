@@ -63,9 +63,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
   Future<void> _refreshProfileCounts() async {
     try {
       ref.invalidate(myProfileProvider);
+      final profile = await ref.read(myProfileProvider.future);
+      ref.invalidate(followersCountProvider(profile.id));
+      ref.invalidate(followingCountProvider(profile.id));
       ref.invalidate(myFollowersCountProvider);
       ref.invalidate(myFollowingCountProvider);
-      await ref.read(myProfileProvider.future);
+      await ref.read(followersCountProvider(profile.id).future);
+      await ref.read(followingCountProvider(profile.id).future);
+      await ref.read(myFollowersCountProvider.future);
+      await ref.read(myFollowingCountProvider.future);
     } catch (_) {}
   }
 
@@ -152,7 +158,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                               key: _detailsKey,
                               profile: profile,
                               visibility:
-                              _visibility.isEmpty ? null : _visibility,
+                                  _visibility.isEmpty ? null : _visibility,
                               onEdit: () async {
                                 final result = await Navigator.of(context)
                                     .push(MaterialPageRoute(
@@ -166,7 +172,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     if (vis is Map) {
                                       setState(() {
                                         _visibility =
-                                        Map<String, bool>.fromEntries(
+                                            Map<String, bool>.fromEntries(
                                           vis.entries.map((e) => MapEntry(
                                               e.key.toString(),
                                               e.value == true)),
@@ -183,29 +189,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                             Consumer(
                               builder: (context, ref2, _) {
                                 final activitiesAsync =
-                                ref2.watch(activitiesProvider(profile.id));
+                                    ref2.watch(activitiesProvider(profile.id));
                                 return activitiesAsync.when(
                                   data: (activities) => Column(
                                     children: activities
                                         .map((a) => Padding(
-                                      padding: const EdgeInsets.only(
-                                          bottom: 12.0),
-                                      child: ActivityCard(
-                                        activity: a,
-                                        onTap: () {},
-                                        onMoreTap: () {},
-                                        compact: true,
-                                        horizontalPadding: 0,
-                                        verticalPadding: 6,
-                                      ),
-                                    ))
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 12.0),
+                                              child: ActivityCard(
+                                                activity: a,
+                                                onTap: () {},
+                                                onMoreTap: () {},
+                                                compact: true,
+                                                horizontalPadding: 0,
+                                                verticalPadding: 6,
+                                              ),
+                                            ))
                                         .toList(),
                                   ),
                                   loading: () => const Center(
                                       child: Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 24),
-                                        child: CircularProgressIndicator(),
-                                      )),
+                                    padding: EdgeInsets.symmetric(vertical: 24),
+                                    child: CircularProgressIndicator(),
+                                  )),
                                   error: (e, st) => const Padding(
                                     padding: EdgeInsets.symmetric(vertical: 24),
                                     child: Center(

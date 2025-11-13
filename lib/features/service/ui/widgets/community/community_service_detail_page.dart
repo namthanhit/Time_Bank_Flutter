@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:time_bank_flutter/features/profile/ui/other_profile_page.dart';
 import 'package:time_bank_flutter/features/profile/ui/profile_page.dart';
 import 'package:time_bank_flutter/features/profile/providers/providers.dart';
+import 'package:time_bank_flutter/features/profile/domain/profile.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../../domain/models/service.dart';
 import '../../../providers/service_providers.dart';
@@ -92,7 +93,7 @@ class _CommunityServiceDetailPageState
     final isFavorited = prefs.getBool('favorite_${widget.serviceId}') ?? false;
 
     final applicationStatus =
-    MockServiceRepository.getApplicationStatus(widget.serviceId);
+        MockServiceRepository.getApplicationStatus(widget.serviceId);
 
     if (mounted) {
       setState(() {
@@ -129,7 +130,7 @@ class _CommunityServiceDetailPageState
   @override
   Widget build(BuildContext context) {
     final serviceAsync =
-    ref.watch(detailJobCommunityByIdProvider(widget.serviceId));
+        ref.watch(detailJobCommunityByIdProvider(widget.serviceId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -199,8 +200,11 @@ class _CommunityServiceDetailPageState
     );
   }
 
-  void _goToProfile(BuildContext context, String serviceUserId) {
+  void _goToProfile(BuildContext context, String serviceUserId,
+      {String? providerName, String? providerAvatar, String? description}) {
     final myProfileId = ref.read(myProfileProvider).value?.id;
+    debugPrint(
+        'Profile navigation: serviceUserId=$serviceUserId, myProfileId=$myProfileId');
 
     if (myProfileId != null && serviceUserId == myProfileId) {
       Navigator.push(
@@ -210,10 +214,29 @@ class _CommunityServiceDetailPageState
         ),
       );
     } else {
+      debugPrint('Navigating to OtherProfilePage: userId=$serviceUserId, '
+          'providerName=${providerName ?? '<null>'}, '
+          'providerAvatar=${providerAvatar ?? '<null>'}');
+
+      final previewProfile = Profile(
+        id: serviceUserId,
+        name: providerName ?? 'Người dùng',
+        phone: '',
+        avatarUrl: providerAvatar,
+        description: description ?? '',
+        points: 0,
+      );
+
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => OtherProfilePage(userId: serviceUserId),
+          builder: (_) => OtherProfilePage(
+            userId: serviceUserId,
+            initialName: providerName,
+            initialAvatarUrl: providerAvatar,
+            initialDescription: description,
+            initialProfile: previewProfile,
+          ),
         ),
       );
     }
@@ -254,25 +277,29 @@ class _CommunityServiceDetailPageState
           Row(
             children: [
               GestureDetector(
-                onTap: () => _goToProfile(context, service.userId),
+                onTap: () => _goToProfile(context, service.userId,
+                    providerName: service.providerName,
+                    providerAvatar: service.providerAvatar,
+                    description:
+                        service.providerSpecialization ?? service.description),
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: const Color(0xFF003E77),
                   backgroundImage: service.providerAvatar != null &&
-                      service.providerAvatar!.isNotEmpty
+                          service.providerAvatar!.isNotEmpty
                       ? NetworkImage(service.providerAvatar!)
                       : null,
                   child: (service.providerAvatar == null ||
-                      service.providerAvatar!.isEmpty)
+                          service.providerAvatar!.isEmpty)
                       ? Text(
-                    service.providerName?.substring(0, 1).toUpperCase() ??
-                        'U',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  )
+                          service.providerName?.substring(0, 1).toUpperCase() ??
+                              'U',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        )
                       : null,
                 ),
               ),
@@ -280,7 +307,11 @@ class _CommunityServiceDetailPageState
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _goToProfile(context, service.userId),
+                  onTap: () => _goToProfile(context, service.userId,
+                      providerName: service.providerName,
+                      providerAvatar: service.providerAvatar,
+                      description: service.providerSpecialization ??
+                          service.description),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -472,7 +503,7 @@ class _CommunityServiceDetailPageState
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     service.serviceImages!.length,
-                        (index) => Container(
+                    (index) => Container(
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: 8,
                       height: 8,
@@ -565,7 +596,7 @@ class _CommunityServiceDetailPageState
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 6),
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: const Text(
             'Đã hủy',
@@ -579,54 +610,54 @@ class _CommunityServiceDetailPageState
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: _requestState == 1
           ? Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text(
-                'Đã gửi yêu cầu',
-                style:
-                TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: () {
-              _showCancelConfirmationDialog();
-            },
-            icon: const Icon(
-              Icons.delete_outline,
-              color: Colors.red,
-              size: 35,
-            ),
-          ),
-        ],
-      )
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text(
+                      'Đã gửi yêu cầu',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    _showCancelConfirmationDialog();
+                  },
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 35,
+                  ),
+                ),
+              ],
+            )
           : SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () => _showConfirmationDialog(service),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text(
-            'Chấp nhận công việc',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-          ),
-        ),
-      ),
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _showConfirmationDialog(service),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Chấp nhận công việc',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                ),
+              ),
+            ),
     );
   }
 
@@ -749,7 +780,7 @@ class _CommunityServiceDetailPageState
                   textAlign: TextAlign.justify,
                   text: TextSpan(
                     style:
-                    const TextStyle(fontSize: 16, color: Color(0xFF003E77)),
+                        const TextStyle(fontSize: 16, color: Color(0xFF003E77)),
                     children: [
                       const TextSpan(
                           text: 'Bạn đồng ý ứng tuyển vào yêu cầu: '),
@@ -759,7 +790,7 @@ class _CommunityServiceDetailPageState
                       ),
                       const TextSpan(
                           text:
-                          ', yêu cầu ứng tuyển sẽ được gửi tới người đăng và yêu cầu của bạn sẽ được xem xét, phê duyệt.'),
+                              ', yêu cầu ứng tuyển sẽ được gửi tới người đăng và yêu cầu của bạn sẽ được xem xét, phê duyệt.'),
                     ],
                   ),
                 ),
@@ -810,7 +841,7 @@ class _CommunityServiceDetailPageState
                     child: const Text(
                       'Đồng ý',
                       style:
-                      TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
                     ),
                   ),
                 ),

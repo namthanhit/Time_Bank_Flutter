@@ -110,8 +110,11 @@ class Profile {
 
     DateTime? tryParseTime(dynamic d) {
       if (d == null) return null;
-      try { return DateTime.parse(d.toString()); }
-      catch (e) { return null; }
+      try {
+        return DateTime.parse(d.toString());
+      } catch (e) {
+        return null;
+      }
     }
 
     int tryParseInt(dynamic i) {
@@ -126,7 +129,6 @@ class Profile {
       phone: json['phone'] as String,
       email: json['email'] as String?,
       avatarUrl: json['avatar_url'] as String?,
-
       birthDate: tryParseTime(userDetail['birth_date']),
       gender: _genderFromString(userDetail['gender'] as String?),
       description: userDetail['description'] as String?,
@@ -137,31 +139,41 @@ class Profile {
       workAddress: userDetail['work_address'] as String?,
       studyAddress: userDetail['study_address'] as String?,
       socialNetwork: sn,
-
       updatedAt: tryParseTime(json['updated_at']) ?? DateTime.now(),
-
       points: tryParseInt(json['points']),
-      isFollowing: json['isFollowing'] as bool? ?? false,
+      isFollowing: _parseBool(json['isFollowing'] ??
+          json['is_following'] ??
+          json['is_followed'] ??
+          userDetail['is_following'] ??
+          userDetail['isFollowing']),
     );
   }
 
+  static bool _parseBool(dynamic v) {
+    if (v == null) return false;
+    if (v is bool) return v;
+    if (v is int) return v == 1;
+    final s = v.toString().toLowerCase();
+    return s == '1' || s == 'true' || s == 'yes';
+  }
+
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'full_name': name,
-    'phone': phone,
-    'email': email,
-    'avatar_url': avatarUrl,
-    'birth_date': birthDate?.toUtc().toIso8601String(),
-    'gender': gender.name,
-    'description': description,
-    'region_id': regionId,
-    'street': street,
-    'work_address': workAddress,
-    'study_address': studyAddress,
-    'social_network': socialNetwork,
-    'updated_at': updatedAt.toUtc().toIso8601String(),
-    'points': points,
-  };
+        'id': id,
+        'full_name': name,
+        'phone': phone,
+        'email': email,
+        'avatar_url': avatarUrl,
+        'birth_date': birthDate?.toUtc().toIso8601String(),
+        'gender': gender.name,
+        'description': description,
+        'region_id': regionId,
+        'street': street,
+        'work_address': workAddress,
+        'study_address': studyAddress,
+        'social_network': socialNetwork,
+        'updated_at': updatedAt.toUtc().toIso8601String(),
+        'points': points,
+      };
 }
 
 Gender _genderFromString(String? s) {

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/network/auth_api_client.dart';
 import '../domain/profile.dart';
@@ -43,22 +42,7 @@ class ApiProfileRepository implements ProfileRepository {
     final res = await _api.get('/users/$userId');
     _ensureOK(res);
     final body = json.decode(utf8.decode(res.bodyBytes));
-    try {
-      debugPrint(
-          'ApiProfileRepository.fetchProfileById: requested=$userId, responseKeys=${(body is Map) ? body.keys.toList() : 'non-map'}');
-      if (body is Map && body.containsKey('id')) {
-        debugPrint(
-            'ApiProfileRepository.fetchProfileById: response id=${body['id']}, full_name=${body['full_name']}');
-      } else if (body is Map &&
-          body.containsKey('data') &&
-          body['data'] is Map) {
-        final d = body['data'] as Map<String, dynamic>;
-        debugPrint(
-            'ApiProfileRepository.fetchProfileById: nested data id=${d['id']}, full_name=${d['full_name']}');
-      }
-    } catch (e) {
-      // ignore logging errors
-    }
+    try {} catch (e) {}
     return Profile.fromJson(body is Map && body.containsKey('data')
         ? Map<String, dynamic>.from(body['data'])
         : Map<String, dynamic>.from(body));
@@ -89,12 +73,14 @@ class ApiProfileRepository implements ProfileRepository {
   @override
   Future<void> followUser(String userId) async {
     final res = await _api.post('/users/$userId/follow');
+    try {} catch (_) {}
     _ensureOK(res);
   }
 
   @override
   Future<void> unfollowUser(String userId) async {
     final res = await _api.delete('/users/$userId/unfollow');
+    try {} catch (_) {}
     _ensureOK(res);
   }
 }

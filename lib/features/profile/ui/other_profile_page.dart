@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../profile/providers/providers.dart';
+import '../domain/profile.dart';
 import 'widgets/profile_header.dart';
-import 'widgets/profile_details.dart';
+import 'widgets/other_profile_detile.dart';
 import 'widgets/reviews_list.dart';
 
 class OtherProfilePage extends ConsumerStatefulWidget {
   final String userId;
-  const OtherProfilePage({Key? key, required this.userId}) : super(key: key);
+  final String? initialName;
+  final String? initialAvatarUrl;
+  final String? initialDescription;
+  final Profile? initialProfile;
+
+  const OtherProfilePage({
+    Key? key,
+    required this.userId,
+    this.initialName,
+    this.initialAvatarUrl,
+    this.initialDescription,
+    this.initialProfile,
+  }) : super(key: key);
 
   @override
   ConsumerState<OtherProfilePage> createState() => _OtherProfilePageState();
@@ -15,53 +28,143 @@ class OtherProfilePage extends ConsumerStatefulWidget {
 
 class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
   bool _isLoadingFollow = false;
+  bool? _localIsFollowing;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   Future<void> _onFollowPressed(bool isFollowing) async {
-    setState(() => _isLoadingFollow = true);
-    try {
-      if (isFollowing) {
-        await _showUnfollowDialog();
-      } else {
+    if (isFollowing) {
+      final didConfirm = await _showUnfollowDialog();
+      if (didConfirm != true) return;
+
+      setState(() {
+        _isLoadingFollow = true;
+        _localIsFollowing = false;
+      });
+
+      try {
+        ref.invalidate(unfollowUserProvider(widget.userId));
+        await ref.read(unfollowUserProvider(widget.userId).future);
+
+        ref.invalidate(profileByIdProvider(widget.userId));
+        ref.invalidate(followersCountProvider(widget.userId));
+        final refreshed =
+            await ref.read(profileByIdProvider(widget.userId).future);
+        await ref.read(followersCountProvider(widget.userId).future);
+
+        if (mounted) {
+          if (refreshed.isFollowing == false) {
+            setState(() => _localIsFollowing = null);
+          } else {
+            setState(() => _localIsFollowing = refreshed.isFollowing);
+          }
+        }
+
+        try {
+          ref.invalidate(myProfileProvider);
+          await ref.read(myProfileProvider.future);
+          ref.invalidate(myFollowingCountProvider);
+          await ref.read(myFollowingCountProvider.future);
+        } catch (_) {}
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _localIsFollowing = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Lỗi khi hủy theo dõi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoadingFollow = false);
+      }
+    } else {
+      setState(() {
+        _isLoadingFollow = true;
+        _localIsFollowing = true;
+      });
+
+      try {
+        ref.invalidate(followUserProvider(widget.userId));
         await ref.read(followUserProvider(widget.userId).future);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Lỗi: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingFollow = false);
+
+        ref.invalidate(profileByIdProvider(widget.userId));
+        ref.invalidate(followersCountProvider(widget.userId));
+        final refreshed =
+            await ref.read(profileByIdProvider(widget.userId).future);
+        await ref.read(followersCountProvider(widget.userId).future);
+
+        if (mounted) {
+          if (refreshed.isFollowing == true) {
+            setState(() => _localIsFollowing = null);
+          } else {
+            setState(() => _localIsFollowing = refreshed.isFollowing);
+          }
+        }
+
+        try {
+          ref.invalidate(myProfileProvider);
+          await ref.read(myProfileProvider.future);
+          ref.invalidate(myFollowingCountProvider);
+          await ref.read(myFollowingCountProvider.future);
+        } catch (_) {}
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _localIsFollowing = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Lỗi khi theo dõi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoadingFollow = false);
       }
     }
   }
 
-  Future<void> _showUnfollowDialog() async {
-    final didConfirm = await showDialog<bool>(
+  Future<bool?> _showUnfollowDialog() async {
+    return showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Hủy theo dõi?'),
-          content: const Text('Bạn có chắc chắn muốn hủy theo dõi người này?'),
+          backgroundColor: Colors.white,
+          title: const Text('Hủy theo dõi?',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF003E77),
+                  fontSize: 20)),
+          content: const Text('Bạn có chắc chắn muốn hủy theo dõi người này?',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.black87,
+              )),
           actions: [
             TextButton(
-              child: const Text('Hủy'),
+              child: const Text('Hủy',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 18,
+                  )),
               onPressed: () => Navigator.of(context).pop(false),
             ),
             TextButton(
-              child: const Text('Xác nhận'),
+              child: const Text('Xác nhận',
+                  style: TextStyle(
+                    color: Color(0xFF003E77),
+                    fontSize: 18,
+                  )),
               onPressed: () => Navigator.of(context).pop(true),
             ),
           ],
         );
       },
     );
-
-    if (didConfirm == true) {
-      await ref.read(unfollowUserProvider(widget.userId).future);
-    }
   }
 
   @override
@@ -71,136 +174,238 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
     final followingAsync = ref.watch(followingCountProvider(widget.userId));
 
     return Scaffold(
-      extendBodyBehindAppBar: false,
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF003E77),
-        elevation: 0,
-        toolbarHeight: 48,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: Colors.grey[300]?.withOpacity(0.5),
-            height: 1.0,
+        extendBodyBehindAppBar: true,
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF003E77),
+          elevation: 0,
+          toolbarHeight: 48,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          actions: [],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1.0),
+            child: Container(
+              color: Colors.grey[300]?.withOpacity(0.5),
+              height: 1.0,
+            ),
           ),
         ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(profileByIdProvider(widget.userId));
-          ref.invalidate(followersCountProvider(widget.userId));
-          ref.invalidate(followingCountProvider(widget.userId));
-          await ref.read(profileByIdProvider(widget.userId).future);
-        },
-        child: profileAsync.when(
-          data: (profile) {
-            final isFollowing = profile.isFollowing;
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ProfileHeader(
-                    name: profile.name,
-                    subtitle: profile.description ?? '',
-                    avatarUrl: profile.avatarUrl,
-                    isSelf: false,
-                    followers: followersAsync.value ?? 0,
-                    following: followingAsync.value ?? 0,
-                    points: profile.points,
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(profileByIdProvider(widget.userId).future),
+              ref.refresh(followersCountProvider(widget.userId).future),
+              ref.refresh(followingCountProvider(widget.userId).future),
+            ]);
+          },
+          child: Padding(
+            padding: const EdgeInsets.only(top: 28.0),
+            child: profileAsync.when(
+              data: (profile) {
+                final bool idMismatch = profile.id != widget.userId;
+                Profile displayProfile;
+                final bool isFollowing;
+
+                if (idMismatch) {
+                  final previewBase = widget.initialProfile ??
+                      Profile(
+                        id: widget.userId,
+                        name: widget.initialName ?? profile.name,
+                        phone: '',
+                        email: profile.email,
+                        avatarUrl: widget.initialAvatarUrl ?? profile.avatarUrl,
+                        birthDate: profile.birthDate,
+                        gender: profile.gender,
+                        description:
+                            widget.initialDescription ?? profile.description,
+                        regionId: profile.regionId,
+                        regionName: profile.regionName,
+                        fullRegionAddress: profile.fullRegionAddress,
+                        street: profile.street,
+                        workAddress: profile.workAddress,
+                        studyAddress: profile.studyAddress,
+                        socialNetwork: profile.socialNetwork,
+                        updatedAt: profile.updatedAt,
+                        points: profile.points,
+                        isFollowing: false,
+                      );
+
+                  displayProfile = previewBase.copyWith(
+                    phone: previewBase.phone.isNotEmpty
+                        ? previewBase.phone
+                        : profile.phone,
+                    email: previewBase.email ?? profile.email,
+                    birthDate: previewBase.birthDate ?? profile.birthDate,
+                    gender: previewBase.gender == Gender.unknown
+                        ? profile.gender
+                        : previewBase.gender,
+                    description: previewBase.description ?? profile.description,
+                    regionId: previewBase.regionId ?? profile.regionId,
+                    regionName: previewBase.regionName ?? profile.regionName,
+                    fullRegionAddress: previewBase.fullRegionAddress ??
+                        profile.fullRegionAddress,
+                    street: previewBase.street ?? profile.street,
+                    workAddress: previewBase.workAddress ?? profile.workAddress,
+                    studyAddress:
+                        previewBase.studyAddress ?? profile.studyAddress,
+                    socialNetwork:
+                        previewBase.socialNetwork ?? profile.socialNetwork,
+                    points: previewBase.points > 0
+                        ? previewBase.points
+                        : profile.points,
+                    isFollowing: false,
+                  );
+
+                  isFollowing = false;
+                } else {
+                  displayProfile = profile;
+                  isFollowing = displayProfile.isFollowing;
+                }
+
+                final effectiveFollowing = _localIsFollowing ?? isFollowing;
+
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ProfileHeader(
+                        name: displayProfile.name,
+                        subtitle: displayProfile.description ?? '',
+                        avatarUrl: displayProfile.avatarUrl,
+                        isSelf: false,
+                        followers: followersAsync.value ?? 0,
+                        following: followingAsync.value ?? 0,
+                        points: displayProfile.points,
+                      ),
+                      if (idMismatch) ...[
                         const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber.shade200),
+                          ),
+                          child: const Text(
+                            'Lưu ý: API trả thông tin khác với người trong bài đăng — hiển thị thông tin tóm tắt từ bài đăng.',
+                            style: TextStyle(color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            ElevatedButton.icon(
-                              onPressed: _isLoadingFollow
-                                  ? null
-                                  : () => _onFollowPressed(isFollowing),
-                              icon: _isLoadingFollow
-                                  ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: _isLoadingFollow
+                                      ? null
+                                      : () =>
+                                          _onFollowPressed(effectiveFollowing),
+                                  icon: _isLoadingFollow
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Color(0xFF0D4C7B),
+                                          ),
+                                        )
+                                      : Icon(effectiveFollowing
+                                          ? Icons.how_to_reg_rounded
+                                          : Icons.person_add),
+                                  label: Text(effectiveFollowing
+                                      ? 'Đang theo dõi'
+                                      : 'Theo dõi'),
+                                  style: ElevatedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    backgroundColor: const Color(0xFFF0F6F9),
+                                    foregroundColor: const Color(0xFF0D4C7B),
+                                    fixedSize: const Size(160, 44),
+                                    elevation: 0,
+                                  ),
                                 ),
-                              )
-                                  : Icon(isFollowing
-                                  ? Icons.person_remove
-                                  : Icons.person_add),
-                              label: Text(
-                                  isFollowing ? 'Đang theo dõi' : 'Theo dõi'),
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
-                                backgroundColor: isFollowing
-                                    ? const Color(0xFF0D4C7B)
-                                    : const Color(0xFFF0F6F9),
-                                foregroundColor: isFollowing
-                                    ? Colors.white
-                                    : const Color(0xFF0D4C7B),
-                                fixedSize: const Size(140, 40),
-                                elevation: 0,
-                              ),
+                                const SizedBox(width: 12),
+                                OutlinedButton.icon(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.message),
+                                  label: const Text('Nhắn tin'),
+                                  style: OutlinedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    side: const BorderSide(
+                                        color: Color(0xFF0D4C7B)),
+                                    foregroundColor: const Color(0xFF0D4C7B),
+                                    fixedSize: const Size(140, 40),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            OutlinedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.message),
-                              label: const Text('Nhắn tin'),
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
-                                side:
-                                const BorderSide(color: Color(0xFF0D4C7B)),
-                                foregroundColor: const Color(0xFF0D4C7B),
-                                fixedSize: const Size(140, 40),
-                              ),
+                            const SizedBox(height: 12),
+                            OtherProfileDetile(
+                              profile: displayProfile,
+                              followersCount: followersAsync.value ?? 0,
                             ),
+                            const SizedBox(height: 12),
+                            const ReviewsList(),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        ProfileDetails(profile: profile, showEditButton: false),
-                        const SizedBox(height: 12),
-                        const ReviewsList(),
-                      ],
+                      )
+                    ],
+                  ),
+                );
+              },
+              loading: () => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ProfileHeader(
+                      name: widget.initialName ?? 'Người dùng',
+                      subtitle: widget.initialDescription ?? '',
+                      avatarUrl: widget.initialAvatarUrl,
+                      isSelf: false,
+                      followers: followersAsync.value ?? 0,
+                      following: followingAsync.value ?? 0,
+                      points: 0,
                     ),
-                  )
-                ],
+                    const SizedBox(height: 16),
+                    Container(
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
-          loading: () => SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              child: const Center(child: CircularProgressIndicator()),
+              error: (e, st) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(16),
+                  child: Center(child: Text('Lỗi khi tải hồ sơ: $e')),
+                ),
+              ),
             ),
           ),
-          error: (e, st) => SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.all(16),
-              child: Center(child: Text('Lỗi khi tải hồ sơ: $e')),
-            ),
-          ),
-        ),
-      ),
-    );
+        ));
   }
 }

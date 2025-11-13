@@ -73,7 +73,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final localDate = _birthDate!.toLocal();
       _birthCtrl = TextEditingController(
           text:
-          '${localDate.day.toString().padLeft(2, '0')}/${localDate.month.toString().padLeft(2, '0')}/${localDate.year}');
+              '${localDate.day.toString().padLeft(2, '0')}/${localDate.month.toString().padLeft(2, '0')}/${localDate.year}');
     } else {
       _birthCtrl = TextEditingController(text: '');
     }
@@ -210,7 +210,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       setState(() {
         _birthDate = picked;
         _birthCtrl.text =
-        '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
       });
   }
 
@@ -241,7 +241,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 onEdit: () {
                   _backupText['name'] = _nameCtrl.text;
                   Future.delayed(const Duration(milliseconds: 80),
-                          () => FocusScope.of(context).requestFocus(_nameFocus));
+                      () => FocusScope.of(context).requestFocus(_nameFocus));
                 },
               ),
               const SizedBox(height: 12),
@@ -251,7 +251,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 margin: EdgeInsets.zero,
                 child: Padding(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -260,14 +260,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           const Expanded(
                               child: Text('Mô tả ngắn',
                                   style:
-                                  TextStyle(fontWeight: FontWeight.w500))),
+                                      TextStyle(fontWeight: FontWeight.w500))),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
                             onPressed: () {
                               _backupText['description'] = _descCtrl.text;
                               Future.delayed(
                                   const Duration(milliseconds: 80),
-                                      () => FocusScope.of(context)
+                                  () => FocusScope.of(context)
                                       .requestFocus(_descFocus));
                             },
                             splashRadius: 18,
@@ -311,8 +311,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0D4C7B)),
                               child: const Text('Lưu',
-                                  style: TextStyle(color: Colors.white)
-                              ),
+                                  style: TextStyle(color: Colors.white)),
                             ),
                           ],
                         ),
@@ -344,8 +343,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 readOnly: true,
                 onToggle: (v) => setState(() => _showRegion = v),
                 onEdit: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Không thể sửa trường này')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Không thể sửa trường này')));
                 },
               ),
               const SizedBox(height: 8),
@@ -361,7 +360,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   _backupText['work'] = _workCtrl.text;
                   setState(() => _showWork = true);
                   Future.delayed(const Duration(milliseconds: 80),
-                          () => FocusScope.of(context).requestFocus(_workFocus));
+                      () => FocusScope.of(context).requestFocus(_workFocus));
                 },
               ),
               const SizedBox(height: 8),
@@ -380,7 +379,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     _editingStreet = true;
                   });
                   Future.delayed(const Duration(milliseconds: 80),
-                          () => FocusScope.of(context).requestFocus(_streetFocus));
+                      () => FocusScope.of(context).requestFocus(_streetFocus));
                 },
               ),
               const SizedBox(height: 8),
@@ -417,10 +416,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   _backupText['study'] = _studyCtrl.text;
                   setState(() => _showStudy = true);
                   Future.delayed(const Duration(milliseconds: 80),
-                          () => FocusScope.of(context).requestFocus(_studyFocus));
+                      () => FocusScope.of(context).requestFocus(_studyFocus));
                 },
               ),
-
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isSaving ? null : _save,
@@ -428,12 +426,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   padding: const EdgeInsets.symmetric(vertical: 12.0),
                   child: _isSaving
                       ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ))
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ))
                       : const Text('Lưu thay đổi'),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -476,14 +474,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Hiển thị',
-                        style: TextStyle(fontSize: 12, color: Colors.black,
-                        fontWeight: FontWeight.bold)),
-                    Switch(
-                      value: isVisible,
-                      onChanged: onToggle,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
                     if (isEditing || focusNode.hasFocus) ...[
                       IconButton(
                         icon: const Icon(Icons.check, size: 18),
@@ -558,15 +548,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ] else ...[
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   child: Text(
                     controller.text.trim().isEmpty
                         ? 'Chưa có'
                         : controller.text.trim(),
                     style: TextStyle(
                         fontSize: 14,
-                        color:
-                        readOnly ? Colors.black : Colors.black87),
+                        color: readOnly ? Colors.black : Colors.black87),
                   ),
                 ),
               ],
@@ -604,14 +593,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Hiển thị',
-                        style: TextStyle(fontSize: 12, color: Colors.black,
-                        fontWeight: FontWeight.bold)),
-                    Switch(
-                      value: isVisible,
-                      onChanged: onToggle,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
                     if (isEditing) ...[
                       IconButton(
                         icon: const Icon(Icons.check, size: 18),
@@ -685,13 +666,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ] else
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   child: Text(
                     date == null
                         ? 'Chưa có'
                         : '${date.toLocal().day.toString().padLeft(2, '0')}/${date.toLocal().month.toString().padLeft(2, '0')}/${date.toLocal().year}',
-                    style:
-                    const TextStyle(fontSize: 14, color: Colors.black87),
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                 ),
             ],
