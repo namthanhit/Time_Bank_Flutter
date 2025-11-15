@@ -6,13 +6,6 @@ import 'change_pin_flow.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../profile/ui/profile_page.dart';
 
-const Color kPrimaryColor = Color(0xFF1A3870);
-const Color kAccentColor = Color(0xFF007BFF);
-const Color kLightBackgroundColor = Color(0xFFF0F2F5);
-const Color kDarkTextColor = Color(0xFF333333);
-const Color kGreyTextColor = Color(0xFF757575);
-const Color kLogoutButtonColor = Color(0xFFD81B3A);
-
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
@@ -20,16 +13,50 @@ class SettingsPage extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xác nhận đăng xuất', style: TextStyle(color: kDarkTextColor)),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?', style: TextStyle(color: kGreyTextColor)),
+        backgroundColor: Colors.white,
+        icon: const Icon(Icons.logout_rounded, color: kLogoutButtonColor, size: 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        title: const Text(
+          'Đăng xuất',
+          style: TextStyle(color: kDarkTextColor, fontWeight: FontWeight.bold, fontSize: 22),
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?',
+          style: TextStyle(color: kGreyTextColor, fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Huỷ', style: TextStyle(color: kGreyTextColor)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Đăng xuất', style: TextStyle(color: kLogoutButtonColor, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: kGreyTextColor,
+                    side: BorderSide(color: kGreyTextColor.withOpacity(0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Huỷ bỏ'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kLogoutButtonColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Đăng xuất'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -45,13 +72,13 @@ class SettingsPage extends ConsumerWidget {
     final profileAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
-      backgroundColor: kLightBackgroundColor, // Nền chung của trang
+      backgroundColor: kLightBackgroundColor,
       appBar: AppBar(
         title: const Text('Cài đặt', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: kPrimaryColor, // Header màu xanh đậm
-        elevation: 0, // Bỏ đổ bóng cho AppBar
+        backgroundColor: Color(0xFF003E77),
+        elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white), // Icon back màu trắng
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -96,28 +123,28 @@ class SettingsPage extends ConsumerWidget {
                       onTap: () {
                         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePinFlow()));
                       },
-                      isLast: true, // Đánh dấu item cuối cùng để không có divider
+                      isLast: true,
                     ),
                   ],
                 ),
-                const SizedBox(height: 24), // Khoảng cách lớn hơn trước nút Logout
+                const SizedBox(height: 24),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: ElevatedButton(
                     onPressed: () => _handleLogout(context, ref),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kLogoutButtonColor, // Màu đỏ cho nút đăng xuất
-                      minimumSize: const Size.fromHeight(52), // Nút cao hơn một chút
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Bo tròn góc
-                      elevation: 4, // Đổ bóng nhẹ cho nút
+                      backgroundColor: kLogoutButtonColor,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
                       shadowColor: kLogoutButtonColor.withOpacity(0.3),
                     ),
                     child: const Text(
                       'Đăng xuất',
                       style: TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w700, // Chữ đậm hơn
+                        fontWeight: FontWeight.w700,
                         fontSize: 18,
                       ),
                     ),
@@ -134,19 +161,18 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  // Helper function để tạo card chứa các item cài đặt
   Widget _buildSettingsCard(BuildContext context, {required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16), // Bo tròn góc card
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
-            offset: const Offset(0, 3), // Đổ bóng nhẹ
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -178,9 +204,9 @@ class _SettingsTile extends StatelessWidget {
         ListTile(
           leading: Icon(icon, color: kPrimaryColor),
           title: Text(title, style: const TextStyle(color: kDarkTextColor, fontSize: 16)),
-          trailing: const Icon(Icons.arrow_forward_ios, color: kGreyTextColor, size: 18), // Icon mũi tên nhỏ hơn
+          trailing: const Icon(Icons.arrow_forward_ios, color: kGreyTextColor, size: 18),
           onTap: onTap,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8), // Padding tăng nhẹ
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         ),
         if (!isLast)
           const Divider(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/onboarding/ui/verify_otp_page.dart';
-import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -166,11 +165,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         Center(
                           child: TextButton(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const LoginPage()),
-                              );
+                              Navigator.of(context)
+                                  .popUntil((route) => route.isFirst);
                             },
                             child: const Text(
                               "Đăng nhập",
