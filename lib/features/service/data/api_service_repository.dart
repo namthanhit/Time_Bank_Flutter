@@ -152,7 +152,8 @@ class ApiServiceRepository implements ServiceRepository {
       _ensureOK(res);
 
       final decoded = json.decode(utf8.decode(res.bodyBytes));
-      debugPrint('getdetaillJobCommunityById: decoded type: ${decoded.runtimeType}');
+      debugPrint(
+          'getdetaillJobCommunityById: decoded type: ${decoded.runtimeType}');
       Map<String, dynamic>? serviceMap;
       if (decoded is Map && decoded.containsKey('data')) {
         final d = decoded['data'];
@@ -210,8 +211,8 @@ class ApiServiceRepository implements ServiceRepository {
   @override
   Future<void> updateOfferStatusAccepted(
       {required String offerId,
-        required String jobId,
-        required String status}) async {
+      required String jobId,
+      required String status}) async {
     final path = 'offers/$offerId/me-job/$jobId/accept-offer';
     final res = await _api.patch(
       path,
@@ -224,8 +225,8 @@ class ApiServiceRepository implements ServiceRepository {
   @override
   Future<void> updateOfferStatusRejected(
       {required String offerId,
-        required String jobId,
-        required String status}) async {
+      required String jobId,
+      required String status}) async {
     final path = '/offers/$offerId/me-job/$jobId/reject-offer';
     final res = await _api.patch(
       path,
@@ -233,6 +234,54 @@ class ApiServiceRepository implements ServiceRepository {
     );
     _ensureOK(res);
     debugPrint('Offer status updated successfully: ${res.statusCode}');
+  }
+
+  @override
+  Future<Map<String, dynamic>> createJob({
+    required String title,
+    required String description,
+    required String regionCode,
+    required String place,
+    required int time,
+    required int slot,
+    required String visibility,
+    required List<String> skills,
+    required String preferredStartTime,
+    List<String>? imageUrls,
+  }) async {
+    try {
+      const path = '/jobs';
+      final Map<String, dynamic> bodyMap = {
+        'title': title,
+        'description': description,
+        'region_code': regionCode,
+        'place': place,
+        'time': time,
+        'slot': slot,
+        'visibility': visibility,
+        'skills': skills,
+        'preferred_start_time': preferredStartTime,
+      };
+
+      if (imageUrls != null && imageUrls.isNotEmpty) {
+        bodyMap['imageUrls'] = imageUrls;
+      }
+
+      final body = json.encode(bodyMap);
+
+      final res = await _api.post(path, body: body);
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception('Phản hồi không hợp lệ từ server');
+      }
+
+      return decoded;
+    } catch (e, st) {
+      debugPrint('createJob error: $e\n$st');
+      rethrow;
+    }
   }
 
   @override

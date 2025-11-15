@@ -49,7 +49,7 @@ class ConfirmPage extends ConsumerWidget {
                 result: result,
                 recipientName: recipient?.fullName ?? 'Người nhận không xác định',
                 senderName: userProfile?.fullName ?? 'Bạn',
-                recipientPhone: formState.toPhone, // Truyền SĐT
+                recipientPhone: formState.toPhone,
               ),
             ),
           );

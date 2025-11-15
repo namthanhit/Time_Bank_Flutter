@@ -5,12 +5,12 @@ import 'package:time_bank_flutter/features/profile/ui/other_profile_page.dart';
 import 'package:time_bank_flutter/features/profile/ui/profile_page.dart';
 import 'package:time_bank_flutter/features/profile/providers/providers.dart';
 import 'package:time_bank_flutter/features/profile/domain/profile.dart';
+import '../../../../chat/providers/chat_providers.dart';
+import '../../../../chat/ui/chat_conversation_page.dart';
 import '../../../domain/models/service.dart';
 import '../../../providers/offer_provider.dart';
 import '../../../providers/service_providers.dart';
 import 'service_detail_header.dart';
-import '../../../../chat/providers/chat_providers.dart';
-import '../../../../chat/ui/chat_conversation_page.dart';
 
 class CommunityServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
@@ -199,6 +199,7 @@ class _CommunityServiceDetailPageState
       );
     }
   }
+  // >> Kết thúc tích hợp HEAD
 
   Widget _buildServiceBox(Service service) {
     final followersAsync = ref.watch(followersCountProvider(service.userId));
@@ -508,7 +509,6 @@ class _CommunityServiceDetailPageState
 
         String? status;
         if (statusData is Map<String, dynamic>) {
-          // Sửa lỗi ép kiểu an toàn
           final offerValue = statusData['offer'];
           if (offerValue is String) {
             status = offerValue;
@@ -631,7 +631,7 @@ class _CommunityServiceDetailPageState
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text(
-                    'Đã bị từ chối',
+                    'Đã bị từ chối', // Giữ text từ cả 2 nhánh
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                   ),
                 ),
@@ -648,7 +648,7 @@ class _CommunityServiceDetailPageState
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text(
-                    'Đã hủy',
+                    'Đã hủy', // Giữ text từ cả 2 nhánh
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                   ),
                 ),
@@ -894,7 +894,6 @@ class _CommunityServiceDetailPageState
   }
 
   void _requestService() async {
-    // Giữ nguyên logic API thật (từ local)
     try {
       final note = _noteController.text;
       final repo = ref.read(offerRepositoryProvider);
@@ -956,14 +955,16 @@ class _CommunityServiceDetailPageState
 
   Future<void> _navigateToChat(Service service) async {
     final peerUid = service.userId;
-    final peerName = service.providerName ?? 'Người cung cấp #${service.userId}';
+    final peerName =
+        service.providerName ?? 'Người cung cấp #${service.userId}';
 
-    final myUid = ref.read(currentUidProvider);
+    final myUid = ref.read(currentUidProvider); // (Provider này phải tồn tại)
 
     if (peerUid == myUid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bạn không thể tự chat với chính mình.')),
+          const SnackBar(
+              content: Text('Bạn không thể tự chat với chính mình.')),
         );
       }
       return;

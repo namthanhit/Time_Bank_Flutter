@@ -39,4 +39,17 @@ abstract class ServiceRepository {
     required String jobId,
     required String status,
   });
+
+  Future<Map<String, dynamic>> createJob({
+    required String title,
+    required String description,
+    required String regionCode,
+    required String place,
+    required int time,
+    required int slot,
+    required String visibility,
+    required List<String> skills,
+    required String preferredStartTime,
+    List<String>? imageUrls,
+  });
 }

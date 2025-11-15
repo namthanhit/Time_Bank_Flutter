@@ -1,17 +1,13 @@
 import 'dart:io';
-
+import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:time_bank_flutter/features/service/data/mock_service_repository.dart';
-import 'package:time_bank_flutter/features/service/domain/models/service.dart';
-
-import '../../../../time_transfer/domain/models/recipient_info.dart';
-import '../../../../time_transfer/ui/widgets/transfer_destination_card.dart';
-// Note: The 'Service' model and 'MockServiceRepository' are no longer used
-// as the UI is for a "Request", not a "Service".
+import '../../../onboarding/providers/onboarding_providers.dart';
+import '../../providers/service_providers.dart';
+import 'transfer_escrow.dart';
 
 class ServiceCreatePage extends ConsumerStatefulWidget {
   const ServiceCreatePage({super.key});
@@ -29,21 +25,19 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   final _durationController = TextEditingController();
   final _descriptionController = TextEditingController();
   int _participantsCount = 1;
-  // visibility options: 'Cá nhân' (private), 'Mọi người' (public), 'Bạn bè' (friends)
   String _visibilityOption = 'Mọi người';
-  // selected skills (store skill ids)
   List<String> _selectedSkillIds = [];
-  // selected image urls (placeholder implementation)
-  List<String> _selectedImages = [];
 
-  // single-field inputs kept: _timeController and _durationController
-  // guards to avoid re-entrant formatting during onChanged
+  Map<String, String> _selectedSkillsMap = {};
+  List<String> _selectedImages = []; // Danh sách các đường dẫn file local
+
   bool _isFormattingTime = false;
   bool _isFormattingDuration = false;
   bool _isFormattingDate = false;
   String? _dateError;
 
-  // skills will be selected from MockServiceRepository.skillNames via selector
+  // Biến quản lý trạng thái loading
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -53,7 +47,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     _dateController.dispose();
     _durationController.dispose();
     _descriptionController.dispose();
-    // participants handled as int
     super.dispose();
   }
 
@@ -65,12 +58,13 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         return Icons.people_alt;
       case 'Cá nhân':
       default:
-        return Icons.person; // Hoặc Icons.person
+        return Icons.person;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('Selected Skills Map: $_selectedSkillsMap');
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF003E77),
@@ -95,11 +89,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header inside the card
                     _buildCardHeader(),
                     const SizedBox(height: 24),
-
-                    // Tên yêu cầu
                     _buildSectionTitle('Tên yêu cầu:'),
                     TextFormField(
                       controller: _titleController,
@@ -112,8 +103,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Địa chỉ
                     _buildSectionTitle('Địa chỉ:'),
                     TextFormField(
                       controller: _addressController,
@@ -127,8 +116,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Thời gian (single input, auto-format hh:mm and auto-jump)
                     _buildSectionTitle('Thời gian:'),
                     Row(
                       children: [
@@ -243,8 +230,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       ],
                     ),
                     const SizedBox(height: 20),
-
-                    // Thời lượng (single input, auto-format hh:mm:ss and auto-jump)
                     _buildSectionTitle('Thời lượng:'),
                     TextFormField(
                       controller: _durationController,
@@ -252,6 +237,13 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Vui lòng nhập thời lượng';
+                        }
+                        final parts = value.split(':');
+                        if (parts.length != 3) return 'Định dạng hh:mm:ss';
+                        if (int.tryParse(parts[0]) == null ||
+                            int.tryParse(parts[1]) == null ||
+                            int.tryParse(parts[2]) == null) {
+                          return 'Giờ, phút, giây phải là số';
                         }
                         return null;
                       },
@@ -305,8 +297,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Mô tả
                     _buildSectionTitle('Mô tả:'),
                     TextFormField(
                       controller: _descriptionController,
@@ -322,27 +312,21 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Chuyên môn
                     _buildSectionTitle('Chuyên môn:'),
                     Wrap(
                       spacing: 8.0,
                       runSpacing: 4.0,
                       children: [
-                        ...MockServiceRepository.getSkillNamesFromIds(
-                                _selectedSkillIds)
-                            .asMap()
-                            .entries
-                            .map((e) => InputChip(
-                                  label: Text(e.value),
+                        ..._selectedSkillsMap.entries
+                            .map((entry) => InputChip(
+                                  label: Text(entry.value),
                                   labelStyle: TextStyle(
                                       color: Color(0xFF000000), fontSize: 16),
                                   backgroundColor: Color(0xFFE0DC06),
-                                  //side: BorderSide(color: Colors.orange.shade200),
-                                  //deleteIconColor: Colors.orange.shade700,
                                   onDeleted: () {
                                     setState(() {
-                                      _selectedSkillIds.removeAt(e.key);
+                                      _selectedSkillIds.remove(entry.key);
+                                      _selectedSkillsMap.remove(entry.key);
                                     });
                                   },
                                 ))
@@ -356,8 +340,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-
-                    // Participants under specialization with aligned label
                     Row(
                       children: [
                         const Text('Số lượng',
@@ -412,33 +394,35 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       ],
                     ),
                     const SizedBox(height: 20),
-
-                    // Ảnh
                     _buildSectionTitle('Ảnh:'),
                     _buildImagePicker(),
                     const SizedBox(height: 32),
-
-                    // Create Button
                     SizedBox(
                       width: double.infinity,
                       height: 45,
                       child: ElevatedButton(
-                        onPressed: _createRequest,
+                        // Cập nhật onPressed
+                        onPressed: _isLoading ? null : _createRequest,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
-                          // foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text(
-                          'Tạo yêu cầu',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        // Cập nhật child
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              )
+                            : const Text(
+                                'Tạo yêu cầu',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -451,14 +435,12 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
-  // Header widget inside the card
   Widget _buildCardHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            // Placeholder Avatar
             const CircleAvatar(
               radius: 22,
               backgroundImage: AssetImage('assets/images/avatar_1.png'),
@@ -476,7 +458,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         ),
         Row(
           children: [
-            // Icon này sẽ thay đổi dựa trên giá trị của _visibilityOption
             Icon(_getIconForOption(_visibilityOption),
                 color: Colors.blue.shade800, size: 26),
             const SizedBox(width: 8),
@@ -488,7 +469,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                   _visibilityOption = val;
                 });
               },
-              // Đây là phần được cập nhật chính
               itemBuilder: (ctx) => [
                 PopupMenuItem(
                   value: 'Cá nhân',
@@ -522,7 +502,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                   ),
                 ),
               ],
-              // Phần child này vẫn giữ nguyên
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -550,7 +529,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
-  // Placeholder widget for the image picker
   Widget _buildImagePicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,7 +537,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           spacing: 12,
           runSpacing: 12,
           children: [
-            // Support both remote URLs and local file paths returned by pickers.
             ..._selectedImages.map((url) => ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
@@ -572,7 +549,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                             width: 110,
                             height: 110,
                             fit: BoxFit.cover,
-                            // Show a friendly placeholder if network load fails
                             errorBuilder: (context, error, stackTrace) =>
                                 Center(
                               child: Icon(
@@ -628,7 +604,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       hintText: hint,
       hintStyle: TextStyle(color: Colors.grey[400]),
       filled: true,
-      // White background for fields
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -650,15 +625,37 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
-  // (Formatting helpers removed per UI decision)
-
-  // Skill selector dialog - uses MockServiceRepository.skillNames
   Future<void> _showSkillSelector(BuildContext context) async {
-    final allSkills = MockServiceRepository.skillNames;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
+
+    Map<String, String> allSkills;
+    try {
+      final skillsList = await ref.read(skillsProvider.future);
+      allSkills = {for (var skill in skillsList) skill.id: skill.name};
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi tải danh sách kỹ năng: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     final Map<String, bool> selected = {
       for (final id in allSkills.keys) id: _selectedSkillIds.contains(id)
     };
-
     await showDialog<void>(
       context: context,
       builder: (ctx) {
@@ -666,19 +663,23 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           backgroundColor: Colors.white,
           title: const Text('Chọn chuyên môn'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: allSkills.entries.map((e) {
-                return CheckboxListTile(
-                  value: selected[e.key] ?? false,
-                  title: Text(e.value),
-                  onChanged: (val) {
-                    selected[e.key] = val ?? false;
-                    // update dialog state
-                    (ctx as Element).markNeedsBuild();
-                  },
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setDialogState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: allSkills.entries.map((e) {
+                    return CheckboxListTile(
+                      value: selected[e.key] ?? false,
+                      title: Text(e.value),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selected[e.key] = val ?? false;
+                        });
+                      },
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ),
           actions: [
@@ -695,6 +696,9 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                         .where((e) => e.value)
                         .map((e) => e.key)
                         .toList();
+                    _selectedSkillsMap = {
+                      for (var id in _selectedSkillIds) id: allSkills[id]!
+                    };
                   });
                   Navigator.of(ctx).pop();
                 },
@@ -708,111 +712,142 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
-  void _createRequest() {
-    if (_formKey.currentState!.validate()) {
-      // Form is valid, process the data
-      // (The old 'Service' model no longer applies)
-      final title = _titleController.text;
-      final address = _addressController.text;
-      final time = _timeController.text;
-      final date = _dateController.text;
-      final duration = _durationController.text;
-      // Parse time (hh:mm) into minutes
-      int parseTimeToMinutes(String s) {
-        final parts = s.split(':');
-        if (parts.length < 2) return 0;
-        final h = int.tryParse(parts[0]) ?? 0;
-        final m = int.tryParse(parts[1]) ?? 0;
-        return h * 60 + m;
-      }
+  int _parseDurationToSeconds(String hhmmss) {
+    final parts = hhmmss.split(':');
+    if (parts.length != 3) {
+      return 0;
+    }
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1]) ?? 0;
+    final s = int.tryParse(parts[2]) ?? 0;
+    return (h * 3600) + (m * 60) + s;
+  }
 
-      // Parse duration hh:mm:ss into total minutes (rounded)
-      int parseDurationToMinutes(String s) {
-        final parts = s.split(':');
-        if (parts.isEmpty) return 0;
-        final h = int.tryParse(parts[0]) ?? 0;
-        final m = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
-        final sec = parts.length > 2 ? int.tryParse(parts[2]) ?? 0 : 0;
-        final totalSeconds = h * 3600 + m * 60 + sec;
-        return (totalSeconds / 60).round();
-      }
+  Future<List<String>> _uploadImages(List<String> localPaths) async {
+    final List<String> downloadUrls = [];
 
-      final timeMinutes = parseTimeToMinutes(time);
-      final durationMinutes = parseDurationToMinutes(duration);
+    if (localPaths.isEmpty) {
+      return downloadUrls;
+    }
 
-      // Build a mock Service and add it to the MockServiceRepository so it appears in "My" tab
-      final newService = Service(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: MockServiceRepository.currentUserId,
-        skillIds: _selectedSkillIds.isEmpty ? null : _selectedSkillIds,
-        title: title,
-        // Convert literal newlines into escaped "\\n" so backend receives
-        // line breaks as the two-character sequence \n while keeping any
-        // tags or plain text intact.
-        description: _descriptionController.text.replaceAll('\n', '\\n'),
-        regionCode: address,
-        place: '',
-        preferredStart: parseDdMmYyyy(date),
-        time: timeMinutes > 0 ? timeMinutes : durationMinutes,
-        // `slot` represents personnel capacity (count). Creation UI currently
-        // doesn't collect capacity, so default to 1.
-        slot: 1,
-        visibility: _visibilityOption == 'Cá nhân'
+    final storageRef = FirebaseStorage.instance.ref();
+
+    await Future.wait(
+      localPaths.map((localPath) async {
+        try {
+          final file = File(localPath);
+          final fileName =
+              'service_images/${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+
+          final uploadRef = storageRef.child(fileName);
+
+          final uploadTask = uploadRef.putFile(file);
+          final snapshot = await uploadTask.whenComplete(() {});
+
+          final downloadUrl = await snapshot.ref.getDownloadURL();
+          downloadUrls.add(downloadUrl);
+        } catch (e) {
+          debugPrint('Lỗi upload file: $localPath - Lỗi: $e');
+        }
+      }),
+    );
+
+    return downloadUrls;
+  }
+
+  void _createRequest() async {
+    if (_formKey.currentState!.validate() && !_isLoading) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final title = _titleController.text;
+        final address = _addressController.text;
+        final durationString = _durationController.text;
+        final slot = _participantsCount;
+        final skills = _selectedSkillIds;
+        final visibility = _visibilityOption == 'Cá nhân'
             ? 'private'
-            : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public'),
-        status: 'open',
-        createdAt: DateTime.now(),
-        providerName: null,
-      );
+            : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public');
 
-      MockServiceRepository.addService(newService);
+        final timeParam = _parseDurationToSeconds(durationString);
+        final regionCode = "NULL";
+        final place = address;
+        String preferredStartTime;
 
-      // Use collected values (debug/log)
-      debugPrint(
-          'Create request: title=$title, address=$address, time=$time, date=$date, duration=$duration');
+        final DateTime? dateObj = parseDdMmYyyy(_dateController.text);
+        if (dateObj != null) {
+          final timeParts = _timeController.text.split(':');
+          final h = int.tryParse(timeParts[0]) ?? 0;
+          final m = int.tryParse(timeParts[1]) ?? 0;
+          final combinedDateTime =
+              DateTime(dateObj.year, dateObj.month, dateObj.day, h, m);
+          preferredStartTime = combinedDateTime.toIso8601String();
+        } else {
+          preferredStartTime = DateTime.now().toIso8601String();
+        }
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Yêu cầu đã được tạo thành công!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+        final List<String> imageUrls = await _uploadImages(_selectedImages);
 
-      // Navigate back; listeners should refresh My tab from mock repository
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (ctx) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Chuyển thời gian'),
-              backgroundColor: const Color(0xFF003E77),
+        final repo = ref.read(serviceRepositoryProvider);
+        final Map<String, dynamic> jobData = await repo.createJob(
+          title: title,
+          description: _descriptionController.text,
+          regionCode: regionCode,
+          place: place,
+          time: timeParam,
+          slot: slot,
+          visibility: visibility,
+          skills: skills,
+          preferredStartTime: preferredStartTime,
+          imageUrls: imageUrls,
+        );
+
+        final String? jobId = jobData['id'] as String?;
+        if (jobId == null) {
+          throw Exception("Không nhận được Job ID từ server sau khi tạo.");
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yêu cầu đã được tạo thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (ctx) => TransferEscrowPage(
+              jobId: jobId,
+              jobTitle: _titleController.text,
+              jobDuration: Duration(seconds: timeParam),
+              jobSlots: _participantsCount,
             ),
-            body: Padding(
-              padding: const EdgeInsets.all(16),
-              child: TransferDestinationCard(
-                phone: '', // khởi tạo theo yêu cầu (hoặc truyền số từ form)
-                amount: Duration.zero,
-                note: _titleController.text,
-                lookupState: AsyncValue.data(null),
-                onPhoneChanged: (s) {},
-                onPhoneSubmitted: (s) {},
-                onAmountChanged: (d) {},
-                onNoteChanged: (s) {},
-                onLookupPressed: () {},
-                showFieldErrors: false,
-                onQrPressed: () {},
-              ),
-            ),
-          );
-        }),
-      );
+          ),
+        );
+      } catch (e, st) {
+        // Xử lý lỗi
+        debugPrint('Lỗi tạo job: $e\n$st');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tạo yêu cầu thất bại: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
-  // (format helpers removed — logic inlined where needed)
-
   String _normalizeTime(String fourDigits) {
-    // fourDigits must be 4 chars long: HHMM
     final h = int.tryParse(fourDigits.substring(0, 2)) ?? 0;
     final mRaw = int.tryParse(fourDigits.substring(2, 4)) ?? 0;
     final carryH = mRaw ~/ 60;
@@ -821,34 +856,25 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     return '${hh.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
   }
 
-  // Normalize hhmmss digits (6 chars) into carried hh:mm:ss
   String _normalizeDuration(String sixDigits) {
-    // assume sixDigits length == 6
     final h = int.tryParse(sixDigits.substring(0, 2)) ?? 0;
     var m = int.tryParse(sixDigits.substring(2, 4)) ?? 0;
     var s = int.tryParse(sixDigits.substring(4, 6)) ?? 0;
-
-    // carry seconds into minutes
     final carryM = s ~/ 60;
     s = s % 60;
     m += carryM;
-
-    // carry minutes into hours
     final carryH = m ~/ 60;
     m = m % 60;
     final hh = h + carryH;
-
     return '${hh.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  //năm nhuận
   bool isLeapYear(int y) {
     if (y % 400 == 0) return true;
     if (y % 100 == 0) return false;
     return y % 4 == 0;
   }
 
-  //số ngày trong tháng
   int daysInMonth(int year, int month) {
     List<int> daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     if (month == 2) {
@@ -862,23 +888,17 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     final s = input.trim().replaceAll('-', '/');
     final parts = s.split('/');
     if (parts.length != 3) return null;
-
-    // loại bỏ khoảng trắng
     final dStr = parts[0].trim();
     final mStr = parts[1].trim();
     final yStr = parts[2].trim();
-
     if (dStr.isEmpty || mStr.isEmpty || yStr.isEmpty) return null;
-
     final d = int.tryParse(dStr);
     final m = int.tryParse(mStr);
     final y = int.tryParse(yStr);
     if (d == null || m == null || y == null) return null;
-
     if (m < 1 || m > 12) return null;
     final maxD = daysInMonth(y, m);
     if (d < 1 || d > maxD) return null;
-
     try {
       return DateTime(y, m, d);
     } catch (_) {
@@ -886,7 +906,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     }
   }
 
-  // Show a bottom sheet to choose image source (camera or gallery).
   void _showImageSourceOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -898,7 +917,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
               title: const Text('Camera'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                // Request camera permission
                 final status = await Permission.camera.request();
                 if (!status.isGranted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -906,7 +924,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                   ));
                   return;
                 }
-
                 try {
                   final XFile? picked = await ImagePicker()
                       .pickImage(source: ImageSource.camera, imageQuality: 85);
@@ -914,7 +931,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                     setState(() => _selectedImages.add(picked.path));
                   }
                 } catch (e) {
-                  // ignore errors from picker
                   debugPrint('Camera pick error: $e');
                 }
               },
@@ -924,29 +940,19 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
               title: const Text('Thư viện'),
               onTap: () async {
                 Navigator.of(ctx).pop();
-
-                // Request storage/photos permission in a robust way so it works
-                // across Android versions (pre- and post-API33) and iOS.
                 PermissionStatus status = PermissionStatus.denied;
                 if (Platform.isAndroid) {
-                  // Try legacy storage permission first (covers older Android)
                   status = await Permission.storage.request();
-                  // If not granted, try the newer photos/media permission (Android 13+)
                   if (!status.isGranted) {
                     status = await Permission.photos.request();
                   }
                 } else if (Platform.isIOS) {
-                  // On iOS we request photos; result might be .limited
                   status = await Permission.photos.request();
                 } else {
                   status = await Permission.storage.request();
                 }
-
-                // Treat .limited on iOS as allowed for picking
                 final allowed = status.isGranted || status.isLimited;
                 if (!allowed) {
-                  // If the user permanently denied permission we can prompt them
-                  // to open app settings so they can enable it manually.
                   final open = await showDialog<bool>(
                     context: context,
                     builder: (dctx) => AlertDialog(
