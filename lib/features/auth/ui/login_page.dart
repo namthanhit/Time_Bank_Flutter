@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import '../providers/auth_providers.dart';
-import '../providers/auth_state.dart';
 import '../domain/validators.dart';
 import '../../Onboarding/ui/signup_page.dart';
 
@@ -56,18 +55,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final state = ref.watch(authControllerProvider);
     final isLoading = state.loading;
 
-    ref.listen<AuthState>(authControllerProvider, (prev, next) async {
+    String? friendlyError;
+    if (state.error != null && !state.loading) {
+      final errorString = state.error!.toLowerCase();
 
-      if (next.error != null && (prev?.error != next.error)) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (errorString.contains('invalid credentials') ||
+          errorString.contains('401')) {
+        friendlyError = "Số điện thoại hoặc mật khẩu không đúng.";
       }
-    });
+      else if (errorString.contains('account temporarily locked') ||
+          errorString.contains('403')) {
+        friendlyError = "Tài khoản của bạn đã bị tạm khóa. Vui lòng thử lại sau.";
+      }
+      else {
+        friendlyError = "Đã xảy ra lỗi. Vui lòng thử lại.";
+      }
+    }
+
 
     return Scaffold(
       body: Container(
@@ -117,6 +121,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           textInputAction: TextInputAction.next,
                           onFieldSubmitted: (_) => _pwdFocus.requestFocus(),
                           validator: Validators.phoneVN,
+                          onChanged: (_) {
+                            if (state.error != null) {
+                              ref.read(authControllerProvider.notifier).clearError();
+                            }
+                          },
                           decoration: InputDecoration(
                             hintText: "Nhập số điện thoại",
                             hintStyle: TextStyle(
@@ -138,6 +147,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _submit(),
                           validator: Validators.password,
+                          onChanged: (_) {
+                            if (state.error != null) {
+                              ref.read(authControllerProvider.notifier).clearError();
+                            }
+                          },
                           decoration: InputDecoration(
                             hintText: "Nhập mật khẩu",
                             hintStyle: TextStyle(
@@ -155,7 +169,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                         ),
+
+                        if (friendlyError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: Text(
+                              friendlyError,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        else
+                          const SizedBox.shrink(),
+
                         const SizedBox(height: 20),
+
                         SizedBox(
                           height: 50,
                           child: AbsorbPointer(

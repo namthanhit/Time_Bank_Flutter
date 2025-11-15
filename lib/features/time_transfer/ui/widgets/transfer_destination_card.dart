@@ -5,7 +5,6 @@ import 'package:time_bank_flutter/features/time_transfer/domain/models/recipient
 import 'package:time_bank_flutter/features/time_transfer/providers/transaction_providers.dart';
 import 'time_picker_dialog.dart';
 
-
 class TransferDestinationCard extends ConsumerStatefulWidget {
   final String phone;
   final Duration amount;
@@ -35,10 +34,12 @@ class TransferDestinationCard extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TransferDestinationCard> createState() => _TransferDestinationCardState();
+  ConsumerState<TransferDestinationCard> createState() =>
+      _TransferDestinationCardState();
 }
 
-class _TransferDestinationCardState extends ConsumerState<TransferDestinationCard> {
+class _TransferDestinationCardState
+    extends ConsumerState<TransferDestinationCard> {
   final TextEditingController accountController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController noteController = TextEditingController(); // MỚI
@@ -114,12 +115,10 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
     }
   }
 
-
   void _onNoteChanged() {
     if (_isSyncingNote) return;
     widget.onNoteChanged(noteController.text);
   }
-
 
   Future<void> _openTimePicker() async {
     final Duration? picked = await showDialog<Duration>(
@@ -144,6 +143,21 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
     final balance = balanceAsync.value?.secs ?? 0;
     final enough = widget.amount.inSeconds <= balance;
 
+    String? translatedErrorText;
+    if (widget.lookupState.hasError && !widget.lookupState.isLoading) {
+      final errorString = widget.lookupState.error.toString().toLowerCase();
+
+      if (errorString.contains("không thể chuyển cho chính mình")) {
+        translatedErrorText = "Không thể chuyển thời gian cho chính mình.";
+      }
+      else if (errorString.contains("không tìm thấy")) {
+        translatedErrorText = "Không tìm thấy số tài khoản này.";
+      }
+      else {
+        translatedErrorText = "Đã xảy ra lỗi tra cứu.";
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -156,17 +170,13 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
           title: 'Số tài khoản',
           hint: 'Nhập số tài khoản (SĐT)',
           controller: accountController,
-          onQrIconTap: widget.onQrPressed, // Hàm callback
-          qrIcon: Icons.qr_code_scanner,
+          onQrIconTap: widget.onQrPressed,
           icon: Icons.person_search_outlined,
           onIconTap: widget.onLookupPressed,
           onSubmitted: widget.onPhoneSubmitted,
           focusNode: accountFocus,
           keyboardType: TextInputType.phone,
-          errorText: widget.lookupState.hasError &&
-              !widget.lookupState.isLoading
-              ? widget.lookupState.error.toString()
-              : null,
+          errorText: translatedErrorText,
         ),
         const SizedBox(height: 20),
         _buildInputBox(
@@ -259,12 +269,11 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  else
-                    if (icon != null)
-                      GestureDetector(
-                        onTap: onIconTap,
-                        child: Icon(icon, color: colorPrimary, size: 22),
-                      ),
+                  else if (icon != null)
+                    GestureDetector(
+                      onTap: onIconTap,
+                      child: Icon(icon, color: colorPrimary, size: 22),
+                    ),
                 ],
               ),
             ],
@@ -274,7 +283,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Text(
-              errorText,
+              errorText, // Đây là nơi hiển thị lỗi đã dịch
               style: const TextStyle(color: Colors.red, fontSize: 13),
             ),
           )
@@ -295,8 +304,7 @@ class _TransferDestinationCardState extends ConsumerState<TransferDestinationCar
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: (enough && !showError) ? Colors.transparent : Colors.red
-          ),
+              color: (enough && !showError) ? Colors.transparent : Colors.red),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withAlpha((0.08 * 255).toInt()),

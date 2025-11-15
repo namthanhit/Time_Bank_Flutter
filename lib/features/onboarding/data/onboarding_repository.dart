@@ -9,20 +9,17 @@ class OnboardingRepository {
   final OnboardingApi api;
   final FirebaseAuth auth;
 
-  // ---------- Regions ----------
+
   Future<List<Region>> getProvinces() => api.fetchProvinces();
   Future<List<Region>> getDistricts(String provinceId) => api.fetchDistricts(provinceId);
   Future<List<Region>> getWards(String districtId) => api.fetchWards(districtId);
   Future<Region> getRegionDetail(String id) => api.fetchRegionDetail(id);
 
-  // ---------- Uniqueness ----------
-  /// Trả về { 'email_taken': bool, 'citizen_id_taken': bool }
+
   Future<Map<String, bool>> checkUnique({String? email, String? citizenId}) {
-    // API phía dưới đã map đúng query: citizen_id (snake_case)
     return api.checkUnique(email: email, citizenId: citizenId);
   }
 
-  // ---------- Phone/OTP ----------
   Future<StartPhoneResult> startPhoneFlow(String phoneRaw) async {
     final r = await api.checkPhone(phoneRaw);
     if (r.exists) throw OnboardingError('Số điện thoại đã được sử dụng');
@@ -54,10 +51,10 @@ class OnboardingRepository {
   }) async {
     final credential = PhoneAuthProvider.credential(verificationId: verificationId, smsCode: smsCode);
     await auth.signInWithCredential(credential);
-    await auth.signOut(); // không giữ session Firebase
+    await auth.signOut();
   }
 
-  // ---------- Signup/Create ----------
+
   Future<String> createAccount({
     required String phoneToken,
     required PersonalDto personal,
@@ -65,7 +62,6 @@ class OnboardingRepository {
     required String password,
     required String skillId,
   }) async {
-    // Guard nhẹ: cần wardId để lưu vào UserDetail.region_id
     if ((personal.regionId ?? personal.regionId) == null) {
       throw OnboardingError('Thiếu region_id (wardId) trong hồ sơ cá nhân');
     }

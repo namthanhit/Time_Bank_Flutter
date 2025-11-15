@@ -4,7 +4,7 @@ class Validators {
     if (s.isEmpty) return 'Vui lòng nhập số điện thoại';
     // VN: 10 digits, bắt đầu 0 (đơn giản). Tuỳ quy tắc dự án.
     final reg = RegExp(r'^0\d{9}$');
-    if (!reg.hasMatch(s)) return 'Số điện thoại không hợp lệ (vd: 0xxxxxxxxx)';
+    if (!reg.hasMatch(s)) return 'Số điện thoại không hợp lệ';
     return null;
   }
 

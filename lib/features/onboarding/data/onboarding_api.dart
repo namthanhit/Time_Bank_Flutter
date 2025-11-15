@@ -7,7 +7,6 @@ class OnboardingApi {
   OnboardingApi(this._api);
   final ApiClient _api;
 
-  // ---- Auth / Skills ----
 
   Future<CheckPhoneResp> checkPhone(String phone) async {
     final res = await _api.get('/auth/check-phone', query: {'phone': phone});
@@ -49,10 +48,6 @@ class OnboardingApi {
     );
   }
 
-  // --------------- Uniqueness ---------------
-
-  /// GET /auth/check-unique?email=...&citizen_id=...
-  /// → { email_taken: bool, citizen_id_taken: bool }
   Future<Map<String, bool>> checkUnique({String? email, String? citizenId}) async {
     final q = <String, String>{};
     if (email != null && email.isNotEmpty) q['email'] = email;
@@ -66,9 +61,7 @@ class OnboardingApi {
       'citizen_id_taken': data['citizen_id_taken'] == true,
     };
   }
-  // ---- Regions----
 
-  /// GET /regions/provinces
   Future<List<Region>> fetchProvinces() async {
     final res = await _api.get('/regions/provinces');
     _ensureOK(res);
@@ -79,7 +72,6 @@ class OnboardingApi {
     return regions;
   }
 
-  /// GET /regions/:provinceId/districts
   Future<List<Region>> fetchDistricts(String provinceId) async {
     final res = await _api.get('/regions/$provinceId/districts');
     _ensureOK(res);
@@ -90,7 +82,6 @@ class OnboardingApi {
     return regions;
   }
 
-  /// GET /regions/:districtId/wards
   Future<List<Region>> fetchWards(String districtId) async {
     final res = await _api.get('/regions/$districtId/wards');
     _ensureOK(res);
@@ -101,17 +92,14 @@ class OnboardingApi {
     return regions;
   }
 
-  /// GET /regions/detail/:id
   Future<Region> fetchRegionDetail(String id) async {
     final res = await _api.get('/regions/detail/$id');
     _ensureOK(res);
     final data = _decodeJson(res.body);
-    // detail thường trả object trực tiếp; nếu bọc {data:{...}} vẫn OK
     final obj = (data['id'] != null) ? data : (data['data'] as Map<String, dynamic>);
     return Region.fromJson(obj);
   }
 
-  // ---- helpers ----
   void _ensureOK(http.Response r) {
     if (r.statusCode < 200 || r.statusCode >= 300) {
       throw Exception('HTTP ${r.statusCode}: ${r.body}');
@@ -123,11 +111,10 @@ class OnboardingApi {
   Map<String, dynamic> _decodeJson(String source) {
     final raw = jsonDecode(source);
     if (raw is Map<String, dynamic>) return raw;
-    if (raw is List) return {'data': raw}; // chuẩn hóa về {data: [...]}
+    if (raw is List) return {'data': raw};
     throw const FormatException('Unexpected JSON shape');
   }
 
-  /// Chuẩn hóa: lấy List từ cả {data:[...]} hoặc List thuần
   List<Map<String, dynamic>> _extractList(Map<String, dynamic> decoded) {
     final v = decoded['data'] ?? decoded;
     if (v is List) {

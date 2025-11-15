@@ -70,15 +70,16 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController(this._ref, this.repo) : super(AuthState.initial());
   final Ref _ref;
   final AuthRepository repo;
+  void clearError() {
+    state = state.copyWith(error: null);
+  }
 
-  // Helper đọc key an toàn từ mọi kiểu response
   T? _pick<T>(dynamic src, String key) {
     try {
       if (src == null) return null;
       if (src is Map) {
         final v = src[key];
         if (v is T) return v;
-        // nếu value lồng trong 'data'
         if (src['data'] is Map) {
           final v2 = (src['data'] as Map)[key];
           if (v2 is T) return v2;

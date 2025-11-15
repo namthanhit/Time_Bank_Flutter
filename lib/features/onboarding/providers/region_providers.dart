@@ -2,50 +2,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'onboarding_providers.dart';
 import '../domain/models/models.dart';
 
-/// ----- Selections (id) -----
 
-/// Province (Tỉnh/TP) được chọn
 final selectedProvinceIdProvider = StateProvider<String?>((_) => null);
 
-/// District (Quận/Huyện) được chọn
 final selectedDistrictIdProvider = StateProvider<String?>((_) => null);
 
-/// Ward (Xã/Phường) được chọn
 final selectedWardIdProvider = StateProvider<String?>((_) => null);
 
-/// ----- Lists -----
-
-/// Danh sách Province (Tỉnh/TP)
 final provincesProvider = FutureProvider<List<Region>>((ref) async {
   final repo = ref.read(onboardingRepoProvider);
-  final items = await repo.getProvinces(); // alias fetchProvinces()
+  final items = await repo.getProvinces();
   items.sort((a, b) => a.name.compareTo(b.name));
-  // Giữ cache sau khi rời màn để quay lại không refetch
   ref.keepAlive();
   return items;
 });
 
-/// Danh sách District theo Province
 final districtsProvider = FutureProvider.autoDispose<List<Region>>((ref) async {
   final provinceId = ref.watch(selectedProvinceIdProvider);
   if (provinceId == null) return <Region>[];
   final repo = ref.read(onboardingRepoProvider);
-  final items = await repo.getDistricts(provinceId); // alias fetchDistricts()
+  final items = await repo.getDistricts(provinceId);
   items.sort((a, b) => a.name.compareTo(b.name));
   return items;
 });
 
-/// Danh sách Ward theo District
 final wardsProvider = FutureProvider.autoDispose<List<Region>>((ref) async {
   final districtId = ref.watch(selectedDistrictIdProvider);
   if (districtId == null) return <Region>[];
   final repo = ref.read(onboardingRepoProvider);
-  final items = await repo.getWards(districtId); // alias fetchWards()
+  final items = await repo.getWards(districtId);
   items.sort((a, b) => a.name.compareTo(b.name));
   return items;
 });
-
-/// ----- Helpers: Region theo id đã chọn (lookup nhanh từ list hiện có) -----
 
 final selectedProvinceProvider = Provider<Region?>((ref) {
   final id = ref.watch(selectedProvinceIdProvider);
@@ -83,20 +71,17 @@ final selectedWardProvider = Provider<Region?>((ref) {
   );
 });
 
-/// ----- Full address text (từ wardId → district → province) -----
 final fullAddressTextProvider = FutureProvider<String?>((ref) async {
   final wardId = ref.watch(selectedWardIdProvider);
   if (wardId == null) return null;
 
   final repo = ref.read(onboardingRepoProvider);
 
-  // ward detail
   final ward = await repo.getRegionDetail(wardId);
   if (ward.parentId == null) return ward.name;
 
-  // district detail
   final district = await repo.getRegionDetail(ward.parentId!);
-  // province detail
+
   Region? province;
   if (district.parentId != null) {
     province = await repo.getRegionDetail(district.parentId!);

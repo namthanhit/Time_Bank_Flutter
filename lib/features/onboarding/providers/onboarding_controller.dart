@@ -7,7 +7,6 @@ class OnboardingController extends StateNotifier<OnboardingState> {
   OnboardingController(this._repo) : super(const OnboardingState());
   final OnboardingRepository _repo;
 
-  // B1: Nhập số điện thoại -> checkPhone + gửi OTP (Firebase)
   Future<void> startWithPhone(String phone) async {
     state = state.copyWith(loading: true, error: null);
     try {
@@ -23,7 +22,6 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     }
   }
 
-  // B2: Xác thực OTP cục bộ (Firebase)
   Future<void> verifyOtp(String code) async {
     final verId = state.verificationId;
     if (verId == null) {
@@ -39,7 +37,6 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     }
   }
 
-  // Lưu bản nháp hồ sơ cá nhân
   void setPersonalDraft({
     String? fullName,
     String? email,
@@ -60,12 +57,10 @@ class OnboardingController extends StateNotifier<OnboardingState> {
     );
   }
 
-  // Lưu bảo mật (PIN + mật khẩu)
   void setSecurity({String? pin, String? password}) {
     state = state.copyWith(pin: pin, password: password);
   }
 
-  // B3: Gửi tạo tài khoản lên backend
   Future<String> submitCreateAccount() async {
     final phoneToken = state.phoneToken;
     if (phoneToken == null) throw Exception('Thiếu phone_token');
@@ -109,5 +104,13 @@ class OnboardingController extends StateNotifier<OnboardingState> {
       state = state.copyWith(loading: false, error: e.toString());
       rethrow;
     }
+  }
+
+  void setManualError(String errorMsg) {
+    state = state.copyWith(error: errorMsg, loading: false);
+  }
+
+  void clearError() {
+    state = state.copyWith(error: null);
   }
 }

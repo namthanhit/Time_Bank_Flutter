@@ -59,6 +59,6 @@ class ApiTransactionRepository implements TransactionRepository {
   @override
   String buildDefaultNote(
       String senderName, String recipientName, String formattedAmount) {
-    return '$senderName chuyển $formattedAmount cho $recipientName';
+    return '$senderName chuyển thời gian cho $recipientName';
   }
 }

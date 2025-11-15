@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/onboarding/ui/verify_otp_page.dart';
-import 'package:time_bank_flutter/features/auth/ui/login_page.dart';
 import 'package:time_bank_flutter/features/onboarding/providers/onboarding_providers.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -26,7 +25,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
     final phone = _phoneController.text.trim();
 
-    // ✅ Gọi flow mới: check-phone → gửi OTP (Firebase) → set verificationId/phoneToken
     await ref.read(onboardingControllerProvider.notifier).startWithPhone(phone);
 
     final state = ref.read(onboardingControllerProvider);
@@ -42,17 +40,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingControllerProvider);
 
-    // Lắng nghe lỗi để hiện SnackBar
-    ref.listen(onboardingControllerProvider, (prev, next) {
-      if (next.error != null && mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(next.error!)));
-      }
-    });
 
     return Scaffold(
       body: Container(
-        // Nền gradient xanh (GIỮ NGUYÊN)
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -86,6 +76,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   child: Form(
                     key: _formKey,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildInput(
                           label: "Số điện thoại",
@@ -103,6 +94,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             return null;
                           },
                         ),
+
+                        if (state.error != null && !state.loading)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              state.error!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox.shrink(),
 
                         const SizedBox(height: 32),
                         Container(
@@ -138,7 +143,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         ),
 
                         const SizedBox(height: 20),
-
                         Row(
                           children: [
                             const Expanded(
@@ -157,21 +161,18 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 16),
-
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LoginPage()),
-                            );
-                          },
-                          child: const Text(
-                            "Đăng nhập",
-                            style: TextStyle(
-                              color: Color(0xFF0F58A1),
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .popUntil((route) => route.isFirst);
+                            },
+                            child: const Text(
+                              "Đăng nhập",
+                              style: TextStyle(
+                                color: Color(0xFF0F58A1),
+                              ),
                             ),
                           ),
                         ),
