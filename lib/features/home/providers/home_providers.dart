@@ -7,20 +7,26 @@ import '../../auth/providers/auth_providers.dart';
 
 final homeSummaryProvider = FutureProvider<HomeSummary>((ref) async {
   try {
-    final wallet = await ref.watch(accountBalanceProvider.future);
-    // rating intentionally skipped for Home summary — set to 0.0 so UI can treat it as hidden
-    return HomeSummary(rating: 0.0, timeBalance: wallet.pretty);
+    final walletFuture = ref.watch(accountBalanceProvider.future);
+    final profileFuture = ref.watch(userProfileProvider.future);
+
+    final wallet = await walletFuture;
+    final userProfile = await profileFuture;
+
+    return HomeSummary(
+      rating: 0.0,
+      timeBalance: wallet.pretty,
+      avatarUrl: userProfile.avatarUrl,
+    );
   } catch (e, st) {
-    print('homeSummaryProvider: failed to fetch wallet -> $e\n$st');
+    print('homeSummaryProvider: failed to fetch data -> $e\n$st');
     rethrow;
   }
 });
 
-/// Activities for Home: use "my jobs" (jobs created by current user) and map Service -> Activity
+
 final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
   final userProfile = await ref.watch(userProfileProvider.future);
-
-  // myJobsProvider returns Map with 'data' -> List<Service>
   final jobsMap = await ref.watch(myJobsProvider(userProfile.id).future);
 
   final raw = jobsMap['data'];
@@ -73,4 +79,4 @@ final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
 });
 
 /// Ẩn/hiện số dư
-final balanceHiddenProvider = StateProvider<bool>((_) => false);
+final balanceHiddenProvider = StateProvider<bool>((_) => true);

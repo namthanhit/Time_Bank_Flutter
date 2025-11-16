@@ -31,40 +31,64 @@ class ChatListContainer extends ConsumerWidget {
           if (searchQuery.isEmpty) return true;
 
           final peerUid = _getPeerUid(thread, myUid);
-          String threadName;
 
-          if (peerUid != null && thread.memberNames.containsKey(peerUid)) {
-            threadName = thread.memberNames[peerUid]!;
-          } else {
-            threadName = thread.name ?? '';
-          }
+          String threadName = (peerUid != null)
+              ? thread.memberNames[peerUid] ?? ''
+              : thread.name ?? '';
 
           return threadName.toLowerCase().contains(searchQuery);
-
         }).toList();
 
+        if (threads.isEmpty) {
+          return const Center(child: Text('Chưa có cuộc trò chuyện nào.'));
+        }
         if (filteredThreads.isEmpty) {
           return const Center(child: Text('Không tìm thấy kết quả.'));
         }
 
-        return ChatList(
-          threads: filteredThreads,
-          onTap: (thread) {
-            final peerUid = _getPeerUid(thread, myUid);
-            String threadName;
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(peerProfileProvider);
 
-            if (peerUid != null && thread.memberNames.containsKey(peerUid)) {
-              threadName = thread.memberNames[peerUid]!;
-            } else {
-              threadName = thread.name ?? 'Group Chat';
-            }
-
-            onThreadTap(thread.id, threadName);
+            await ref.refresh(threadsProvider.future);
           },
+          child: ChatList(
+            threads: filteredThreads,
+            onTap: (thread) {
+              final peerUid = _getPeerUid(thread, myUid);
+              String threadName;
+
+              if (peerUid != null && thread.memberNames.containsKey(peerUid)) {
+                threadName = thread.memberNames[peerUid]!;
+              } else {
+                threadName = thread.name ?? 'Group Chat';
+              }
+
+              onThreadTap(thread.id, threadName);
+            },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => Center(child: Text('Lỗi tải danh sách: $e')),
+      error: (e, st) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Lỗi tải danh sách: $e', textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  ref.invalidate(peerProfileProvider);
+                  ref.invalidate(threadsProvider);
+                },
+                child: const Text('Thử lại'),
+              )
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

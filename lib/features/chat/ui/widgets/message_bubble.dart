@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:io'; // <-- Import để dùng Image.file
-import '../../domain/models/message.dart'; // <-- Import model đã sửa
+import 'dart:io';
+import '../../domain/models/message.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
   final String? avatar;
+  final String? initials;
   final bool online;
-  final VoidCallback? onRetry; // <-- 1. Thêm callback retry
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     Key? key,
     required this.message,
     required this.isMe,
     this.avatar,
+    this.initials,
     this.online = false,
-    this.onRetry, // <-- 2. Thêm vào constructor
+    this.onRetry,
   }) : super(key: key);
 
   @override
@@ -32,20 +34,15 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!isMe) ...[
-              _buildAvatar(), // Tách avatar ra
+              _buildAvatar(),
             ],
-
-            // 3. Thêm widget trạng thái (xoay/lỗi) CHO TIN CỦA MÌNH
             if (isMe) _buildStatusIndicator(context),
-
-            // Nội dung bubble: text hoặc image
             if (message.type == MessageType.image && message.mediaUrl != null)
-              _buildImageContent(context) // Tách ra hàm riêng
+              _buildImageContent(context)
             else
-              _buildTextContent(context, bubbleColor, textColor), // Tách ra hàm riêng
+              _buildTextContent(context, bubbleColor, textColor),
           ],
         ),
-        // Time
         Padding(
           padding: EdgeInsets.only(
             left: isMe ? 0 : 45,
@@ -61,8 +58,10 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  // Widget hiển thị avatar (code cũ của bạn)
+
   Widget _buildAvatar() {
+    final fallbackText = (initials != null && initials!.isNotEmpty) ? initials! : '?';
+
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: Stack(
@@ -70,9 +69,20 @@ class MessageBubble extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.grey.shade300,
             backgroundImage: _avatarImageProvider(avatar),
-            child: avatar == null ? const Icon(Icons.person, size: 16) : null,
+
+
+            child: (avatar == null || avatar!.isEmpty)
+                ? Text(
+              fallbackText,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF334155),
+              ),
+            )
+                : null,
           ),
           if (online)
             Positioned(
@@ -96,13 +106,11 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  // 4. WIDGET MỚI: Hiển thị trạng thái (xoay/lỗi)
-  Widget _buildStatusIndicator(BuildContext context) {
-    // Nếu là 'sent' (mặc định), không hiển thị gì
-    if (message.status == MessageStatus.sent) {
-      return const SizedBox.shrink(); // Không chiếm chỗ
-    }
 
+  Widget _buildStatusIndicator(BuildContext context) {
+    if (message.status == MessageStatus.sent) {
+      return const SizedBox.shrink();
+    }
     Widget indicator;
     if (message.status == MessageStatus.pending) {
       indicator = const SizedBox(
@@ -110,7 +118,7 @@ class MessageBubble extends StatelessWidget {
         height: 16,
         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey),
       );
-    } else { // status == MessageStatus.failed
+    } else {
       indicator = IconButton(
         icon: Icon(Icons.error_outline, color: Colors.red[400], size: 20),
         onPressed: onRetry,
@@ -118,17 +126,15 @@ class MessageBubble extends StatelessWidget {
         constraints: const BoxConstraints(),
       );
     }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Center(child: indicator),
     );
   }
 
-  // 5. WIDGET SỬA LẠI: Hiển thị nội dung ảnh
-  Widget _buildImageContent(BuildContext context) {
-    final bool isLocal = message.isLocalFile; // Lấy từ model
 
+  Widget _buildImageContent(BuildContext context) {
+    final bool isLocal = message.isLocalFile;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: ConstrainedBox(
@@ -138,8 +144,6 @@ class MessageBubble extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          // Nếu là file local (đang pending) thì dùng Image.file
-          // Nếu không thì dùng CachedNetworkImage
           child: isLocal
               ? Image.file(
             File(message.mediaUrl!),
@@ -160,7 +164,7 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  // Widget nội dung text (code cũ của bạn)
+
   Widget _buildTextContent(BuildContext context, Color bubbleColor, Color textColor) {
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -188,7 +192,6 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  // --- Các hàm helper (code cũ của bạn) ---
   ImageProvider? _avatarImageProvider(String? src) {
     if (src == null || src.isEmpty) return null;
     if (src.startsWith('http')) return NetworkImage(src);

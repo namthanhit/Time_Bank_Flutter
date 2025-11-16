@@ -42,58 +42,85 @@ class ChatListItem extends ConsumerWidget {
     final myUid = ref.watch(currentUidProvider);
     final peerUid = _getPeerUid(thread, myUid);
 
-    String title;
-    String initials;
+    if (peerUid == null) {
+      final title = thread.name ?? 'Group Chat';
+      final lastMessageText = _formatLastMessage(thread, myUid);
+      final lastMessageTime = thread.lastAt;
 
-    if (peerUid != null && thread.memberNames.containsKey(peerUid)) {
-      title = thread.memberNames[peerUid]!;
-    } else {
-      title = thread.name ?? 'Group Chat';
+      return ListTile(
+        leading: const CircleAvatar(backgroundColor: Colors.grey, child: Icon(Icons.group)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(lastMessageText, maxLines: 1),
+        trailing: Text(_formatTime(lastMessageTime), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        onTap: onTap,
+      );
     }
-    initials = title.isNotEmpty ? title[0].toUpperCase() : '?';
 
-    final presenceAsync = (peerUid != null)
-        ? ref.watch(presenceProvider(peerUid))
-        : const AsyncValue<bool>.data(false);
+    final peerProfileAsync = ref.watch(peerProfileProvider(peerUid));
+    final presenceAsync = ref.watch(presenceProvider(peerUid));
     final isPeerOnline = presenceAsync.asData?.value ?? false;
-
     final lastMessageText = _formatLastMessage(thread, myUid);
     final lastMessageTime = thread.lastAt;
 
-    return ListTile(
-      leading: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          CircleAvatar(
-            backgroundColor: Colors.grey.shade300,
-            child: Text(initials),
-          ),
-          Positioned(
-            right: -2,
-            bottom: -2,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: isPeerOnline ? Colors.green : Colors.grey.shade600,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.5),
+
+    return peerProfileAsync.when(
+      data: (peerData) {
+        final title = peerData['full_name'] as String? ?? 'Người dùng';
+        final peerAvatarUrl = peerData['avatar_url'] as String?;
+        final initials = title.isNotEmpty ? title[0].toUpperCase() : '?';
+
+        return ListTile(
+          leading: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.grey.shade300,
+                backgroundImage: (peerAvatarUrl != null && peerAvatarUrl.isNotEmpty)
+                    ? NetworkImage(peerAvatarUrl)
+                    : null,
+                child: (peerAvatarUrl == null || peerAvatarUrl.isEmpty)
+                    ? Text(initials)
+                    : null,
               ),
-            ),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: isPeerOnline ? Colors.green : Colors.grey.shade600,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text(
+            lastMessageText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Text(
+            _formatTime(lastMessageTime),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          onTap: onTap,
+        );
+      },
+      loading: () => ListTile(
+        leading: const CircleAvatar(backgroundColor: Color(0xFFE9EEF2)),
+        title: Text('Đang tải...', style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
+        subtitle: Text(lastMessageText, maxLines: 1),
+        trailing: Text(_formatTime(lastMessageTime), style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-        lastMessageText,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      error: (e, _) => ListTile(
+        leading: const CircleAvatar(backgroundColor: Color(0xFFE9EEF2), child: Icon(Icons.error_outline, color: Colors.red)),
+        title: Text(thread.memberNames[peerUid] ?? 'Lỗi tải hồ sơ', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600)),
+        subtitle: Text(lastMessageText, maxLines: 1),
       ),
-      trailing: Text(
-        _formatTime(lastMessageTime),
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-      onTap: onTap,
     );
   }
 }

@@ -4,12 +4,19 @@ import 'package:flutter/foundation.dart';
 class HomeSummary {
   final double rating;
   final String timeBalance;
-  const HomeSummary({required this.rating, required this.timeBalance});
+  final String? avatarUrl;
+
+  const HomeSummary({
+    required this.rating,
+    required this.timeBalance,
+    this.avatarUrl,
+  });
 
   factory HomeSummary.fromJson(Map<String, dynamic> j) => HomeSummary(
-        rating: (j['rating'] as num).toDouble(),
-        timeBalance: j['time_balance'] as String,
-      );
+    rating: (j['rating'] as num).toDouble(),
+    timeBalance: j['time_balance'] as String,
+    avatarUrl: (j['avatar'] ?? j['avatar_url'] ?? j['user_avatar']) as String?,
+  );
 }
 
 @immutable
@@ -20,7 +27,7 @@ class Activity {
   final String taskTime; // "HH:mm dd/MM/yyyy"
   final String duration; // "HH:mm:ss"
   final String location;
-  final List<String> tags; // <-- thay cho tag1/tag2
+  final List<String> tags;
   final String status;
   final String? avatarUrl;
 

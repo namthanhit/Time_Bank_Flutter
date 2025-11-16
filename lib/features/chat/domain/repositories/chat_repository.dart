@@ -11,6 +11,8 @@ abstract class ChatRepository {
       String peerUid,
       String myName,
       String peerName,
+      String myAvatar,
+      String peerAvatar,
       );
 
   Stream<List<Message>> watchMessages(String threadId, {int limit});

@@ -5,10 +5,11 @@ class Thread {
   final String? name;
   final List<String> members;
   final String? lastText;
-  final String? lastType;          // 'text' | 'image'
+  final String? lastType;
   final String? lastSenderId;
   final DateTime? lastAt;
   final Map<String, String> memberNames;
+  final Map<String, String> memberAvatars;
 
   const Thread({
     required this.id,
@@ -19,13 +20,19 @@ class Thread {
     this.lastSenderId,
     this.lastAt,
     this.memberNames = const {},
+    this.memberAvatars = const {},
   });
 
   factory Thread.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data()!;
     final lm = (d['lastMessage'] as Map<String, dynamic>?) ?? {};
+
     final namesData = d['memberNames'] as Map<String, dynamic>? ?? {};
     final memberNames = namesData.map((key, value) => MapEntry(key, value.toString()));
+
+    final avatarsData = d['memberAvatars'] as Map<String, dynamic>? ?? {};
+    final memberAvatars = avatarsData.map((key, value) => MapEntry(key, value.toString()));
+
     return Thread(
       id: doc.id,
       name: d['name'] as String?,
@@ -35,6 +42,7 @@ class Thread {
       lastSenderId: lm['senderId'] as String?,
       lastAt: (lm['at'] is Timestamp) ? (lm['at'] as Timestamp).toDate() : null,
       memberNames: memberNames,
+      memberAvatars: memberAvatars,
     );
   }
 
@@ -42,6 +50,7 @@ class Thread {
     if (name != null) 'name': name,
     'members': members,
     if (memberNames.isNotEmpty) 'memberNames': memberNames,
+    if (memberAvatars.isNotEmpty) 'memberAvatars': memberAvatars, // <-- 5. GHI VÀO FIRESTORE
 
     if (lastText != null || lastType != null || lastSenderId != null || lastAt != null)
       'lastMessage': {
