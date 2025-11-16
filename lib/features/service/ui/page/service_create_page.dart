@@ -1,10 +1,12 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart'; // Import Firebase Storage
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../auth/domain/user_profile.dart';
+import '../../../auth/providers/auth_providers.dart';
 import '../../../onboarding/providers/onboarding_providers.dart';
 import '../../providers/service_providers.dart';
 import 'transfer_escrow.dart';
@@ -29,14 +31,13 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   List<String> _selectedSkillIds = [];
 
   Map<String, String> _selectedSkillsMap = {};
-  List<String> _selectedImages = []; // Danh sách các đường dẫn file local
+  List<String> _selectedImages = [];
 
   bool _isFormattingTime = false;
   bool _isFormattingDuration = false;
   bool _isFormattingDate = false;
   String? _dateError;
 
-  // Biến quản lý trạng thái loading
   bool _isLoading = false;
 
   @override
@@ -65,6 +66,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   @override
   Widget build(BuildContext context) {
     debugPrint('Selected Skills Map: $_selectedSkillsMap');
+    final userProfileAsync = ref.watch(userProfileProvider);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF003E77),
@@ -89,7 +92,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildCardHeader(),
+                    _buildCardHeader(userProfileAsync),
                     const SizedBox(height: 24),
                     _buildSectionTitle('Tên yêu cầu:'),
                     TextFormField(
@@ -107,7 +110,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                     TextFormField(
                       controller: _addressController,
                       decoration:
-                          _buildInputDecoration('Số nhà, địa chỉ, khu vực'),
+                      _buildInputDecoration('Số nhà, địa chỉ, khu vực'),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Vui lòng nhập địa chỉ';
@@ -139,7 +142,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                               if (_isFormattingTime) return;
                               _isFormattingTime = true;
                               final digits =
-                                  v.replaceAll(RegExp(r'[^0-9]'), '');
+                              v.replaceAll(RegExp(r'[^0-9]'), '');
                               String newText;
                               if (digits.length <= 2) {
                                 newText = digits;
@@ -171,7 +174,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                           child: TextFormField(
                             controller: _dateController,
                             decoration:
-                                _buildInputDecoration('dd/mm/yyyy').copyWith(
+                            _buildInputDecoration('dd/mm/yyyy').copyWith(
                               errorText: _dateError,
                             ),
                             keyboardType: TextInputType.datetime,
@@ -184,17 +187,17 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                               if (_isFormattingDate) return;
                               _isFormattingDate = true;
                               final digits =
-                                  v.replaceAll(RegExp(r'[^0-9]'), '');
+                              v.replaceAll(RegExp(r'[^0-9]'), '');
                               String newText;
                               if (digits.length <= 2) {
                                 newText = digits;
                               } else if (digits.length <= 4) {
                                 newText =
-                                    '${digits.substring(0, 2)}/${digits.substring(2)}';
+                                '${digits.substring(0, 2)}/${digits.substring(2)}';
                               } else {
                                 final y = digits.substring(4);
                                 newText =
-                                    '${digits.substring(0, 2)}/${digits.substring(2, 4)}/$y';
+                                '${digits.substring(0, 2)}/${digits.substring(2, 4)}/$y';
                               }
 
                               if (newText != v) {
@@ -209,7 +212,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                                 final dt = parseDdMmYyyy(newText);
                                 setState(() {
                                   _dateError =
-                                      dt == null ? 'Ngày không hợp lệ' : null;
+                                  dt == null ? 'Ngày không hợp lệ' : null;
                                 });
                               } else {
                                 if (_dateError != null)
@@ -276,13 +279,13 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                           _durationController.value = TextEditingValue(
                             text: newText,
                             selection:
-                                TextSelection.collapsed(offset: newText.length),
+                            TextSelection.collapsed(offset: newText.length),
                           );
                         }
 
                         if (digits.length >= 6) {
                           final normalized =
-                              _normalizeDuration(digits.substring(0, 6));
+                          _normalizeDuration(digits.substring(0, 6));
                           if (normalized != _durationController.text) {
                             _durationController.value = TextEditingValue(
                               text: normalized,
@@ -319,17 +322,17 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       children: [
                         ..._selectedSkillsMap.entries
                             .map((entry) => InputChip(
-                                  label: Text(entry.value),
-                                  labelStyle: TextStyle(
-                                      color: Color(0xFF000000), fontSize: 16),
-                                  backgroundColor: Color(0xFFE0DC06),
-                                  onDeleted: () {
-                                    setState(() {
-                                      _selectedSkillIds.remove(entry.key);
-                                      _selectedSkillsMap.remove(entry.key);
-                                    });
-                                  },
-                                ))
+                          label: Text(entry.value),
+                          labelStyle: TextStyle(
+                              color: Color(0xFF000000), fontSize: 16),
+                          backgroundColor: Color(0xFFE0DC06),
+                          onDeleted: () {
+                            setState(() {
+                              _selectedSkillIds.remove(entry.key);
+                              _selectedSkillsMap.remove(entry.key);
+                            });
+                          },
+                        ))
                             .toList(),
                         ActionChip(
                           onPressed: () => _showSkillSelector(context),
@@ -373,7 +376,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                               ),
                               Padding(
                                 padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                const EdgeInsets.symmetric(horizontal: 8.0),
                                 child: Text('$_participantsCount',
                                     style: const TextStyle(fontSize: 16)),
                               ),
@@ -401,7 +404,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       width: double.infinity,
                       height: 45,
                       child: ElevatedButton(
-                        // Cập nhật onPressed
                         onPressed: _isLoading ? null : _createRequest,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
@@ -409,20 +411,19 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        // Cập nhật child
                         child: _isLoading
                             ? const CircularProgressIndicator(
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              )
+                          valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
                             : const Text(
-                                'Tạo yêu cầu',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
+                          'Tạo yêu cầu',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -435,16 +436,15 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
-  Widget _buildCardHeader() {
+  Widget _buildCardHeader(AsyncValue<UserProfile> userProfileAsync) {
+    final name = userProfileAsync.valueOrNull?.fullName ?? "Bạn";
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            const CircleAvatar(
-              radius: 22,
-              backgroundImage: AssetImage('assets/images/avatar_1.png'),
-            ),
+            _buildUserAvatar(userProfileAsync),
             const SizedBox(width: 12),
             Text(
               'Tạo yêu cầu',
@@ -504,7 +504,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
               ],
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
@@ -515,7 +515,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                     Text(
                       _visibilityOption,
                       style:
-                          TextStyle(color: Colors.grey.shade800, fontSize: 14),
+                      TextStyle(color: Colors.grey.shade800, fontSize: 14),
                     ),
                     const SizedBox(width: 6),
                     const Icon(Icons.arrow_drop_down, size: 20),
@@ -529,6 +529,26 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     );
   }
 
+  Widget _buildUserAvatar(AsyncValue<UserProfile> profileAsync) {
+    final profile = profileAsync.valueOrNull;
+    final url = profile?.avatarUrl;
+
+    if (url != null &&
+        url.isNotEmpty &&
+        (url.startsWith('http://') || url.startsWith('https://'))) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundImage: NetworkImage(url),
+        backgroundColor: Colors.grey[200],
+      );
+    } else {
+      return const CircleAvatar(
+        radius: 22,
+        backgroundImage: AssetImage('assets/images/avatar_1.png'),
+      );
+    }
+  }
+
   Widget _buildImagePicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,34 +558,34 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           runSpacing: 12,
           children: [
             ..._selectedImages.map((url) => ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 110,
-                    height: 110,
-                    color: Colors.grey.shade200,
-                    child: url.startsWith('http')
-                        ? Image.network(
-                            url,
-                            width: 110,
-                            height: 110,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Center(
-                              child: Icon(
-                                Icons.broken_image,
-                                size: 40,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          )
-                        : Image.file(
-                            File(url),
-                            width: 110,
-                            height: 110,
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                )),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 110,
+                height: 110,
+                color: Colors.grey.shade200,
+                child: url.startsWith('http')
+                    ? Image.network(
+                  url,
+                  width: 110,
+                  height: 110,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Center(
+                        child: Icon(
+                          Icons.broken_image,
+                          size: 40,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                )
+                    : Image.file(
+                  File(url),
+                  width: 110,
+                  height: 110,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )),
             GestureDetector(
               onTap: () => _showImageSourceOptions(context),
               child: Container(
@@ -782,7 +802,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           final h = int.tryParse(timeParts[0]) ?? 0;
           final m = int.tryParse(timeParts[1]) ?? 0;
           final combinedDateTime =
-              DateTime(dateObj.year, dateObj.month, dateObj.day, h, m);
+          DateTime(dateObj.year, dateObj.month, dateObj.day, h, m);
           preferredStartTime = combinedDateTime.toIso8601String();
         } else {
           preferredStartTime = DateTime.now().toIso8601String();
@@ -828,7 +848,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           ),
         );
       } catch (e, st) {
-        // Xử lý lỗi
         debugPrint('Lỗi tạo job: $e\n$st');
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
 import 'package:time_bank_flutter/features/service/ui/page/four_service_applicants_page.dart';
 import 'package:time_bank_flutter/features/service/ui/page/rating_page.dart';
 import '../../page/service_create_page.dart';
+import 'package:time_bank_flutter/features/auth/domain/user_profile.dart';
 
-class CommunityHeader extends StatefulWidget {
+class CommunityHeader extends ConsumerStatefulWidget {
   final bool isMyTab;
   final Function(String?)? onFilterChanged;
   final Function(String)? onSearchChanged;
@@ -16,10 +19,10 @@ class CommunityHeader extends StatefulWidget {
   });
 
   @override
-  State<CommunityHeader> createState() => _CommunityHeaderState();
+  ConsumerState<CommunityHeader> createState() => _CommunityHeaderState();
 }
 
-class _CommunityHeaderState extends State<CommunityHeader> {
+class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
   late String _selectedFilter;
 
   @override
@@ -28,8 +31,57 @@ class _CommunityHeaderState extends State<CommunityHeader> {
     _selectedFilter = widget.isMyTab ? 'Yêu cầu của tôi' : 'Tất cả mọi người';
   }
 
+  Widget _buildAvatar(AsyncValue<UserProfile> profileAsync) {
+    final profile = profileAsync.valueOrNull;
+    final url = profile?.avatarUrl;
+
+    if (url != null &&
+        url.isNotEmpty &&
+        (url.startsWith('http://') || url.startsWith('https://'))) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundImage: NetworkImage(url),
+        backgroundColor: Colors.grey[200],
+      );
+    } else {
+      return CircleAvatar(
+        radius: 18,
+        backgroundColor: Colors.grey[200],
+        child: const Icon(
+          Icons.person,
+          color: Color(0xFF003E77),
+          size: 22,
+        ),
+      );
+    }
+  }
+
+  Widget _buildGreeting(AsyncValue<UserProfile> profileAsync) {
+
+    final String name = profileAsync.when(
+      data: (user) => user.fullName.split(' ').first,
+      loading: () => 'bạn',
+      error: (e, s) => 'bạn',
+    );
+
+    return Flexible(
+      fit: FlexFit.loose,
+      child: Text(
+        'Hãy tạo điều bạn muốn?',
+        style: const TextStyle(
+          color: Colors.black54,
+          fontSize: 15,
+        ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final userProfileAsync = ref.watch(userProfileProvider);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
       decoration: const BoxDecoration(
@@ -38,7 +90,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header với Avatar + Greeting (make the framed container expand)
           Row(
             children: [
               Expanded(
@@ -52,41 +103,18 @@ class _CommunityHeaderState extends State<CommunityHeader> {
                     );
                   },
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey[300]!, width: 1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    // ensure inner Row can take the available width
                     child: Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.grey[200],
-                          backgroundImage:
-                              AssetImage('assets/images/avatar.png'),
-                          onBackgroundImageError: (_, __) {},
-                          child: Icon(
-                            Icons.person,
-                            color: Color(0xFF003E77),
-                            size: 22,
-                          ),
-                        ),
+                        _buildAvatar(userProfileAsync),
                         const SizedBox(width: 10),
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: Text(
-                            'Hãy tạo điều bạn muốn',
-                            style: TextStyle(
-                              color: Colors.black54,
-                              fontSize: 15,
-                              //fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
+
+                        _buildGreeting(userProfileAsync),
                       ],
                     ),
                   ),
@@ -96,22 +124,20 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           ),
           const SizedBox(height: 4),
 
-          // 4 Icons Row
           Row(
             children: [
               _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận',
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FourServiceApplicantsPage(
-                      //serviceId: 'cmhp29k6p00054ebg7rebjhgx',
-                      serviceTitle: 'Chờ xác nhận',
-                      initialTabIndex: 0, // tab 1
-                    ),
-                  ),
-                );
-              }),
+                      () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FourServiceApplicantsPage(
+                          serviceTitle: 'Chờ xác nhận',
+                          initialTabIndex: 0, // tab 1
+                        ),
+                      ),
+                    );
+                  }),
               _buildStatusIcon('assets/icons/Folder_Open.png', 'Đã mở', () {
                 Navigator.push(
                   context,
@@ -125,18 +151,18 @@ class _CommunityHeaderState extends State<CommunityHeader> {
                 );
               }),
               _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện',
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FourServiceApplicantsPage(
-                      serviceId: '4',
-                      serviceTitle: 'Đang thực hiện',
-                      initialTabIndex: 3, // tab 3
-                    ),
-                  ),
-                );
-              }),
+                      () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FourServiceApplicantsPage(
+                          serviceId: '4',
+                          serviceTitle: 'Đang thực hiện',
+                          initialTabIndex: 3, // tab 3
+                        ),
+                      ),
+                    );
+                  }),
               _buildStatusIcon('assets/icons/Wavy_Check.png', 'Đánh giá', () {
                 Navigator.push(
                   context,
@@ -147,7 +173,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           ),
           const SizedBox(height: 18),
 
-          // Section Title (icon + label reflect selected filter)
           Row(
             children: [
               Icon(
@@ -168,7 +193,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           ),
           const SizedBox(height: 12),
 
-          // Search Bar với Filter Icon
           Row(
             children: [
               Expanded(
@@ -181,7 +205,6 @@ class _CommunityHeaderState extends State<CommunityHeader> {
                   ),
                   child: TextField(
                     onChanged: widget.onSearchChanged,
-                    //textAlign: TextAlign.center,
                     textAlignVertical: TextAlignVertical.center,
                     decoration: InputDecoration(
                       hintText: 'Tìm kiếm dịch vụ, người dùng...',
@@ -309,10 +332,8 @@ class _CommunityHeaderState extends State<CommunityHeader> {
           Navigator.of(context).pop();
           final value = filterValue ?? label;
           setState(() {
-            // update local selected filter
             _selectedFilter = value;
           });
-          // propagate to parent if provided
           if (widget.onFilterChanged != null) {
             widget.onFilterChanged!(value);
           }
@@ -326,16 +347,16 @@ class _CommunityHeaderState extends State<CommunityHeader> {
       case 'Bạn bè':
         return Icons.group; // 👥
       case 'Yêu cầu của tôi':
-        return Icons.assignment_ind; // 🧾 hoặc Icons.person_outline
+        return Icons.assignment_ind;
       case 'Mọi người':
       case 'Tất cả mọi người':
       default:
-        return Icons.public; // 🌐
+        return Icons.public;
     }
   }
 
   String _displayLabelForFilter(String filter) {
-    // normalize some labels to match the UI expectation
+
     if (filter == 'Mọi người') return 'Mọi người';
     return filter;
   }
