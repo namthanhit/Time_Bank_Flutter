@@ -38,7 +38,10 @@ final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
   }
 
   String _formatTaskTime(DateTime dt) {
-    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    final local = dt.toUtc().add(const Duration(hours: 7));
+    return '${local.day}/${local.month}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 
   List<String> _skillNamesFromService(svc.Service s) {
@@ -50,7 +53,7 @@ final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
   List<Activity> mapped = services.map((s) {
     final created = s.createdAt;
     final taskTime = _formatTaskTime(created);
-    final duration = Duration(minutes: s.time);
+    final duration = Duration(seconds: s.time);
     final hh = duration.inHours.toString().padLeft(2, '0');
     final mm = (duration.inMinutes % 60).toString().padLeft(2, '0');
     final ss = (duration.inSeconds % 60).toString().padLeft(2, '0');
@@ -62,7 +65,7 @@ final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
       title: s.title,
       taskTime: taskTime,
       duration: durationStr,
-      location: s.regionCode ?? s.place,
+      location: s.place,
       tags: _skillNamesFromService(s),
       status: s.status,
       avatarUrl: s.providerAvatar,

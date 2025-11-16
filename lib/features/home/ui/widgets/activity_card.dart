@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/home_models.dart';
 import '../home_typography.dart';
-// specialization tag will mimic ServiceCard style
+
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({

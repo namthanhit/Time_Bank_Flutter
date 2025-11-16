@@ -112,18 +112,17 @@ final activitiesProvider =
     return '${diff.inDays ~/ 30} tháng trước';
   }
 
-  String _formatDuration(int totalMinutes) {
-    final duration = Duration(minutes: totalMinutes);
+  String _formatDuration(int totalSeconds) {
+    final duration = Duration(seconds: totalSeconds);
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return "$hours:$minutes:$seconds";
   }
-
   List<Activity> mapServiceToActivity(List<svc.Service> list) {
     return list.map((s) {
-      final created = s.createdAt;
+      final created = s.createdAt.toLocal();
       final taskTime =
           '${created.hour.toString().padLeft(2, '0')}:${created.minute.toString().padLeft(2, '0')} ${created.day.toString().padLeft(2, '0')}/${created.month.toString().padLeft(2, '0')}/${created.year}';
 
@@ -133,7 +132,7 @@ final activitiesProvider =
         title: s.title,
         taskTime: taskTime,
         duration: _formatDuration(s.time),
-        location: s.regionCode ?? s.place,
+        location: s.place,
         tags: s.skillNames ?? [],
         status: s.status,
         avatarUrl: s.providerAvatar,

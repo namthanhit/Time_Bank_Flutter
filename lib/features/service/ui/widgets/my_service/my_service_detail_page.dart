@@ -72,13 +72,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             if (service == null) {
               return const Center(child: Text('Không tìm thấy dịch vụ'));
             }
-            // Wrap the scrollable content with RefreshIndicator to allow pull-to-refresh.
-            // AlwaysScrollableScrollPhysics ensures the indicator can appear even when content is short.
             return RefreshIndicator(
               onRefresh: () async {
-                // Invalidate the provider so it refetches.
                 ref.invalidate(serviceByIdProvider(widget.serviceId));
-                // Small delay to allow UI refresh and show indicator briefly.
                 await Future.delayed(const Duration(milliseconds: 300));
               },
               child: SingleChildScrollView(

@@ -115,7 +115,7 @@ class Offer {
         slot: _tryParseInt(job['slot']),
         visibility: job['visibility'] ?? '',
         jobStatus: job['status'] ?? '',
-        jobCreatedAt: _tryParseTime(job['created_at']),
+        jobCreatedAt:_tryParseTime(job['created_at']),
         jobOwnerId: jobOwner['id'] ?? '',
         jobOwnerName: jobOwner['full_name'] ?? '',
         jobOwnerAvatar: jobOwner['avatar_url'],
