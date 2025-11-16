@@ -29,6 +29,51 @@ class ServiceCard extends StatelessWidget {
     }
   }
 
+  void _showDeleteConfirmDialog(BuildContext context, Service service) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Xác nhận hủy yêu cầu',
+              style: TextStyle(
+                  color: Color(0xFF003E77),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          content: const Text(
+            'Bạn có chắc chắn muốn xóa yêu cầu này không?',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // Đóng dialog
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Đồng ý',
+                  style: TextStyle(
+                      color: Color(0xFF003E77),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const double chipWidth = 60.0;
@@ -36,7 +81,6 @@ class ServiceCard extends StatelessWidget {
     final bool hasMultipleSkills =
         (service.skillNames?.length ?? (service.skillNames != null ? 1 : 0)) >
             1;
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -139,6 +183,11 @@ class ServiceCard extends StatelessWidget {
                     ),
                     if (isMyService)
                       PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'delete') {
+                            _showDeleteConfirmDialog(context, service);
+                          }
+                        },
                         icon: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
@@ -168,21 +217,6 @@ class ServiceCard extends StatelessWidget {
                         elevation: 8,
                         itemBuilder: (context) => [
                           const PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit,
-                                    size: 18, color: Color(0xFF003E77)),
-                                SizedBox(width: 10),
-                                Text('Chỉnh sửa',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    )),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
                             value: 'delete',
                             child: Row(
                               children: [
@@ -193,21 +227,6 @@ class ServiceCard extends StatelessWidget {
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                       color: Colors.red,
-                                    )),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
-                            value: 'share',
-                            child: Row(
-                              children: [
-                                Icon(Icons.share,
-                                    size: 18, color: Color(0xFF003E77)),
-                                SizedBox(width: 10),
-                                Text('Chia sẻ',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
                                     )),
                               ],
                             ),

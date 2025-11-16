@@ -5,10 +5,10 @@ import '../../../domain/models/service.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
+import 'edit_service.dart';
 
 class MyServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
-
   const MyServiceDetailPage({
     super.key,
     required this.serviceId,
@@ -104,11 +104,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
       ),
     );
   }
-
   Widget _buildServiceContent(Service service) {
     // Khởi tạo trạng thái dựa trên service status
     _initializeStatus(service);
-
     // Nội dung chính: cuộn dọc
     return SingleChildScrollView(
       child: Column(
@@ -208,8 +206,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Chức năng chỉnh sửa')),
+                    // Open the edit page with the current service prefilled
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (ctx) => EditServicePage(service: service),
+                      ),
                     );
                     break;
                   case 'delete':
@@ -484,7 +486,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
   Widget _buildProgressIndicator() {
     // Các bước cố định
-    final steps = ['Đã thanh toán', 'Đang mở', 'Đang thực hiện', 'Đã hoàn thành'];
+    final steps = [
+      'Đã thanh toán',
+      'Đang mở',
+      'Đang thực hiện',
+      'Đã hoàn thành'
+    ];
 
     // Xử lý logic khi dịch vụ bị hủy
     final List<String> displaySteps = List<String>.from(steps);
@@ -797,8 +804,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               height: 40,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFBADBEF).withOpacity(
-                      0.82),
+                  backgroundColor: Color(0xFFBADBEF).withOpacity(0.82),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
