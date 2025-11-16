@@ -92,8 +92,8 @@ class MockServiceRepository implements ServiceRepository {
     required String preferredStartTime,
     List<String>? imageUrls,
   }) async {
-      const path = '/jobs';
-      return {};
+    const path = '/jobs';
+    return {};
   }
 
   @override
@@ -739,6 +739,59 @@ class MockServiceRepository implements ServiceRepository {
       }
     } catch (_) {
       // ignore
+    }
+  }
+
+  // Update certain fields of an existing service in the mock dataset.
+  // This does an immutable replace (Service is immutable), preserving fields
+  // that are not supplied in the parameters.
+  static void updateServiceFields(Object serviceId,
+      {String? title,
+      String? description,
+      String? place,
+      int? time,
+      int? slot,
+      String? visibility,
+      List<String>? skills,
+      DateTime? preferredStart,
+      List<String>? serviceImages}) {
+    final sid = serviceId.toString();
+    final repo = MockServiceRepository();
+    try {
+      final idx = repo._mockData.indexWhere((s) => s.id == sid);
+      if (idx == -1) return;
+      final s = repo._mockData[idx];
+
+      final updated = Service(
+        id: s.id,
+        userId: s.userId,
+        skillId:
+            (skills != null && skills.isNotEmpty) ? skills.first : s.skillId,
+        skillIds: skills ?? s.skillIds,
+        title: title ?? s.title,
+        description: description ?? s.description,
+        regionCode: s.regionCode,
+        place: place ?? s.place,
+        preferredStart: preferredStart ?? s.preferredStart,
+        time: time ?? s.time,
+        slot: slot ?? s.slot,
+        visibility: visibility ?? s.visibility,
+        status: s.status,
+        createdAt: s.createdAt,
+        updatedAt: DateTime.now(),
+        ratingAvg: s.ratingAvg,
+        ratingCount: s.ratingCount,
+        providerName: s.providerName,
+        providerAvatar: s.providerAvatar,
+        providerSpecialization: s.providerSpecialization,
+        serviceImages: serviceImages ?? s.serviceImages,
+        bookedSlots: s.bookedSlots,
+      );
+
+      repo._mockData[idx] = updated;
+      _notifyListeners();
+    } catch (e) {
+      debugPrint('updateServiceFields failed: $e');
     }
   }
 
