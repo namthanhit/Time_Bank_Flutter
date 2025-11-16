@@ -35,6 +35,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   bool _isFormattingDuration = false;
   bool _isFormattingDate = false;
   String? _dateError;
+  String? _timeError; // ✅ THÊM: Biến state cho lỗi thời gian
 
   // Biến quản lý trạng thái loading
   bool _isLoading = false;
@@ -122,11 +123,18 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                         Expanded(
                           child: TextFormField(
                             controller: _timeController,
-                            decoration: _buildInputDecoration('hh:mm'),
+                            // ✅ SỬA: Thêm errorText
+                            decoration: _buildInputDecoration('hh:mm').copyWith(
+                              errorText: _timeError,
+                            ),
                             keyboardType: TextInputType.number,
+                            // ✅ SỬA: Cập nhật validator
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Vui lòng nhập thời gian';
+                              }
+                              if (!_isValidTime(value)) {
+                                return 'Giờ không hợp lệ (hh:mm)';
                               }
                               return null;
                             },
@@ -135,21 +143,24 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                                   RegExp(r'[0-9:]')),
                               LengthLimitingTextInputFormatter(5),
                             ],
+                            // ✅ SỬA: Cập nhật onChanged
                             onChanged: (v) {
                               if (_isFormattingTime) return;
                               _isFormattingTime = true;
                               final digits =
                                   v.replaceAll(RegExp(r'[^0-9]'), '');
                               String newText;
+
                               if (digits.length <= 2) {
                                 newText = digits;
-                              } else if (digits.length == 3) {
+                              } else {
                                 final h = digits.substring(0, 2);
                                 final m = digits.substring(2);
                                 newText = '$h:$m';
-                              } else {
-                                final four = (digits + '0000').substring(0, 4);
-                                newText = _normalizeTime(four);
+                              }
+
+                              if (newText.length > 5) {
+                                newText = newText.substring(0, 5);
                               }
 
                               if (newText != v) {
@@ -160,8 +171,18 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                                 );
                               }
 
-                              if (digits.length >= 4)
-                                FocusScope.of(context).nextFocus();
+                              // Thêm logic validation trực tiếp
+                              if (newText.length == 5) {
+                                final isValid = _isValidTime(newText);
+                                setState(() {
+                                  _timeError =
+                                      isValid ? null : 'Giờ không hợp lệ';
+                                });
+                                if (isValid) FocusScope.of(context).nextFocus();
+                              } else {
+                                if (_timeError != null)
+                                  setState(() => _timeError = null);
+                              }
                               _isFormattingTime = false;
                             },
                           ),
@@ -756,7 +777,10 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   }
 
   void _createRequest() async {
-    if (_formKey.currentState!.validate() && !_isLoading) {
+    // ✅ SỬA: Thêm check _timeError
+    if (_formKey.currentState!.validate() &&
+        !_isLoading &&
+        _timeError == null) {
       setState(() {
         _isLoading = true;
       });
@@ -810,12 +834,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         }
 
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Yêu cầu đã được tạo thành công!'),
-            backgroundColor: Colors.green,
-          ),
-        );
 
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -847,13 +865,25 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     }
   }
 
-  String _normalizeTime(String fourDigits) {
-    final h = int.tryParse(fourDigits.substring(0, 2)) ?? 0;
-    final mRaw = int.tryParse(fourDigits.substring(2, 4)) ?? 0;
-    final carryH = mRaw ~/ 60;
-    final m = mRaw % 60;
-    final hh = h + carryH;
-    return '${hh.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  // ❌ XÓA: Hàm này không cần thiết và làm sai logic
+  // String _normalizeTime(String fourDigits) { ... }
+
+  // ✅ THÊM: Hàm helper để kiểm tra hh:mm
+  bool _isValidTime(String hhmm) {
+    if (hhmm.length != 5) return false;
+    final parts = hhmm.split(':');
+    if (parts.length != 2) return false;
+
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+
+    if (h == null || m == null) return false;
+
+    // Giờ từ 0-23, phút từ 0-59
+    if (h < 0 || h > 23) return false;
+    if (m < 0 || m > 59) return false;
+
+    return true;
   }
 
   String _normalizeDuration(String sixDigits) {

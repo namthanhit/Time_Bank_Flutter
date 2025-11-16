@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// << Import Riverpod để dùng ref trong listener (nếu cần, nhưng hiện tại không cần)
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/open_applicants.dart';
 import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/pending_applicants_no_search_widget.dart';
 import 'package:time_bank_flutter/features/service/ui/widgets/buttom_icon/received_applicants.dart';
@@ -13,7 +15,7 @@ class FourServiceApplicantsPage extends StatefulWidget {
 
   const FourServiceApplicantsPage({
     super.key,
-     this.serviceId,
+    this.serviceId,
     required this.serviceTitle,
     this.initialTabIndex = 0,
   });
@@ -44,10 +46,19 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+
+    _tabController.addListener(_handleTabSelection);
+  }
+
+  void _handleTabSelection() {
+    if (!_tabController.indexIsChanging) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
     super.dispose();
   }
@@ -88,7 +99,7 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
               unselectedLabelColor: const Color(0xFF003E77),
               indicator: UnderlineTabIndicator(
                 borderSide:
-                const BorderSide(width: 5, color: Color(0xFFE30000)),
+                    const BorderSide(width: 5, color: Color(0xFFE30000)),
                 borderRadius: BorderRadius.circular(4),
                 insets: const EdgeInsets.only(bottom: 2),
               ),
@@ -105,62 +116,49 @@ class _FourServiceApplicantsPageState extends State<FourServiceApplicantsPage>
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: _tabs.map((tab) {
-          if (tab == 'Chờ xác nhận') {
-            return const Padding(
-              padding: EdgeInsets.all(0),
-              child: PendingApplicantsNoSearchWidget(),
-            );
-          }
-          if (tab == 'Đã mở') {
-            return const Padding(
-              padding: EdgeInsets.all(0),
-              child: OpenApplicantsWidget(showOnlyMyServices: true),
-            );
-          }
-          if (tab == 'Đã nhận') {
-            return Padding(
-              padding: const EdgeInsets.all(0),
-              child: ReceivedApplicants(
-                showOnlyForCurrentUser: true,
-                // onRefresh: () => setState(() {}), // <-- XÓA DÒNG NÀY
-              ),
-            );
-          }
-          ;
-          if (tab == 'Đang thực hiện') {
-            return const Padding(
-                padding: EdgeInsets.all(0),
-                child: ServiceInProgressWidget(showOnlyMyServices: true));
-          }
-          ;
-          if (tab == 'Hoàn thành') {
-            return Padding(
-                padding: const EdgeInsets.all(0),
-                child: ServiceCompletedWidget());
-          }
-          ;
-          if (tab == 'Đã hủy') {
-            return const Padding(
-                padding: EdgeInsets.all(0),
-                child: ServiceCancelledWidget(showOnlyMyServices: true));
-          }
-          ;
-          // Default placeholder for other tabs
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Text(
-                'Nội dung: $tab',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+      body: _buildCurrentTabBody(),
     );
+  }
+
+  Widget _buildCurrentTabBody() {
+    switch (_tabController.index) {
+      // 0: Chờ xác nhận
+      case 0:
+        return const Padding(
+          padding: EdgeInsets.all(0),
+          child: PendingApplicantsNoSearchWidget(),
+        );
+
+      case 1:
+        return Padding(
+          padding: const EdgeInsets.all(0),
+          child: ReceivedApplicants(
+            showOnlyForCurrentUser: true,
+          ),
+        );
+
+      case 2:
+        return const Padding(
+          padding: EdgeInsets.all(0),
+          child: OpenApplicantsWidget(showOnlyMyServices: true),
+        );
+
+      case 3:
+        return const Padding(
+            padding: EdgeInsets.all(0),
+            child: ServiceInProgressWidget(showOnlyMyServices: true));
+
+      case 4:
+        return Padding(
+            padding: const EdgeInsets.all(0), child: ServiceCompletedWidget());
+
+      case 5:
+        return const Padding(
+            padding: EdgeInsets.all(0),
+            child: ServiceCancelledWidget(showOnlyMyServices: true));
+
+      default:
+        return Container();
+    }
   }
 }
