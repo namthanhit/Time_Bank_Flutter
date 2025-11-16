@@ -521,22 +521,28 @@ class _EditServicePageState extends ConsumerState<EditServicePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            const CircleAvatar(
-              radius: 22,
-              backgroundImage: AssetImage('assets/images/avatar_1.png'),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+        Expanded(
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 22,
+                backgroundImage: AssetImage('assets/images/avatar_1.png'),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
         ),
         Row(
           children: [
