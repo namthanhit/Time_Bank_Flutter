@@ -10,7 +10,7 @@ class ServicePaginationState {
   final bool hasMore;
   final int currentPage;
 
-  ServicePaginationState({
+  const ServicePaginationState({
     this.services = const [],
     this.isLoading = false,
     this.hasMore = true,
@@ -58,7 +58,6 @@ class ServicePaginationNotifier extends StateNotifier<ServicePaginationState> {
       final totalPages =
           metadata?['totalPages'] ?? metadata?['total_pages'] ?? 1;
 
-      // ✅ Lọc bỏ item trùng ID
       final existingIds = state.services.map((s) => s.id).toSet();
       final uniqueNewData =
           newData.where((s) => !existingIds.contains(s.id)).toList();
@@ -75,6 +74,11 @@ class ServicePaginationNotifier extends StateNotifier<ServicePaginationState> {
       state = state.copyWith(isLoading: false);
       print('Pagination error: $e');
     }
+  }
+
+  Future<void> refresh() async {
+    state = const ServicePaginationState();
+    await fetchNextPage();
   }
 }
 

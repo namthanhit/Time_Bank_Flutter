@@ -15,7 +15,6 @@ class PaginationRequestDto {
     this.type,
   });
 
-  /// ✅ Sửa: trả đủ các trường để có thể gửi query đúng
   Map<String, dynamic> toMap() {
     return {
       'page': page,

@@ -201,7 +201,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.grey[200],
+      color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
       child: Center(
         child: Column(
@@ -211,22 +211,17 @@ class _EmptyState extends StatelessWidget {
               width: 150,
               height: 150,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: Colors.white,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
               child: Image.asset('assets/images/thong_bao.png',
-                  width: 96, height: 96, fit: BoxFit.contain),
+                  width: 150, height: 150, fit: BoxFit.contain),
             ),
             const SizedBox(height: 12),
             const Text('Bạn chưa có dịch vụ nào cả',
                 style: TextStyle(fontSize: 16, color: Colors.grey)),
             const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: onRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Làm mới'),
-            ),
           ],
         ),
       ),

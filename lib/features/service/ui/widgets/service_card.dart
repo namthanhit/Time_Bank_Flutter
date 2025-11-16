@@ -281,7 +281,7 @@ class ServiceCard extends StatelessWidget {
                           const TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                     Text(
-                      _formatDateTime(service.createdAt),
+                      _formatDateTime(service.preferredStart ?? DateTime.now()),
                       style: const TextStyle(
                           fontSize: 16, color: Color(0xFF419C23)),
                     ),
@@ -335,7 +335,11 @@ class ServiceCard extends StatelessWidget {
   }
 
   static String _formatDateTime(DateTime t) {
-    return '${t.day}/${t.month}/${t.year} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    final local = t.toUtc().add(const Duration(hours: 7));
+
+    return '${local.day}/${local.month}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 
   static String _formatDurationHMS(int seconds) {
