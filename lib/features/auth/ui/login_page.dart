@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:time_bank_flutter/features/forgot_password/phone_number_dart.dart';
 import '../providers/auth_providers.dart';
 import '../domain/validators.dart';
 import '../../Onboarding/ui/signup_page.dart';
@@ -229,7 +230,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
-                            onPressed: isLoading ? null : () {},
+                            onPressed: isLoading ? null : () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const PhoneNumberPage()
+                                    ,)
+                              );
+                            },
                             child: const Text(
                               "Quên mật khẩu?",
                               style: TextStyle(

@@ -238,11 +238,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 isVisible: true,
                 isEditing: false,
                 onToggle: (_) {},
-                onEdit: () {
-                  _backupText['name'] = _nameCtrl.text;
-                  Future.delayed(const Duration(milliseconds: 80),
-                      () => FocusScope.of(context).requestFocus(_nameFocus));
-                },
+                onEdit: () {},
+                readOnly: true
               ),
               const SizedBox(height: 12),
               Card(
@@ -456,7 +453,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     required VoidCallback onEdit,
     String? prefix,
     bool readOnly = false,
-  }) {
+  })
+  {
     return Card(
       color: Colors.white,
       elevation: 0,
