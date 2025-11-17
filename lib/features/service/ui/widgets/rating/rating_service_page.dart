@@ -1,30 +1,45 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../service/domain/models/rating_model.dart';
+import '../../../../service/providers/rating_provider.dart';
 
-import '../../../data/mock_service_repository.dart';
+class RatingServicePage extends ConsumerStatefulWidget {
+  final RatingModel ratingModel;
 
-/// Rating page used when creating a review for an applicant/service.
-class RatingServicePage extends StatefulWidget {
-  final Map<String, dynamic> applicant;
-  final void Function(Map<String, dynamic> review)? onSubmit;
-
-  const RatingServicePage({super.key, required this.applicant, this.onSubmit});
+  const RatingServicePage({
+    super.key,
+    required this.ratingModel,
+  });
 
   @override
-  State<RatingServicePage> createState() => _RatingServicePageState();
+  ConsumerState<RatingServicePage> createState() => _RatingServicePageState();
 }
 
-class _RatingServicePageState extends State<RatingServicePage> {
-  double _rating = 0.0;
+class _RatingServicePageState extends ConsumerState<RatingServicePage> {
+  double _rating = 5.0;
   final TextEditingController _commentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   List<XFile> _images = [];
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  String _formatDateTime(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    // HH:mm:ss
+    return "${twoDigits(duration.inHours)}:${twoDigits(duration.inMinutes.remainder(60))}:${twoDigits(duration.inSeconds.remainder(60))}";
   }
 
   Future<void> _pickImages() async {
@@ -41,7 +56,6 @@ class _RatingServicePageState extends State<RatingServicePage> {
     }
   }
 
-  /// Builds a row of 5 stars supporting half-star selection.
   Widget _buildStars() {
     const double starSize = 34.0;
     return Row(
@@ -79,6 +93,13 @@ class _RatingServicePageState extends State<RatingServicePage> {
   }
 
   Future<void> _confirmAndSend() async {
+    if (_rating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn số sao đánh giá')),
+      );
+      return;
+    }
+
     final should = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -93,14 +114,14 @@ class _RatingServicePageState extends State<RatingServicePage> {
         actions: [
           TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Từ chối',
+              child: const Text('Hủy',
                   style: TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
                       fontSize: 16))),
           TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Đồng ý',
+              child: const Text('Gửi',
                   style: TextStyle(
                       color: Color(0xFF003E77),
                       fontWeight: FontWeight.bold,
@@ -111,52 +132,49 @@ class _RatingServicePageState extends State<RatingServicePage> {
 
     if (should != true) return;
 
-    // normalize CRLF then convert newlines to literal \n for backend
-    final processedComment = _commentController.text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\n', r'\n');
+    setState(() => _isLoading = true);
 
-    final review = {
-      'applicant': widget.applicant,
-      'rating': _rating,
-      'comment': processedComment,
-      'imagePaths': _images.map((x) => x.path).toList(),
-      // record who submitted the review so permission checks are possible
-      'reviewerId': MockServiceRepository.currentUserId,
-      'reviewTime': DateTime.now(),
-    };
+    try {
 
-    debugPrint('Sending review: $review');
-    widget.onSubmit?.call(review);
+      List<String> uploadedImageIds = [];
 
-    Navigator.of(context).pop();
+      await ref.read(ratingRepositoryProvider).createRating(
+        bookingId: widget.ratingModel.bookingId,
+        stars: _rating.toInt(),
+        comment: _commentController.text.trim(),
+        imageIds: uploadedImageIds,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gửi đánh giá thành công!'), backgroundColor: Colors.green),
+      );
+      Navigator.of(context).pop(true);
+
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: ${e.toString()}'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final applicant = widget.applicant;
-    final avatarUrl = applicant['avatar'] as String?;
-    final name = applicant['name'] ?? 'Người dùng';
+    final item = widget.ratingModel;
 
-    final service =
-        MockServiceRepository.getServiceById(applicant['serviceId']);
-    final jobTitle = service?.title ?? '';
-    final jobTime = applicant['requestTime'] ?? '';
-    final duration = service != null
-        ? MockServiceRepository.formatDuration(service.minSlotMinutes)
-        : '';
-    final description = service?.description ?? '';
-    String location = '';
-    if (service != null) {
-      location = (service.place.trim().isNotEmpty)
-          ? service.place
-          : (service.regionCode ?? '');
-    }
+    final avatarUrl = item.partnerAvatar;
+    final name = item.partnerName;
+    final jobTitle = item.serviceTitle;
 
-    // 🔹 ĐỊNH NGHĨA CÁC STYLE ĐỂ TÁI SỬ DỤNG
-    // Style cho nhãn (giống "Mô tả")
+    final jobTime = _formatDateTime(item.startAt);
+    final duration = _formatDuration(item.durationSecs);
+    final location = item.place;
+
     const labelStyle = TextStyle(fontSize: 16, color: Color(0xFF333333));
-    // Style riêng cho từng nội dung
     const timeStyle = TextStyle(fontSize: 18, color: Color(0xFF2E7D32));
     const durationStyle = TextStyle(fontSize: 18, color: Color(0xFFCC0404));
     const locationStyle = TextStyle(fontSize: 16, color: Color(0xFF003E77));
@@ -174,194 +192,184 @@ class _RatingServicePageState extends State<RatingServicePage> {
           ),
         ),
       ),
-      body: Container(
-        color: Colors.white,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: const Color(0xFF003E77),
-                backgroundImage:
-                    avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                child: avatarUrl == null
-                    ? const Icon(Icons.person, color: Colors.white, size: 30)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF003E77),
-                  ),
-                ),
-              )
-            ]),
-
-            const SizedBox(height: 4),
-
-            if (jobTitle.isNotEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        jobTitle,
-                        style: const TextStyle(
+      body: Stack(
+        children: [
+          Container(
+            color: Colors.white,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header: Avatar + Name
+                    Row(children: [
+                      CircleAvatar(
+                        radius: 35,
+                        backgroundColor: const Color(0xFF003E77),
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty)
+                            ? const Icon(Icons.person, color: Colors.white, size: 30)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
                             fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF003E77)),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // 🔹 THAY ĐỔI 1: DÙNG RICHTEXT CHO THỜI GIAN
-                      RichText(
-                        text: TextSpan(
-                          style: labelStyle, // Style nhãn mặc định
-                          children: [
-                            const TextSpan(text: 'Thời gian: '),
-                            TextSpan(
-                                text: jobTime,
-                                style: timeStyle), // Style nội dung
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-
-                      // 🔹 THAY ĐỔI 2: DÙNG RICHTEXT CHO THỜI LƯỢNG
-                      RichText(
-                        text: TextSpan(
-                          style: labelStyle, // Style nhãn mặc định
-                          children: [
-                            const TextSpan(text: 'Thời lượng: '),
-                            TextSpan(
-                                text: duration,
-                                style: durationStyle), // Style nội dung
-                          ],
-                        ),
-                      ),
-
-                      // 🔹 THAY ĐỔI 3: DÙNG RICHTEXT CHO ĐỊA ĐIỂM
-                      if (location.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        RichText(
-                          text: TextSpan(
-                            style: labelStyle, // Style nhãn mặc định
-                            children: [
-                              const TextSpan(text: 'Địa điểm: '),
-                              TextSpan(
-                                  text: location,
-                                  style: locationStyle), // Style nội dung
-                            ],
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF003E77),
                           ),
                         ),
-                      ],
-
-                      if (description.trim().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                            'Mô tả: '
-                            '$description',
-                            style: labelStyle), // Dùng style nhãn
-                      ],
+                      )
                     ]),
-              ),
 
-            const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-            // Phần còn lại giữ nguyên
-            Row(children: [
-              Flexible(
-                flex: 1,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Chất lượng công việc:',
-                      style: const TextStyle(
-                          fontSize: 16, color: Color(0xFF003E77))),
-                ),
-              ),
-              Flexible(
-                flex: 2,
-                child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                  _buildStars(),
-                  const SizedBox(width: 12),
-                  Text(_rating.toString(),
-                      style: const TextStyle(
-                          fontSize: 20,
-                          color: Color(0xFF003E77),
-                          fontWeight: FontWeight.bold)),
-                ]),
-              ),
-            ]),
+                    // Job Details Box
+                    if (jobTitle.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                jobTitle,
+                                style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF003E77)),
+                              ),
+                              const SizedBox(height: 8),
 
-            const SizedBox(height: 20),
+                              RichText(
+                                text: TextSpan(
+                                  style: labelStyle,
+                                  children: [
+                                    const TextSpan(text: 'Thời gian: '),
+                                    TextSpan(text: jobTime, style: timeStyle),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 6),
 
-            const Text('Thêm ảnh',
-                style: TextStyle(fontSize: 16, color: Color(0xFF003E77))),
-            const SizedBox(height: 8),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              ..._images.map((x) => SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: Image.file(File(x.path), fit: BoxFit.cover))),
-              GestureDetector(
-                onTap: _pickImages,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey[200]),
-                  child: const Center(child: Icon(Icons.add_a_photo)),
-                ),
-              )
-            ]),
+                              RichText(
+                                text: TextSpan(
+                                  style: labelStyle,
+                                  children: [
+                                    const TextSpan(text: 'Thời lượng: '),
+                                    TextSpan(text: duration, style: durationStyle),
+                                  ],
+                                ),
+                              ),
 
-            const SizedBox(height: 20),
+                              if (location.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                RichText(
+                                  text: TextSpan(
+                                    style: labelStyle,
+                                    children: [
+                                      const TextSpan(text: 'Địa điểm: '),
+                                      TextSpan(text: location, style: locationStyle),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ]),
+                      ),
 
-            const Text('Lời nhận xét',
-                style: TextStyle(fontSize: 16, color: Color(0xFF003E77))),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _commentController,
-              maxLines: 6,
-              decoration: InputDecoration(
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                hintText: 'Viết nhận xét...',
-              ),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      const Text('Chất lượng:',
+                          style: TextStyle(fontSize: 16, color: Color(0xFF003E77))),
+                      const SizedBox(width: 12),
+                      _buildStars(),
+                      const SizedBox(width: 12),
+                      Text(_rating.toString(),
+                          style: const TextStyle(
+                              fontSize: 20,
+                              color: Color(0xFF003E77),
+                              fontWeight: FontWeight.bold)),
+                    ]),
+
+                    const SizedBox(height: 20),
+                    const Text('Thêm ảnh',
+                        style: TextStyle(fontSize: 16, color: Color(0xFF003E77))),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      ..._images.map((x) => SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(File(x.path), fit: BoxFit.cover)
+                          ))),
+                      GestureDetector(
+                        onTap: _pickImages,
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey[200]),
+                          child: const Center(child: Icon(Icons.add_a_photo, color: Colors.grey)),
+                        ),
+                      )
+                    ]),
+
+                    const SizedBox(height: 20),
+                    const Text('Lời nhận xét',
+                        style: TextStyle(fontSize: 16, color: Color(0xFF003E77))),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _commentController,
+                      maxLines: 5,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        hintText: 'Nhập nhận xét của bạn...',
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _confirmAndSend,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('Gửi đánh giá',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ]),
             ),
+          ),
 
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _confirmAndSend,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Gửi',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                ),
-              ),
-            ),
-          ]),
-        ),
+          if (_isLoading)
+            Container(
+              color: Colors.black12,
+              child: const Center(child: CircularProgressIndicator()),
+            )
+        ],
       ),
     );
   }
