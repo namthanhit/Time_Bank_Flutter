@@ -14,10 +14,16 @@ class ConversationContainer extends ConsumerStatefulWidget {
   final String threadId;
   final String fallbackName;
 
+  final String? peerAvatarUrl;
+  final String? peerInitials;
+
   const ConversationContainer({
     Key? key,
     required this.threadId,
     required this.fallbackName,
+
+    this.peerAvatarUrl,
+    this.peerInitials,
   }) : super(key: key);
 
   @override
@@ -110,7 +116,7 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
       final myUid = ref.read(currentUidProvider);
       if (myUid == null) {
         debugPrint('🔥 Send image error: User is null');
-        return; // Đã logout, không gửi
+        return;
       }
 
 
@@ -220,7 +226,8 @@ class _ConversationContainerState extends ConsumerState<ConversationContainer> {
                     return MessageBubble(
                       message: m,
                       isMe: isMe,
-                      avatar: null,
+                      avatar: isMe ? null : widget.peerAvatarUrl,
+                      initials: isMe ? null : widget.peerInitials,
                       online: !isMe && isPeerOnline,
                       onRetry: (m.status == MessageStatus.failed && m.type == MessageType.text)
                           ? () => _retrySend(m)

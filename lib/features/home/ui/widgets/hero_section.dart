@@ -9,7 +9,6 @@ class HeroSection extends StatelessWidget {
     required this.isHidden,
     required this.onToggleHidden,
     required this.onNotificationsTap,
-    this.avatarAsset = "assets/images/avatar.png",
     this.backgroundAsset = "assets/images/background.png",
   });
 
@@ -18,9 +17,31 @@ class HeroSection extends StatelessWidget {
   final VoidCallback onToggleHidden;
   final VoidCallback onNotificationsTap;
 
-  // Cho phép cấu hình (nếu sau này lấy từ API)
-  final String avatarAsset;
   final String backgroundAsset;
+
+  Widget _buildAvatar(BuildContext context) {
+
+    final url = summary.avatarUrl;
+
+    if (url != null &&
+        url.isNotEmpty &&
+        (url.startsWith('http://') || url.startsWith('https://'))) {
+      return CircleAvatar(
+        radius: 35,
+        backgroundImage: NetworkImage(url),
+      );
+    } else {
+      return CircleAvatar(
+        radius: 35,
+        backgroundColor: Colors.grey.shade300,
+        child: Icon(
+          Icons.person_outline,
+          size: 40,
+          color: Colors.grey.shade600,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,20 +56,6 @@ class HeroSection extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // overlay gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black54, Colors.transparent, Colors.black45],
-                ),
-              ),
-            ),
-          ),
-
-          // notifications button (đã bọc Material)
           Positioned(
             top: 40,
             right: 16,
@@ -76,10 +83,7 @@ class HeroSection extends StatelessWidget {
               children: [
                 Column(
                   children: [
-                    CircleAvatar(
-                      radius: 35,
-                      backgroundImage: AssetImage(avatarAsset),
-                    ),
+                    _buildAvatar(context),
                     const SizedBox(height: 6),
                     Row(
                       children: [

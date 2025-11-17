@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,7 +11,6 @@ import '../domain/repositories/chat_repository.dart';
 import '../data/firebase_chat_repository.dart';
 import '../../auth/providers/auth_providers.dart';
 
-
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return FirebaseChatRepository();
 });
@@ -18,7 +18,6 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 final currentUidProvider = Provider<String?>((ref) {
   return FirebaseAuth.instance.currentUser?.uid;
 });
-
 
 final threadsProvider = StreamProvider<List<Thread>>((ref) {
   final repo = ref.watch(chatRepositoryProvider);
@@ -32,20 +31,26 @@ final messagesProvider = StreamProvider.family<List<Message>, String>((ref, thre
   return repo.watchMessages(threadId, limit: 30);
 });
 
+final peerProfileProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, peerId) async {
+  final api = ref.watch(authedApiClientProvider);
 
-final peerProfileProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, uid) {
-  final firestore = FirebaseFirestore.instance;
-  return firestore
-      .collection('users')
-      .doc(uid)
-      .snapshots()
-      .map((doc) => doc.data() ?? {});
+  final res = await api.get('/users/$peerId');
+
+  if (res.statusCode < 200 || res.statusCode >= 300) {
+    try {
+      final errorBody = json.decode(utf8.decode(res.bodyBytes));
+      throw Exception(errorBody['message'] ?? 'Lỗi ${res.statusCode}');
+    } catch (e) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+  }
+
+  final body = json.decode(utf8.decode(res.bodyBytes));
+  return body as Map<String, dynamic>;
 });
-
 
 final myProfileNameProvider = Provider<String>((ref) {
   final myProfileAsync = ref.watch(userProfileProvider);
-
   return myProfileAsync.when(
     data: (profile) {
       if (profile.fullName != null && profile.fullName!.isNotEmpty) {
@@ -58,8 +63,21 @@ final myProfileNameProvider = Provider<String>((ref) {
   );
 });
 
-final ensureDmThreadProvider = FutureProvider.family
-    .autoDispose<String, ({String peerUid, String peerName})>(
+final myProfileAvatarProvider = Provider<String>((ref) {
+  final myProfileAsync = ref.watch(userProfileProvider);
+  return myProfileAsync.when(
+    data: (profile) => profile.avatarUrl ?? '',
+    loading: () => '',
+    error: (e, s) => '',
+  );
+});
+
+
+final ensureDmThreadProvider = FutureProvider.family.autoDispose<String, ({
+String peerUid,
+String peerName,
+String peerAvatar
+})>(
       (ref, peerData) async {
     final repo = ref.watch(chatRepositoryProvider);
     final myUid = ref.watch(currentUidProvider);
@@ -68,44 +86,38 @@ final ensureDmThreadProvider = FutureProvider.family
       throw StateError('User must be logged in');
     }
 
-    final myName = ref.watch(myProfileNameProvider);
-
-    if (myName == 'Đang tải...') {
-      final profile = await ref.read(userProfileProvider.future);
-      final finalName = profile.fullName ?? 'Người dùng';
-      return repo.ensureDmThread(
-        myUid,
-        peerData.peerUid,
-        finalName,
-        peerData.peerName,
-      );
-    }
+    final myProfile = await ref.read(userProfileProvider.future);
+    final myName = (myProfile.fullName != null && myProfile.fullName!.isNotEmpty)
+        ? myProfile.fullName!
+        : 'Người dùng';
+    final myAvatar = myProfile.avatarUrl ?? '';
 
     return repo.ensureDmThread(
       myUid,
       peerData.peerUid,
       myName,
       peerData.peerName,
+      myAvatar,
+      peerData.peerAvatar,
     );
   },
 );
 
-  final sendTextProvider = FutureProvider.family.autoDispose<void, ({
-    String threadId,
-    String text,
-    String localId
-    })>((ref, args) async {
-
-      final repo = ref.watch(chatRepositoryProvider);
-      final myUid = ref.watch(currentUidProvider);
-      if (myUid == null) throw StateError('User must be logged in');
-      await repo.sendText(
-        threadId: args.threadId,
-        text: args.text,
-        senderId: myUid,
-        localId: args.localId,
-      );
-  });
+final sendTextProvider = FutureProvider.family.autoDispose<void, ({
+String threadId,
+String text,
+String localId
+})>((ref, args) async {
+  final repo = ref.watch(chatRepositoryProvider);
+  final myUid = ref.watch(currentUidProvider);
+  if (myUid == null) throw StateError('User must be logged in');
+  await repo.sendText(
+    threadId: args.threadId,
+    text: args.text,
+    senderId: myUid,
+    localId: args.localId,
+  );
+});
 
 final sendImageProvider = FutureProvider.family.autoDispose<void, ({
 String threadId,
@@ -147,8 +159,8 @@ String localId
   });
 });
 
-final startPresenceProvider = Provider<void>((ref) {
 
+final startPresenceProvider = Provider<void>((ref) {
   final uid = ref.watch(currentUidProvider);
   if (uid == null) return;
   final db = FirebaseDatabase.instance;
@@ -168,7 +180,6 @@ final startPresenceProvider = Provider<void>((ref) {
     }
   });
 });
-
 
 final presenceProvider = StreamProvider.family<bool, String>((ref, uid) {
   final db = FirebaseDatabase.instance;

@@ -958,7 +958,7 @@ class _CommunityServiceDetailPageState
     final peerName =
         service.providerName ?? 'Người cung cấp #${service.userId}';
 
-    final myUid = ref.read(currentUidProvider); // (Provider này phải tồn tại)
+    final myUid = ref.read(currentUidProvider);
 
     if (peerUid == myUid) {
       if (mounted) {
@@ -977,12 +977,13 @@ class _CommunityServiceDetailPageState
     );
 
     try {
+      final peerAvatar = service.providerAvatar ?? '';
       final threadId = await ref.read(ensureDmThreadProvider(
-        (peerUid: peerUid, peerName: peerName), // (Provider này phải tồn tại)
+        (peerUid: peerUid, peerName: peerName, peerAvatar: peerAvatar),
       ).future);
 
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Đóng dialog loading
+        Navigator.of(context, rootNavigator: true).pop();
       }
 
       if (mounted) {
@@ -997,7 +998,7 @@ class _CommunityServiceDetailPageState
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Đóng dialog loading
+        Navigator.of(context, rootNavigator: true).pop();
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

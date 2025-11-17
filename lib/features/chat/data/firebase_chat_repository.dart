@@ -46,6 +46,8 @@ class FirebaseChatRepository implements ChatRepository {
       String peerUid,
       String myName,
       String peerName,
+      String myAvatar,
+      String peerAvatar,
       ) async {
     final roomId = ([myUid, peerUid]..sort()).join('_');
     final roomRef = _fs.collection('rooms').doc(roomId);
