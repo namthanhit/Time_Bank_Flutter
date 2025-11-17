@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../../auth/domain/user_profile.dart';
-import '../../../auth/providers/auth_providers.dart';
-import '../../../onboarding/providers/onboarding_providers.dart';
-import '../../providers/service_providers.dart';
-import 'transfer_escrow.dart';
+import '../../../../auth/domain/user_profile.dart';
+import '../../../../auth/providers/auth_providers.dart';
+import '../../../../onboarding/providers/onboarding_providers.dart';
+import '../../../providers/service_providers.dart';
+import '../../page/transfer_escrow.dart';
 
 class ServiceCreatePage extends ConsumerStatefulWidget {
   const ServiceCreatePage({super.key});
@@ -37,7 +37,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   bool _isFormattingDuration = false;
   bool _isFormattingDate = false;
   String? _dateError;
-  String? _timeError; // ✅ THÊM: Biến state cho lỗi thời gian
+  String? _timeError;
 
   bool _isLoading = false;
 
@@ -797,7 +797,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   }
 
   void _createRequest() async {
-    // ✅ SỬA: Thêm check _timeError
     if (_formKey.currentState!.validate() &&
         !_isLoading &&
         _timeError == null) {
@@ -812,7 +811,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         final slot = _participantsCount;
         final skills = _selectedSkillIds;
         final visibility = _visibilityOption == 'Cá nhân'
-            ? 'private'
+            ? 'hidden'
             : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public');
 
         final timeParam = _parseDurationToSeconds(durationString);
@@ -884,10 +883,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     }
   }
 
-  // ❌ XÓA: Hàm này không cần thiết và làm sai logic
-  // String _normalizeTime(String fourDigits) { ... }
-
-  // ✅ THÊM: Hàm helper để kiểm tra hh:mm
   bool _isValidTime(String hhmm) {
     if (hhmm.length != 5) return false;
     final parts = hhmm.split(':');
