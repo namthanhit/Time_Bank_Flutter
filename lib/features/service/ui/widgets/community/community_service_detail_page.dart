@@ -1,3 +1,5 @@
+import 'dart:async'; // Dùng cho Timer
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,11 +7,13 @@ import 'package:time_bank_flutter/features/profile/ui/other_profile_page.dart';
 import 'package:time_bank_flutter/features/profile/ui/profile_page.dart';
 import 'package:time_bank_flutter/features/profile/providers/providers.dart';
 import 'package:time_bank_flutter/features/profile/domain/profile.dart';
+import 'package:time_bank_flutter/features/service/providers/booking_providers.dart';
 import '../../../../chat/providers/chat_providers.dart';
 import '../../../../chat/ui/chat_conversation_page.dart';
 import '../../../domain/models/service.dart';
 import '../../../providers/offer_provider.dart';
 import '../../../providers/service_providers.dart';
+
 import 'service_detail_header.dart';
 
 class CommunityServiceDetailPage extends ConsumerStatefulWidget {
@@ -31,6 +35,9 @@ class _CommunityServiceDetailPageState
   bool _isFavorited = false;
   int _currentImageIndex = 0;
   PageController? _pageController;
+  bool _isCheckedIn = false;
+  Timer? _checkInTimer;
+  Timer? _cancellationTimer;
 
   final TextEditingController _noteController = TextEditingController();
 
@@ -47,6 +54,8 @@ class _CommunityServiceDetailPageState
     WidgetsBinding.instance.removeObserver(this);
     _pageController?.dispose();
     _noteController.dispose();
+    _checkInTimer?.cancel(); // Hủy timer khi widget bị hủy
+    _cancellationTimer?.cancel(); // << THÊM MỚI: Hủy timer thứ 2
     super.dispose();
   }
 
@@ -77,6 +86,113 @@ class _CommunityServiceDetailPageState
     ref.refresh(detailJobCommunityByIdProvider(widget.serviceId));
     ref.invalidate(offerStatusProvider(widget.serviceId));
     await ref.read(detailJobCommunityByIdProvider(widget.serviceId).future);
+  }
+
+  // << CẬP NHẬT: Đổi tên thành _scheduleTimers và thêm logic
+  void _scheduleTimers(Service service) {
+    _checkInTimer?.cancel();
+    _cancellationTimer?.cancel();
+
+    final startTime = service.preferredStart;
+    final now = DateTime.now();
+
+    // Không lên lịch nếu không có thời gian hoặc đã check-in
+    if (startTime == null || _isCheckedIn) {
+      return;
+    }
+
+    // --- Lên lịch cho timer MỞ CỬA SỔ check-in ---
+    // (5 phút trước thời gian bắt đầu)
+    final checkInStartTime = startTime.subtract(const Duration(minutes: 5));
+    if (checkInStartTime.isAfter(now)) {
+      final duration = checkInStartTime.difference(now);
+      _checkInTimer = Timer(duration, () {
+        if (mounted) {
+          setState(() {
+            debugPrint('Check-in window OPENED! Rebuilding UI.');
+          });
+        }
+      });
+    }
+
+    // --- Lên lịch cho timer ĐÓNG CỬA SỔ check-in (Hủy) ---
+    // (10 phút sau thời gian bắt đầu)
+    final checkInEndTime = startTime.add(const Duration(minutes: 10));
+    if (checkInEndTime.isAfter(now)) {
+      final duration = checkInEndTime.difference(now);
+      _cancellationTimer = Timer(duration, () {
+        if (mounted) {
+          setState(() {
+            debugPrint('Check-in window CLOSED! Rebuilding UI.');
+          });
+        }
+      });
+    }
+  }
+
+  void _handleCheckIn() async {
+    _checkInTimer?.cancel();
+    _cancellationTimer?.cancel(); // << THÊM MỚI: Hủy cả timer thứ 2
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final repo = ref.read(bookingRepositoryProvider);
+      await repo.checkInBooking(jobId: widget.serviceId);
+
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text(
+              'Thành công',
+              style: TextStyle(
+                color: Color(0xFF003E77),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              'Đã check in thành công!',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    color: Color(0xFF003E77),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      setState(() {
+        _isCheckedIn = true;
+      });
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Check in thất bại: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -128,6 +244,9 @@ class _CommunityServiceDetailPageState
   }
 
   Widget _buildContent(Service service, AsyncValue<dynamic> offerStatusAsync) {
+    // << CẬP NHẬT: Gọi hàm _scheduleTimers (thay vì _scheduleCheckInTimer)
+    _scheduleTimers(service);
+
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       color: const Color(0xFF003E77),
@@ -199,7 +318,6 @@ class _CommunityServiceDetailPageState
       );
     }
   }
-  // >> Kết thúc tích hợp HEAD
 
   Widget _buildServiceBox(Service service) {
     final followersAsync = ref.watch(followersCountProvider(service.userId));
@@ -501,6 +619,7 @@ class _CommunityServiceDetailPageState
     );
   }
 
+  // << CẬP NHẬT: Toàn bộ logic `case 'accepted'`
   Widget _buildActionRow(
       Service service, AsyncValue<dynamic> offerStatusAsync) {
     return offerStatusAsync.when(
@@ -527,10 +646,12 @@ class _CommunityServiceDetailPageState
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {}, // Đã gửi nên không cần action
+                      onPressed: null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.green.withOpacity(0.7),
+                        disabledForegroundColor: Colors.white.withOpacity(0.9),
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -555,46 +676,180 @@ class _CommunityServiceDetailPageState
                   ),
                 ],
               ),
-            'accepted' => Row(
-                children: [
-                  Expanded(
+            'accepted' => () {
+                // 1. Ưu tiên hàng đầu: Nếu đã check-in
+                if (_isCheckedIn) {
+                  return SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {}, // Đã duyệt
+                      onPressed: null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.teal.withOpacity(0.7),
+                        disabledForegroundColor: Colors.white.withOpacity(0.9),
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       child: const Text(
-                        'Đã được duyệt',
+                        'Đã check in',
                         style: TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 18),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () {
-                      _showCancelConfirmationDialog();
-                    },
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
-                      size: 35,
+                  );
+                }
+
+                final startTime = service.preferredStart;
+                final now = DateTime.now();
+
+                // 2. Nếu không có thời gian, quay về "Đã được duyệt"
+                if (startTime == null) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor:
+                                Colors.green.withOpacity(0.7),
+                            disabledForegroundColor:
+                                Colors.white.withOpacity(0.9),
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text(
+                            'Đã được duyệt (thiếu thời gian)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                // 3. Xác định cửa sổ check-in
+                final checkInStartTime =
+                    startTime.subtract(const Duration(minutes: 5));
+                final checkInEndTime =
+                    startTime.add(const Duration(minutes: 10));
+
+                // 4. KIỂM TRA: Đã lỡ hẹn (quá 10 phút sau)
+                if (now.isAfter(checkInEndTime)) {
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.red.withOpacity(0.7),
+                        disabledForegroundColor: Colors.white.withOpacity(0.9),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        'Đã hủy do không check in',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  );
+                }
+
+                // 5. KIỂM TRA: Đang trong cửa sổ check-in
+                // (Từ 5 phút trước ĐẾN 10 phút sau)
+                if (now.isAfter(checkInStartTime) &&
+                    now.isBefore(checkInEndTime)) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _handleCheckIn, // GỌI HÀM CHECK IN
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text(
+                            'Check in',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () {
+                          _showCancelConfirmationDialog();
+                        },
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 35,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                // 6. Mặc định: Chưa đến cửa sổ check-in
+                // (now.isBefore(checkInStartTime))
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: null, // Chưa tới giờ
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              Colors.green.withOpacity(0.7),
+                          disabledForegroundColor:
+                              Colors.white.withOpacity(0.9),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text(
+                          'Đã được duyệt',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 18),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        _showCancelConfirmationDialog();
+                      },
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                        size: 35,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
             'withdrawn' => Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {}, // Đã duyệt
+                      onPressed: null, // Đang chờ, vô hiệu hóa
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.orange.withOpacity(0.7),
+                        disabledForegroundColor: Colors.white.withOpacity(0.9),
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -622,16 +877,18 @@ class _CommunityServiceDetailPageState
             'rejected' => SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {}, // Bị từ chối, không action
+                  onPressed: null, // Bị từ chối, không action
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.red.withOpacity(0.7),
+                    disabledForegroundColor: Colors.white.withOpacity(0.9),
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text(
-                    'Đã bị từ chối', // Giữ text từ cả 2 nhánh
+                    'Đã bị từ chối',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                   ),
                 ),
@@ -639,16 +896,18 @@ class _CommunityServiceDetailPageState
             'cancelled' => SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {}, // Đã hủy, không action
+                  onPressed: null, // Đã hủy, không action
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.red.withOpacity(0.7),
+                    disabledForegroundColor: Colors.white.withOpacity(0.9),
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text(
-                    'Đã hủy', // Giữ text từ cả 2 nhánh
+                    'Đã hủy',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                   ),
                 ),

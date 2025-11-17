@@ -846,7 +846,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     );
   }
 
-  // ✅ HÀM ĐÃ ĐƯỢC CẬP NHẬT
   void _showDeleteConfirmDialog(BuildContext context, Service service) {
     showDialog(
       context: context,
@@ -905,10 +904,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                     ),
                   );
 
-                  // 5. Invalidate provider và quay về trang trước
                   ref.invalidate(serviceByIdProvider(widget.serviceId));
-                  // Có thể invalidate thêm provider của list (nếu cần)
-                  // ref.invalidate(servicePaginationProvider(null)); 
                   
                   Navigator.of(context).pop(); // Quay về trang danh sách
                   

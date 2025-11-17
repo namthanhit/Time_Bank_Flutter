@@ -17,7 +17,6 @@ class PendingApplicantCard extends StatelessWidget {
     return "$hours:$minutes:$seconds";
   }
 
-
   String _formatDateTime(DateTime dt) {
     return DateFormat('HH:mm dd/MM/yyyy').format(dt);
   }
@@ -34,7 +33,7 @@ class PendingApplicantCard extends StatelessWidget {
       requestColor = Colors.red[800] ?? const Color(0xFFD32F2F);
     } else {
       requestTypeText = 'Yêu cầu chờ xét duyệt nhận dịch vụ';
-      requestColor = Colors.green;
+      requestColor = const Color.fromARGB(255, 25, 154, 29);
     }
 
     final requestTime = _formatDateTime(offer.createdAt);
@@ -43,10 +42,10 @@ class PendingApplicantCard extends StatelessWidget {
     final jobTime = _formatDateTime(offer.preferredStart);
     final duration = _formatDuration(offer.time);
     final location =
-    offer.place.trim().isNotEmpty ? offer.place : offer.regionCode;
+        offer.place.trim().isNotEmpty ? offer.place : offer.regionCode;
 
     final jobSkills =
-    offer.skills.map((skill) => skill['name'] ?? '').join(', ');
+        offer.skills.map((skill) => skill['name'] ?? '').join(', ');
 
     return GestureDetector(
       onTap: () {
@@ -75,11 +74,9 @@ class PendingApplicantCard extends StatelessWidget {
               children: [
                 Expanded(
                     child: Text(requestTypeText,
-                        style: TextStyle(
-                            fontSize: 13, color: requestColor))),
+                        style: TextStyle(fontSize: 13, color: requestColor))),
                 Text(requestTime,
-                    style: TextStyle(
-                        fontSize: 12, color: requestColor)),
+                    style: TextStyle(fontSize: 12, color: requestColor)),
               ],
             ),
             const SizedBox(height: 10),
@@ -162,7 +159,7 @@ class PendingApplicantCard extends StatelessWidget {
                       child: LayoutBuilder(builder: (context, constraints) {
                         final double maxChipWidth = 72;
                         final double chipWidth =
-                        (constraints.maxWidth).clamp(40, maxChipWidth);
+                            (constraints.maxWidth).clamp(40, maxChipWidth);
 
                         final specializations = jobSkills
                             .split(',')
@@ -175,35 +172,35 @@ class PendingApplicantCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: specializations
                               .map((spec) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: ConstrainedBox(
-                              constraints:
-                              BoxConstraints(maxWidth: chipWidth),
-                              child: SizedBox(
-                                height: 20,
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 4, vertical: 0),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE0DC06),
-                                    borderRadius:
-                                    BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    spec.trim(),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF000000),
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: ConstrainedBox(
+                                      constraints:
+                                          BoxConstraints(maxWidth: chipWidth),
+                                      child: SizedBox(
+                                        height: 20,
+                                        child: Container(
+                                          alignment: Alignment.center,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 4, vertical: 0),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE0DC06),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            spec.trim(),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF000000),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ))
+                                  ))
                               .toList(),
                         );
                       }),
@@ -264,13 +261,13 @@ class _SpecializationTagsInline extends StatelessWidget {
         runSpacing: 4,
         children: tags
             .map((t) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-                color: const Color(0xFFE0DC06),
-                borderRadius: BorderRadius.circular(5)),
-            child: Text(t,
-                style: const TextStyle(
-                    fontSize: 12, color: Color(0xFF000000)))))
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFE0DC06),
+                    borderRadius: BorderRadius.circular(5)),
+                child: Text(t,
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF000000)))))
             .toList());
   }
 }
