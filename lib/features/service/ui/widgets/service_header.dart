@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
 import 'package:time_bank_flutter/features/service/ui/page/four_service_applicants_page.dart';
 import 'package:time_bank_flutter/features/service/ui/page/rating_page.dart';
-import '../../page/service_create_page.dart';
+import 'create_page/service_create_page.dart';
 import 'package:time_bank_flutter/features/auth/domain/user_profile.dart';
 
-class CommunityHeader extends ConsumerStatefulWidget {
+class ServiceHeader extends ConsumerStatefulWidget {
   final bool isMyTab;
   final Function(String?)? onFilterChanged;
   final Function(String)? onSearchChanged;
 
-  const CommunityHeader({
+  const ServiceHeader({
     super.key,
     this.isMyTab = false,
     this.onFilterChanged,
@@ -19,10 +19,10 @@ class CommunityHeader extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CommunityHeader> createState() => _CommunityHeaderState();
+  ConsumerState<ServiceHeader> createState() => _ServiceHeaderState();
 }
 
-class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
+class _ServiceHeaderState extends ConsumerState<ServiceHeader> {
   late String _selectedFilter;
 
   @override
@@ -57,7 +57,6 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
   }
 
   Widget _buildGreeting(AsyncValue<UserProfile> profileAsync) {
-
     final String name = profileAsync.when(
       data: (user) => user.fullName.split(' ').first,
       loading: () => 'bạn',
@@ -103,7 +102,8 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey[300]!, width: 1),
                       borderRadius: BorderRadius.circular(12),
@@ -113,7 +113,6 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
                       children: [
                         _buildAvatar(userProfileAsync),
                         const SizedBox(width: 10),
-
                         _buildGreeting(userProfileAsync),
                       ],
                     ),
@@ -123,21 +122,20 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
             ],
           ),
           const SizedBox(height: 4),
-
           Row(
             children: [
               _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận',
-                      () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => FourServiceApplicantsPage(
-                          serviceTitle: 'Chờ xác nhận',
-                          initialTabIndex: 0, // tab 1
-                        ),
-                      ),
-                    );
-                  }),
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FourServiceApplicantsPage(
+                      serviceTitle: 'Chờ xác nhận',
+                      initialTabIndex: 0, // tab 1
+                    ),
+                  ),
+                );
+              }),
               _buildStatusIcon('assets/icons/Folder_Open.png', 'Đã mở', () {
                 Navigator.push(
                   context,
@@ -151,18 +149,18 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
                 );
               }),
               _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện',
-                      () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => FourServiceApplicantsPage(
-                          serviceId: '4',
-                          serviceTitle: 'Đang thực hiện',
-                          initialTabIndex: 3, // tab 3
-                        ),
-                      ),
-                    );
-                  }),
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FourServiceApplicantsPage(
+                      serviceId: '4',
+                      serviceTitle: 'Đang thực hiện',
+                      initialTabIndex: 3, // tab 3
+                    ),
+                  ),
+                );
+              }),
               _buildStatusIcon('assets/icons/Wavy_Check.png', 'Đánh giá', () {
                 Navigator.push(
                   context,
@@ -172,27 +170,39 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
             ],
           ),
           const SizedBox(height: 18),
-
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                _iconForFilter(_selectedFilter),
-                color: Color(0xFF003E77),
-                size: 20,
+              Row(
+                children: [
+                  Icon(
+                    _iconForFilter(_selectedFilter),
+                    color: Color(0xFF003E77),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _displayLabelForFilter(_selectedFilter),
+                    style: TextStyle(
+                      color: Color(0xFF003E77),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                _displayLabelForFilter(_selectedFilter),
-                style: TextStyle(
+              IconButton(
+                icon: Icon(
+                  Icons.menu,
                   color: Color(0xFF003E77),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
                 ),
+                onPressed: () {
+                  _showFilter(context);
+                },
               ),
             ],
           ),
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(
@@ -225,14 +235,6 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
                 ),
               ),
               const SizedBox(width: 12),
-              IconButton(
-                onPressed: () => _showFilterDialog(context),
-                icon: Icon(
-                  Icons.filter_alt_outlined,
-                  color: Color(0xFF003E77),
-                  size: 24,
-                ),
-              ),
             ],
           ),
         ],
@@ -303,12 +305,37 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Bộ lọc'),
+          title: const Text('Bộ lọc chi tiết'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildFilterOption(Icons.public, 'Mọi người'),
               _buildFilterOption(Icons.group, 'Bạn bè'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFilter(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Bộ lọc dịch vụ'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFilterOption(Icons.public, 'Tất cả mọi người'),
+              _buildFilterOption(Icons.assignment_ind, 'Dịch vụ của tôi'),
             ],
           ),
           actions: [
@@ -345,7 +372,7 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
   IconData _iconForFilter(String filter) {
     switch (filter) {
       case 'Bạn bè':
-        return Icons.group; // 👥
+        return Icons.group;
       case 'Yêu cầu của tôi':
         return Icons.assignment_ind;
       case 'Mọi người':
@@ -356,7 +383,6 @@ class _CommunityHeaderState extends ConsumerState<CommunityHeader> {
   }
 
   String _displayLabelForFilter(String filter) {
-
     if (filter == 'Mọi người') return 'Mọi người';
     return filter;
   }

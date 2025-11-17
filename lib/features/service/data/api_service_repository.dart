@@ -301,4 +301,81 @@ class ApiServiceRepository implements ServiceRepository {
 
     return result['data'] as List<Service>;
   }
+
+  @override
+  Future<Map<String, dynamic>> checkUpdateJob({
+    required String jobId,
+    required Map<String, dynamic> dto,
+  }) async {
+    try {
+      final path = "jobs/me/edit-job/$jobId/check-update";
+
+      final res = await _api.post(
+        path,
+        body: json.encode(dto),
+      );
+
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception("Phản hồi không hợp lệ");
+      }
+      debugPrint('checkUpdateJob response: $decoded');
+      return decoded;
+    } catch (e, st) {
+      debugPrint("checkUpdateJob error: $e\n$st");
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> confirmUpdateJob({
+    required Map<String, dynamic> body,
+  }) async {
+    try {
+      const path = "jobs/me/edit-job/confirm-update";
+
+      final res = await _api.post(
+        path,
+        body: json.encode(body),
+      );
+
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception("Phản hồi không hợp lệ");
+      }
+
+      return decoded;
+    } catch (e, st) {
+      debugPrint("confirmUpdateJob error: $e\n$st");
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> cancelJob({
+    required String jobId,
+  }) async {
+    try {
+      final path = "jobs/me/delete-job/$jobId";
+
+      final res = await _api.delete(path);
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception("Phản hồi không hợp lệ từ server");
+      }
+
+      return decoded;
+    } catch (e, st) {
+      debugPrint("cancelJob error: $e\n$st");
+      rethrow;
+    }
+  }
 }

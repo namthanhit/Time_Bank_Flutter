@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/service_list_container_community.dart';
 import '../widgets/service_list_container.dart';
 
 class ServiceSearchPage extends StatefulWidget {
@@ -67,7 +68,7 @@ class _ServiceSearchPageState extends State<ServiceSearchPage> {
                 ),
               ),
             ),
-            Expanded(child: ServiceListContainer(query: _query)),
+            Expanded(child: ServiceListContainerCommunity(query: _query)),
           ],
         ),
       ),
