@@ -5,20 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../../auth/domain/user_profile.dart';
-import '../../../auth/providers/auth_providers.dart';
-import '../../../onboarding/providers/onboarding_providers.dart';
-import '../../providers/service_providers.dart';
-import 'transfer_escrow.dart';
-
-class ServiceCreatePage extends ConsumerStatefulWidget {
-  const ServiceCreatePage({super.key});
+import '../../../../onboarding/providers/onboarding_providers.dart';
+import '../../../domain/models/service.dart';
+import '../../../providers/service_providers.dart';
+class EditServicePage extends ConsumerStatefulWidget {
+  final Service service;
+  const EditServicePage({
+    super.key,
+    required this.service,
+  });
 
   @override
-  ConsumerState<ServiceCreatePage> createState() => _ServiceCreatePageState();
+  ConsumerState<EditServicePage> createState() => _EditServicePageState();
 }
 
-class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
+class _EditServicePageState extends ConsumerState<EditServicePage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _addressController = TextEditingController();
@@ -29,18 +30,103 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   int _participantsCount = 1;
   String _visibilityOption = 'Mọi người';
   List<String> _selectedSkillIds = [];
-
   Map<String, String> _selectedSkillsMap = {};
-  List<String> _selectedImages = [];
-
+  List<String> _selectedImages = []; // Danh sách (cả URL cũ và file local mới)
   bool _isFormattingTime = false;
   bool _isFormattingDuration = false;
   bool _isFormattingDate = false;
   String? _dateError;
-  String? _timeError; // ✅ THÊM: Biến state cho lỗi thời gian
-
   bool _isLoading = false;
-
+  @override
+  void initState() {
+    super.initState();
+    _hydrateFormFromService(widget.service);
+  }
+  void _confirmAndUpdate() async {
+    if (_isLoading) return;
+    final bool? didConfirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Xác nhận cập nhật',
+              style: TextStyle(
+                  color: Color(0xFF003E77),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          content: const Text(
+            'Bạn có chắc chắn muốn cập nhật yêu cầu này không?',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false), // Trả về false
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true), // Trả về true
+              child: const Text('Đồng ý',
+                  style: TextStyle(
+                      color: Color(0xFF003E77),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  void _hydrateFormFromService(Service service) {
+    _titleController.text = service.title;
+    _addressController.text = service.place;
+    _descriptionController.text = service.description ?? '';
+    _participantsCount = service.slot;
+    _visibilityOption = _mapVisibilityFromModel(service.visibility);
+    if (service.skillIds != null && service.skillNames != null) {
+      _selectedSkillIds = List<String>.from(service.skillIds!);
+      _selectedSkillsMap = Map.fromIterables(
+        service.skillIds!,
+        service.skillNames!,
+      );
+    }
+    _selectedImages = List<String>.from(service.serviceImages ?? []);
+    if (service.preferredStart != null) {
+      final dt = service.preferredStart!;
+      _timeController.text =
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      _dateController.text =
+      '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    }
+    _durationController.text = _formatDurationFromSeconds(service.time);
+  }
+  String _formatDurationFromSeconds(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hh = duration.inHours.toString().padLeft(2, '0');
+    final mm = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final ss = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hh:$mm:$ss';
+  }
+  String _mapVisibilityFromModel(String visibility) {
+    switch (visibility) {
+      case 'private':
+        return 'Cá nhân';
+      case 'friends':
+        return 'Bạn bè';
+      case 'public':
+      default:
+        return 'Mọi người';
+    }
+  }
   @override
   void dispose() {
     _titleController.dispose();
@@ -51,7 +137,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     _descriptionController.dispose();
     super.dispose();
   }
-
   IconData _getIconForOption(String option) {
     switch (option) {
       case 'Mọi người':
@@ -63,18 +148,15 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         return Icons.person;
     }
   }
-
   @override
   Widget build(BuildContext context) {
     debugPrint('Selected Skills Map: $_selectedSkillsMap');
-    final userProfileAsync = ref.watch(userProfileProvider);
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF003E77),
         foregroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
-        title: const Text('Tạo yêu cầu'),
+        title: const Text('Chỉnh sửa yêu cầu'),
       ),
       backgroundColor: Colors.white,
       body: Container(
@@ -93,7 +175,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildCardHeader(userProfileAsync),
+                    _buildCardHeader(title: 'Chỉnh sửa yêu cầu'),
                     const SizedBox(height: 24),
                     _buildSectionTitle('Tên yêu cầu:'),
                     TextFormField(
@@ -126,18 +208,11 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                         Expanded(
                           child: TextFormField(
                             controller: _timeController,
-                            // ✅ SỬA: Thêm errorText
-                            decoration: _buildInputDecoration('hh:mm').copyWith(
-                              errorText: _timeError,
-                            ),
+                            decoration: _buildInputDecoration('hh:mm'),
                             keyboardType: TextInputType.number,
-                            // ✅ SỬA: Cập nhật validator
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Vui lòng nhập thời gian';
-                              }
-                              if (!_isValidTime(value)) {
-                                return 'Giờ không hợp lệ (hh:mm)';
                               }
                               return null;
                             },
@@ -146,24 +221,21 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                                   RegExp(r'[0-9:]')),
                               LengthLimitingTextInputFormatter(5),
                             ],
-                            // ✅ SỬA: Cập nhật onChanged
                             onChanged: (v) {
                               if (_isFormattingTime) return;
                               _isFormattingTime = true;
                               final digits =
                               v.replaceAll(RegExp(r'[^0-9]'), '');
                               String newText;
-
                               if (digits.length <= 2) {
                                 newText = digits;
-                              } else {
+                              } else if (digits.length == 3) {
                                 final h = digits.substring(0, 2);
                                 final m = digits.substring(2);
                                 newText = '$h:$m';
-                              }
-
-                              if (newText.length > 5) {
-                                newText = newText.substring(0, 5);
+                              } else {
+                                final four = (digits + '0000').substring(0, 4);
+                                newText = _normalizeTime(four);
                               }
 
                               if (newText != v) {
@@ -174,18 +246,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                                 );
                               }
 
-                              // Thêm logic validation trực tiếp
-                              if (newText.length == 5) {
-                                final isValid = _isValidTime(newText);
-                                setState(() {
-                                  _timeError =
-                                      isValid ? null : 'Giờ không hợp lệ';
-                                });
-                                if (isValid) FocusScope.of(context).nextFocus();
-                              } else {
-                                if (_timeError != null)
-                                  setState(() => _timeError = null);
-                              }
+                              if (digits.length >= 4)
+                                FocusScope.of(context).nextFocus();
                               _isFormattingTime = false;
                             },
                           ),
@@ -239,7 +301,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                                 if (_dateError != null)
                                   setState(() => _dateError = null);
                               }
-
                               _isFormattingDate = false;
                             },
                             validator: (value) {
@@ -303,7 +364,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                             TextSelection.collapsed(offset: newText.length),
                           );
                         }
-
                         if (digits.length >= 6) {
                           final normalized =
                           _normalizeDuration(digits.substring(0, 6));
@@ -425,11 +485,12 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                       width: double.infinity,
                       height: 45,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _createRequest,
+                        onPressed: _isLoading ? null : _confirmAndUpdate,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor:
+                          Colors.green,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: _isLoading
@@ -438,9 +499,9 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                           AlwaysStoppedAnimation<Color>(Colors.white),
                         )
                             : const Text(
-                          'Tạo yêu cầu',
+                          'Cập nhật',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -456,19 +517,19 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       ),
     );
   }
-
-  Widget _buildCardHeader(AsyncValue<UserProfile> userProfileAsync) {
-    final name = userProfileAsync.valueOrNull?.fullName ?? "Bạn";
-
+  Widget _buildCardHeader({required String title}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            _buildUserAvatar(userProfileAsync),
+            const CircleAvatar(
+              radius: 22,
+              backgroundImage: AssetImage('assets/images/avatar_1.png'),
+            ),
             const SizedBox(width: 12),
             Text(
-              'Tạo yêu cầu',
+              title,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -549,27 +610,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       ],
     );
   }
-
-  Widget _buildUserAvatar(AsyncValue<UserProfile> profileAsync) {
-    final profile = profileAsync.valueOrNull;
-    final url = profile?.avatarUrl;
-
-    if (url != null &&
-        url.isNotEmpty &&
-        (url.startsWith('http://') || url.startsWith('https://'))) {
-      return CircleAvatar(
-        radius: 22,
-        backgroundImage: NetworkImage(url),
-        backgroundColor: Colors.grey[200],
-      );
-    } else {
-      return const CircleAvatar(
-        radius: 22,
-        backgroundImage: AssetImage('assets/images/avatar_1.png'),
-      );
-    }
-  }
-
   Widget _buildImagePicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +665,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       ],
     );
   }
-
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
@@ -639,7 +678,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       ),
     );
   }
-
   InputDecoration _buildInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
@@ -763,16 +801,12 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     final s = int.tryParse(parts[2]) ?? 0;
     return (h * 3600) + (m * 60) + s;
   }
-
   Future<List<String>> _uploadImages(List<String> localPaths) async {
     final List<String> downloadUrls = [];
-
     if (localPaths.isEmpty) {
       return downloadUrls;
     }
-
     final storageRef = FirebaseStorage.instance.ref();
-
     await Future.wait(
       localPaths.map((localPath) async {
         try {
@@ -795,12 +829,8 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
 
     return downloadUrls;
   }
-
-  void _createRequest() async {
-    // ✅ SỬA: Thêm check _timeError
-    if (_formKey.currentState!.validate() &&
-        !_isLoading &&
-        _timeError == null) {
+  void _updateRequest() async {
+    if (_formKey.currentState!.validate() && !_isLoading) {
       setState(() {
         _isLoading = true;
       });
@@ -814,12 +844,10 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         final visibility = _visibilityOption == 'Cá nhân'
             ? 'private'
             : (_visibilityOption == 'Bạn bè' ? 'friends' : 'public');
-
         final timeParam = _parseDurationToSeconds(durationString);
-        final regionCode = "NULL";
+        final regionCode = "NULL"; // Giữ như cũ
         final place = address;
         String preferredStartTime;
-
         final DateTime? dateObj = parseDdMmYyyy(_dateController.text);
         if (dateObj != null) {
           final timeParts = _timeController.text.split(':');
@@ -827,53 +855,24 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
           final m = int.tryParse(timeParts[1]) ?? 0;
           final combinedDateTime =
           DateTime(dateObj.year, dateObj.month, dateObj.day, h, m);
-          preferredStartTime = combinedDateTime.toIso8601String();
+          preferredStartTime = combinedDateTime.toUtc().toIso8601String();
         } else {
-          preferredStartTime = DateTime.now().toIso8601String();
+          preferredStartTime = DateTime.now().toUtc().toIso8601String();
         }
-
-        final List<String> imageUrls = await _uploadImages(_selectedImages);
-
+        final List<String> existingUrls =
+        _selectedImages.where((img) => img.startsWith('http')).toList();
+        final List<String> newLocalPaths =
+        _selectedImages.where((img) => !img.startsWith('http')).toList();
+        final List<String> newUploadedUrls = await _uploadImages(newLocalPaths);
+        final List<String> finalImageUrls = existingUrls + newUploadedUrls;
         final repo = ref.read(serviceRepositoryProvider);
-        final Map<String, dynamic> jobData = await repo.createJob(
-          title: title,
-          description: _descriptionController.text,
-          regionCode: regionCode,
-          place: place,
-          time: timeParam,
-          slot: slot,
-          visibility: visibility,
-          skills: skills,
-          preferredStartTime: preferredStartTime,
-          imageUrls: imageUrls,
-        );
-
-        final String? jobId = jobData['id'] as String?;
-        if (jobId == null) {
-          throw Exception("Không nhận được Job ID từ server sau khi tạo.");
-        }
-
+        await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
-
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (ctx) => TransferEscrowPage(
-              jobId: jobId,
-              jobTitle: _titleController.text,
-              jobDuration: Duration(seconds: timeParam),
-              jobSlots: _participantsCount,
-            ),
-          ),
-        );
+        ref.invalidate(serviceByIdProvider(widget.service.id));
+        Navigator.of(context).pop();
       } catch (e, st) {
-        debugPrint('Lỗi tạo job: $e\n$st');
+        debugPrint('Lỗi cập nhật job: $e\n$st');
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Tạo yêu cầu thất bại: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
       } finally {
         if (mounted) {
           setState(() {
@@ -883,28 +882,14 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       }
     }
   }
-
-  // ❌ XÓA: Hàm này không cần thiết và làm sai logic
-  // String _normalizeTime(String fourDigits) { ... }
-
-  // ✅ THÊM: Hàm helper để kiểm tra hh:mm
-  bool _isValidTime(String hhmm) {
-    if (hhmm.length != 5) return false;
-    final parts = hhmm.split(':');
-    if (parts.length != 2) return false;
-
-    final h = int.tryParse(parts[0]);
-    final m = int.tryParse(parts[1]);
-
-    if (h == null || m == null) return false;
-
-    // Giờ từ 0-23, phút từ 0-59
-    if (h < 0 || h > 23) return false;
-    if (m < 0 || m > 59) return false;
-
-    return true;
+  String _normalizeTime(String fourDigits) {
+    final h = int.tryParse(fourDigits.substring(0, 2)) ?? 0;
+    final mRaw = int.tryParse(fourDigits.substring(2, 4)) ?? 0;
+    final carryH = mRaw ~/ 60;
+    final m = mRaw % 60;
+    final hh = h + carryH;
+    return '${hh.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
   }
-
   String _normalizeDuration(String sixDigits) {
     final h = int.tryParse(sixDigits.substring(0, 2)) ?? 0;
     var m = int.tryParse(sixDigits.substring(2, 4)) ?? 0;
@@ -917,13 +902,11 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     final hh = h + carryH;
     return '${hh.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-
   bool isLeapYear(int y) {
     if (y % 400 == 0) return true;
     if (y % 100 == 0) return false;
     return y % 4 == 0;
   }
-
   int daysInMonth(int year, int month) {
     List<int> daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     if (month == 2) {
@@ -931,7 +914,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
     }
     return daysPerMonth[month - 1];
   }
-
   DateTime? parseDdMmYyyy(String input) {
     if (input.trim().isEmpty) return null;
     final s = input.trim().replaceAll('-', '/');
@@ -954,7 +936,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
       return null;
     }
   }
-
   void _showImageSourceOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1021,7 +1002,6 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
                   if (open == true) openAppSettings();
                   return;
                 }
-
                 try {
                   final XFile? picked = await ImagePicker()
                       .pickImage(source: ImageSource.gallery, imageQuality: 80);

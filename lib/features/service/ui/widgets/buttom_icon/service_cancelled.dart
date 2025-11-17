@@ -1,103 +1,131 @@
 import 'package:flutter/material.dart';
-import '../../../data/mock_service_repository.dart';
-import '../../../domain/models/service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/service/domain/models/service.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/my_service/my_service_detail_page.dart';
+import '../../../providers/service_pagination_provider.dart';
 
-/// Widget that lists services with status == 'cancelled'.
-class ServiceCancelledWidget extends StatefulWidget {
+class ServiceCancelledWidget extends ConsumerStatefulWidget {
   final bool showOnlyMyServices;
   final void Function(Service)? onTap;
-  final VoidCallback? onRefresh;
+  final String? userId; // Thêm userId
 
   const ServiceCancelledWidget({
     Key? key,
     this.showOnlyMyServices = false,
     this.onTap,
-    this.onRefresh,
+    this.userId, // Thêm userId
   }) : super(key: key);
 
   @override
-  State<ServiceCancelledWidget> createState() => _ServiceCancelledWidgetState();
+  ConsumerState<ServiceCancelledWidget> createState() =>
+      _ServiceCancelledWidgetState();
 }
 
-class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
+class _ServiceCancelledWidgetState
+    extends ConsumerState<ServiceCancelledWidget> {
+  AutoDisposeStateNotifierProvider<ServicePaginationNotifier,
+      ServicePaginationState> _getCurrentProvider() {
+    return servicePaginationProvider(widget.userId);
+  }
+
   @override
   void initState() {
     super.initState();
-    MockServiceRepository.addListener(_onDataChanged);
+    Future.microtask(() {
+      ref.read(_getCurrentProvider().notifier).fetchNextPage();
+    });
   }
 
-  @override
-  void dispose() {
-    MockServiceRepository.removeListener(_onDataChanged);
-    super.dispose();
+  String _formatJobTime(DateTime createdAt) {
+    final local = createdAt.toUtc().add(const Duration(hours: 7));
+
+    return '${local.day}/${local.month}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 
-  void _onDataChanged() {
-    if (mounted) setState(() {});
+  String _formatDuration(int totalSeconds) {
+    final duration = Duration(seconds: totalSeconds);
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
-    final ownerId =
-        widget.showOnlyMyServices ? MockServiceRepository.currentUserId : null;
-    final services = MockServiceRepository.getServicesByStatus('cancelled',
-        ownerId: ownerId);
+    final paginationState = ref.watch(_getCurrentProvider());
+    final allServices = paginationState.services;
+    final isLoading = paginationState.isLoading;
 
-    if (services.isEmpty) {
-      return Container(
-        color: Colors.grey[200],
-        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Image.asset('assets/images/thong_bao.png',
-                    width: 96, height: 96, fit: BoxFit.contain),
-              ),
-              const SizedBox(height: 12),
-              const Text('Không có dịch vụ đã hủy',
-                  style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 8),
-              if (widget.onRefresh != null)
-                TextButton.icon(
-                  onPressed: widget.onRefresh,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Làm mới'),
-                ),
-            ],
-          ),
-        ),
-      );
+    final services = allServices.where((s) {
+      final status = s.status.toString().toLowerCase();
+      return status == 'cancelled' || status == 'expired';
+    }).toList();
+
+    if (services.isEmpty && isLoading) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return Container(
-      color: Colors.grey[200],
+    if (services.isEmpty && !isLoading) {
+      return Center(
+          child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset('assets/images/thong_bao.png', width: 150, height: 150),
+          const SizedBox(height: 12),
+          const Text('Không có dịch vụ đã hủy.',
+              style: TextStyle(fontSize: 16, color: Colors.grey)),
+        ],
+      ));
+    }
+
+    Widget listView = NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 200) {
+          final notifier = ref.read(_getCurrentProvider().notifier);
+          final state = ref.read(_getCurrentProvider());
+          if (!state.isLoading && state.hasMore) {
+            notifier.fetchNextPage();
+          }
+        }
+        return false;
+      },
       child: ListView.separated(
         padding: const EdgeInsets.all(12),
-        itemCount: services.length,
+        itemCount: services.length + (isLoading ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
+          if (index >= services.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          }
+
           final s = services[index];
-          final skillNames =
-              MockServiceRepository.getSkillNamesFromIds(s.skillIds);
+          final skillNames = s.skillNames ?? [];
           final createdAt = s.createdAt;
-          final jobTime =
-              '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}';
+          final jobTime = _formatJobTime(s.preferredStart ?? DateTime.now());
           final location =
               (s.place.trim().isNotEmpty) ? s.place : (s.regionCode ?? '');
-          final slots = s.slot;
-          final booked = s.bookedSlots ?? 0;
 
           return InkWell(
-            onTap: widget.onTap != null ? () => widget.onTap!(s) : null,
+            onTap: () {
+              if (widget.onTap != null) {
+                widget.onTap!(s);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyServiceDetailPage(
+                      serviceId: s.id, // Truyền ID của service
+                    ),
+                  ),
+                );
+              }
+            },
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -145,7 +173,7 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
                                 style: TextStyle(
                                     fontSize: 13, color: Color(0xFF666666))),
                             const SizedBox(width: 8),
-                            Text(MockServiceRepository.formatDuration(s.time),
+                            Text(_formatDuration(s.time), // Dùng data thật
                                 style: const TextStyle(
                                     fontSize: 15,
                                     color: Color(0xFFCC0404),
@@ -169,19 +197,6 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
                             ],
                           ),
                         const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Text('Số lượng nhân sự: ',
-                                style: TextStyle(
-                                    fontSize: 13, color: Color(0xFF666666))),
-                            Text(
-                                '${booked.toString().padLeft(2, '0')}/${slots.toString().padLeft(2, '0')}',
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Color(0xFF003E77),
-                                    fontWeight: FontWeight.w700)),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -194,7 +209,7 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
                       children: [
                         if (skillNames.isNotEmpty)
                           SizedBox(
-                            width: 50,
+                            width: 80,
                             height: 20,
                             child: Container(
                               alignment: Alignment.center,
@@ -204,7 +219,8 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
                               child: Padding(
                                   padding:
                                       const EdgeInsets.symmetric(horizontal: 6),
-                                  child: Text(skillNames.first,
+                                  child: Text(
+                                      skillNames.first, // Dùng data thật
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: 10))),
                             ),
@@ -212,14 +228,15 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
                         if (skillNames.length > 1) const SizedBox(height: 8),
                         if (skillNames.length > 1)
                           SizedBox(
-                            width: 50,
+                            width: 80,
                             height: 20,
                             child: Container(
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                     color: const Color(0xFFE0DC06),
                                     borderRadius: BorderRadius.circular(6)),
-                                child: Text('+${skillNames.length - 1}',
+                                child: Text(
+                                    '+${skillNames.length - 1}', // Dùng data thật
                                     style: const TextStyle(fontSize: 10))),
                           ),
                       ],
@@ -231,6 +248,23 @@ class _ServiceCancelledWidgetState extends State<ServiceCancelledWidget> {
           );
         },
       ),
+    );
+
+    // === LOGIC THAY ĐỔI (3) ===
+    // Thay đổi logic onRefresh để giống File 1
+    listView = RefreshIndicator(
+      onRefresh: () async {
+        final provider = _getCurrentProvider();
+        ref.invalidate(provider); // <-- Giống File 1
+        final notifier = ref.read(provider.notifier); // <-- Giống File 1
+        await notifier.fetchNextPage(); // <-- Giống File 1
+      },
+      child: listView,
+    );
+
+    return Container(
+      color: Colors.grey[200], // Giữ màu nền (giống File 1)
+      child: listView,
     );
   }
 }

@@ -15,3 +15,9 @@ final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
   final repo = ref.watch(bookingRepositoryProvider);
   return repo.getListBooked();
 });
+
+final getCountBookedProvider =
+    FutureProvider.family<int, String>((ref, jobId) async {
+  final repo = ref.watch(bookingRepositoryProvider);
+  return repo.getCountBooked(jobId);
+});

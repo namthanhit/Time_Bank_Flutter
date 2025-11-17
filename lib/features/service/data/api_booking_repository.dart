@@ -50,4 +50,27 @@ class ApiBookingRepository implements BookingRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<int> getCountBooked(String jobId) async {
+    try {
+      final path = '/bookings/$jobId/count-booked';
+
+      final res = await _api.get(path);
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+
+      if (decoded is int) return decoded;
+      debugPrint('Decoded count data: $decoded');
+      if (decoded is Map && decoded['count'] is int) {
+        return decoded['count'];
+      }
+
+      throw Exception('Dữ liệu trả về không hợp lệ');
+    } catch (e, st) {
+      debugPrint('getCountBooked error: $e\n$st');
+      rethrow;
+    }
+  }
 }

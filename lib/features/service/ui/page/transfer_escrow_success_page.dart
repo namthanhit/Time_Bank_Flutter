@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../time_transfer/providers/transaction_providers.dart';
+import 'service_create_page.dart'; // Giả sử đây là đường dẫn đúng
 
 class TransferEscrowSuccessPage extends ConsumerStatefulWidget {
   final int totalSecs;
@@ -115,10 +116,13 @@ class _TransferEscrowSuccessPageState
 
     return WillPopScope(
       onWillPop: () async {
-        // (Hành vi này vẫn giữ nguyên cho nút back vật lý của Android)
         ref.read(transactionFormProvider.notifier).reset();
-        // (Pop về trang trước đó, có thể là trang chủ)
-        Navigator.of(context).pop();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const ServiceCreatePage(),
+          ),
+        );
         return false;
       },
       child: Scaffold(
@@ -289,10 +293,16 @@ class _TransferEscrowSuccessPageState
                         ),
                         onPressed: () {
                           ref.read(transactionFormProvider.notifier).reset();
-                          Navigator.of(context).pop();
+                          Navigator.of(context)
+                              .popUntil((route) => route.isFirst);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ServiceCreatePage(),
+                            ),
+                          );
                         },
                         child: const Text(
-                          "Thực hiện giao dịch khác",
+                          "Thực hiện tạo mới dịch vụ khác",
                           style: TextStyle(fontSize: 17.5, color: Colors.white),
                         ),
                       ),

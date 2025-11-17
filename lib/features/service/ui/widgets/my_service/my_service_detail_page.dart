@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/service/providers/booking_providers.dart';
 import '../../../providers/service_providers.dart';
 import '../../../domain/models/service.dart';
 import '../../../data/mock_service_repository.dart';
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
+import 'edit_service.dart';
 
 class MyServiceDetailPage extends ConsumerStatefulWidget {
   final String serviceId;
-
   const MyServiceDetailPage({
     super.key,
     required this.serviceId,
@@ -72,13 +73,11 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             if (service == null) {
               return const Center(child: Text('Không tìm thấy dịch vụ'));
             }
-            // Wrap the scrollable content with RefreshIndicator to allow pull-to-refresh.
-            // AlwaysScrollableScrollPhysics ensures the indicator can appear even when content is short.
             return RefreshIndicator(
               onRefresh: () async {
-                // Invalidate the provider so it refetches.
+                // Invalidate provider đếm số booked cùng lúc
+                ref.invalidate(getCountBookedProvider(widget.serviceId));
                 ref.invalidate(serviceByIdProvider(widget.serviceId));
-                // Small delay to allow UI refresh and show indicator briefly.
                 await Future.delayed(const Duration(milliseconds: 300));
               },
               child: SingleChildScrollView(
@@ -108,12 +107,8 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
       ),
     );
   }
-
   Widget _buildServiceContent(Service service) {
-    // Khởi tạo trạng thái dựa trên service status
     _initializeStatus(service);
-
-    // Nội dung chính: cuộn dọc
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +123,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             ),
           ),
           const SizedBox(height: 6),
-          // Details box: description + images
           _buildDetailsBox(service),
           const SizedBox(height: 20),
           _buildActionRow(service),
@@ -139,11 +133,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildMyServiceHeader(Service service) {
-    // Header riêng cho My Services: title + icon người, thông tin thời gian/thời lượng/địa điểm/chuyên môn
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title row with icon di chuyển sang gần title
         Row(
           children: [
             Expanded(
@@ -162,7 +154,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Icon người được di chuyển sang gần title
                   Icon(
                     service.isPublic ? Icons.people : Icons.group,
                     size: 25,
@@ -171,7 +162,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                 ],
               ),
             ),
-            // Nút ba chấm (menu)
             PopupMenuButton<String>(
               icon: Container(
                 padding: const EdgeInsets.all(4),
@@ -212,8 +202,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Chức năng chỉnh sửa')),
+                    // Open the edit page with the current service prefilled
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (ctx) => EditServicePage(service: service),
+                      ),
                     );
                     break;
                   case 'delete':
@@ -224,10 +218,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             ),
           ],
         ),
-
         const SizedBox(height: 16),
-
-        // Thông tin chi tiết: time, duration, location, specialization
         _buildServiceDetails(service),
       ],
     );
@@ -236,11 +227,10 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   Widget _buildServiceDetails(Service service) {
     return Column(
       children: [
-        // Hàng 1: Thời gian
         _buildDetailItem(
           Icons.access_time,
           'Thời gian',
-          _formatDateTime(service.createdAt),
+          _formatDateTime(service.preferredStart ?? DateTime.now()),
         ),
 
         const SizedBox(height: 12),
@@ -279,9 +269,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildPersonnelCount(Service service) {
-    final booked = service.bookedSlots ?? 0;
+    final bookedCountAsync = ref.watch(getCountBookedProvider(service.id));
+
     final cap = service.slot;
-    final bookedStr = booked.toString().padLeft(2, '0');
     final capStr = cap.toString().padLeft(2, '0');
 
     return Row(
@@ -300,13 +290,40 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           'Số lượng nhân sự: ',
           style: TextStyle(fontSize: 16, color: Colors.grey[800]),
         ),
-        Text(
-          '$bookedStr/$capStr',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF003E77),
-          ),
+
+        bookedCountAsync.when(
+          data: (bookedCount) {
+            // Dữ liệu đã có
+            final bookedStr = bookedCount.toString().padLeft(2, '0');
+            return Text(
+              '$bookedStr/$capStr',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003E77),
+              ),
+            );
+          },
+          loading: () {
+            // Đang tải
+            return const SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          },
+          error: (error, stack) {
+            // Bị lỗi
+            debugPrint('Lỗi getCountBookedProvider: $error');
+            return Text(
+              '?/$capStr', // Hiển thị dấu ? khi lỗi
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            );
+          },
         ),
       ],
     );
@@ -475,22 +492,23 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
         s == 'đã hủy' ||
         s == 'da huy' ||
         s == 'hủy' ||
-        s == 'huy') {
-      // When cancelled we display it at the 'Đang mở' slot but mark as cancelled
+        s == 'expired') {
       _currentStep = 1;
       _isCancelled = true;
     } else {
-      // Fallback: treat unknown/empty as 'Đang mở'
       _currentStep = 1;
       _isCancelled = false;
     }
   }
 
   Widget _buildProgressIndicator() {
-    // Các bước cố định
-    final steps = ['Đã thanh toán', 'Đang mở', 'Đang thực hiện', 'Đã hoàn thành'];
+    final steps = [
+      'Đã thanh toán',
+      'Đang mở',
+      'Đang thực hiện',
+      'Đã hoàn thành'
+    ];
 
-    // Xử lý logic khi dịch vụ bị hủy
     final List<String> displaySteps = List<String>.from(steps);
     if (_isCancelled &&
         _currentStep >= 0 &&
@@ -498,12 +516,10 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
       displaySteps[_currentStep] = 'Đã hủy';
     }
 
-    // Xác định màu sắc dựa trên trạng thái (bị hủy hay không)
     final Color completedColor = _isCancelled ? Colors.red : Colors.green;
     final Color activeColor = _isCancelled ? Colors.red : Colors.orange;
 
     return Container(
-      // Padding 16px này sẽ là cơ sở cho chiều rộng của các Row bên trong
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -523,7 +539,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           ),
           const SizedBox(height: 12),
 
-          // Thanh tiến trình
           Container(
             child: Stack(
               alignment: Alignment.center,
@@ -548,20 +563,16 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                 // Các mốc tròn
                 Row(
                   children: List.generate(displaySteps.length, (index) {
-                    // Bước đã hoàn thành
                     final isCompleted = index < _currentStep;
-                    // Bước hiện tại
                     final isActive = index == _currentStep;
 
-                    // Tính toán màu cho mốc tròn
                     Color circleColor;
                     if (isActive) {
-                      circleColor = activeColor; // Màu cam/đỏ (nếu hủy)
+                      circleColor = activeColor;
                     } else if (isCompleted) {
-                      circleColor = completedColor; // Màu xanh/đỏ (nếu hủy)
+                      circleColor = completedColor;
                     } else {
-                      // **ĐÃ SỬA LỖI NULL SAFETY:** Thêm `!`
-                      circleColor = Colors.grey[300]!; // Màu xám
+                      circleColor = Colors.grey[300]!;
                     }
 
                     return Expanded(
@@ -574,7 +585,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                             color: circleColor,
                             border: Border.all(color: Colors.white, width: 1),
                           ),
-                          // **SỬA THEO YÊU CẦU:** // Hiển thị Icon khi (isCompleted) HOẶC (isActive)
                           child: (isCompleted || isActive)
                               ? const Icon(Icons.check,
                                   size: 10, color: Colors.white)
@@ -590,7 +600,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
           const SizedBox(height: 6),
 
-          // Label nằm đúng dưới mốc
           Row(
             children: List.generate(displaySteps.length, (index) {
               return Expanded(
@@ -604,7 +613,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                         : FontWeight.normal,
                     color: index <= _currentStep
                         ? (_isCancelled ? Colors.red : Colors.black87)
-                        // **ĐÃ SỬA LỖI NULL SAFETY:** Thêm `!`
                         : Colors.grey[600]!,
                   ),
                 ),
@@ -662,7 +670,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildImageGallery(List<String> images) {
-    // Lọc và xác thực URL trước khi hiển thị
     final validImages = images
         .map((s) => s.trim())
         .where((s) =>
@@ -671,7 +678,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             Uri.tryParse(s) != null)
         .toList();
 
-    // Đảm bảo _currentImageIndex nằm trong khoảng hợp lệ
     if (_currentImageIndex >= validImages.length) {
       _currentImageIndex = validImages.isEmpty ? 0 : validImages.length - 1;
     }
@@ -801,8 +807,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               height: 40,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFBADBEF).withOpacity(
-                      0.82),
+                  backgroundColor: Color(0xFFBADBEF).withOpacity(0.82),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -917,8 +922,12 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  String _formatDateTime(DateTime t) {
+    final local = t.toUtc().add(const Duration(hours: 7));
+
+    return '${local.day}/${local.month}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 
   static String _formatDuration(int seconds) {

@@ -138,7 +138,7 @@ class ServiceDetailHeader extends StatelessWidget {
                         style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                       ),
                       Text(
-                        _formatDateTime(service.createdAt),
+                        _formatDateTime(service.preferredStart),
                         style:
                             TextStyle(fontSize: 18, color: Color(0xFF419C23)),
                       ),
@@ -421,9 +421,12 @@ class ServiceDetailHeader extends StatelessWidget {
     return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
-  String _formatDateTime(DateTime? dt) {
-    if (dt == null) return 'Chưa xác định';
-    final d = dt;
-    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  String _formatDateTime(DateTime? t) {
+    if (t == null) return 'Chưa xác định';
+    final local = t.toUtc().add(const Duration(hours: 7));
+
+    return '${local.day}/${local.month}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 }
