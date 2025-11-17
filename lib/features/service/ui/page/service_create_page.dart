@@ -37,7 +37,7 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
   bool _isFormattingDuration = false;
   bool _isFormattingDate = false;
   String? _dateError;
-  String? _timeError; // ✅ THÊM: Biến state cho lỗi thời gian
+  String? _timeError;
 
   bool _isLoading = false;
 
