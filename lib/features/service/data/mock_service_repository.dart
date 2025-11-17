@@ -65,6 +65,16 @@ class MockServiceRepository implements ServiceRepository {
     }
   }
 
+    @override
+  Future<bool> deleteMyJob({required String jobId}) async {
+    try {
+      return true;
+    } catch (e, st) {
+      debugPrint("deleteMyJob error: $e\n$st");
+      rethrow;
+    }
+  }
+
   @override
   Future<void> updateOfferStatusAccepted(
       {required String offerId,

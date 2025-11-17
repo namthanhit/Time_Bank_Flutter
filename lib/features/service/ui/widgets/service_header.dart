@@ -6,6 +6,11 @@ import 'package:time_bank_flutter/features/service/ui/page/rating_page.dart';
 import 'create_page/service_create_page.dart';
 import 'package:time_bank_flutter/features/auth/domain/user_profile.dart';
 
+// << Import provider pagination (đã có) >>
+import 'package:time_bank_flutter/features/service/providers/service_pagination_provider.dart';
+// << THÊM MỚI: Import provider cho "Chờ xác nhận" >>
+import 'package:time_bank_flutter/features/service/providers/service_providers.dart';
+
 class ServiceHeader extends ConsumerStatefulWidget {
   final bool isMyTab;
   final Function(String?)? onFilterChanged;
@@ -81,6 +86,29 @@ class _ServiceHeaderState extends ConsumerState<ServiceHeader> {
   Widget build(BuildContext context) {
     final userProfileAsync = ref.watch(userProfileProvider);
 
+    // --- Đếm "Đã mở" và "Đang thực hiện" ---
+    final paginationState = ref.watch(servicePaginationProvider(null));
+    final openServicesCount = paginationState.services
+        .where((s) => s.status.toString().toLowerCase() == 'open')
+        .length;
+    final inProgressServicesCount = paginationState.services
+        .where((s) => s.status.toString().toLowerCase() == 'matched')
+        .length;
+
+    // << THÊM MỚI: Lắng nghe và đếm "Chờ xác nhận" >>
+    final pendingOffersAsync = ref.watch(allMyPendingOffersProvider);
+    final pendingCount = pendingOffersAsync.when(
+      data: (offers) {
+        // Sử dụng logic lọc giống hệt như trong PendingApplicantsNoSearchWidget
+        return offers
+            .where((o) => o.status == 'pending' || o.status == 'withdrawn')
+            .length;
+      },
+      loading: () => 0,
+      error: (e, s) => 0,
+    );
+    // << KẾT THÚC PHẦN THÊM MỚI >>
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
       decoration: const BoxDecoration(
@@ -124,43 +152,60 @@ class _ServiceHeaderState extends ConsumerState<ServiceHeader> {
           const SizedBox(height: 4),
           Row(
             children: [
-              _buildStatusIcon('assets/icons/File_Check.png', 'Chờ xác nhận',
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FourServiceApplicantsPage(
-                      serviceTitle: 'Chờ xác nhận',
-                      initialTabIndex: 0, // tab 1
+              // << CẬP NHẬT: Thêm count cho "Chờ xác nhận" >>
+              _buildStatusIcon(
+                'assets/icons/File_Check.png',
+                'Chờ xác nhận',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FourServiceApplicantsPage(
+                        serviceTitle: 'Chờ xác nhận',
+                        initialTabIndex: 0, // tab 1
+                      ),
                     ),
-                  ),
-                );
-              }),
-              _buildStatusIcon('assets/icons/Folder_Open.png', 'Đã mở', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FourServiceApplicantsPage(
-                      serviceId: '3',
-                      serviceTitle: 'Đã mở',
-                      initialTabIndex: 2, // tab 2
+                  );
+                },
+                count: pendingCount, // << TRUYỀN COUNT VÀO ĐÂY
+              ),
+
+              _buildStatusIcon(
+                'assets/icons/Folder_Open.png',
+                'Đã mở',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FourServiceApplicantsPage(
+                        serviceId: '3',
+                        serviceTitle: 'Đã mở',
+                        initialTabIndex: 2, // tab 2
+                      ),
                     ),
-                  ),
-                );
-              }),
-              _buildStatusIcon('assets/icons/pending.png', 'Đang thực hiện',
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FourServiceApplicantsPage(
-                      serviceId: '4',
-                      serviceTitle: 'Đang thực hiện',
-                      initialTabIndex: 3, // tab 3
+                  );
+                },
+                count: openServicesCount, // Đếm "Đã mở"
+              ),
+
+              _buildStatusIcon(
+                'assets/icons/pending.png',
+                'Đang thực hiện',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FourServiceApplicantsPage(
+                        serviceId: '4',
+                        serviceTitle: 'Đang thực hiện',
+                        initialTabIndex: 3, // tab 3
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+                count: inProgressServicesCount, // Đếm "Đang thực hiện"
+              ),
+
               _buildStatusIcon('assets/icons/Wavy_Check.png', 'Đánh giá', () {
                 Navigator.push(
                   context,
@@ -242,7 +287,9 @@ class _ServiceHeaderState extends ConsumerState<ServiceHeader> {
     );
   }
 
-  Widget _buildStatusIcon(String imagePath, String label, VoidCallback onTap) {
+  // Thêm tham số {int count = 0}
+  Widget _buildStatusIcon(String imagePath, String label, VoidCallback onTap,
+      {int count = 0}) {
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -251,34 +298,69 @@ class _ServiceHeaderState extends ConsumerState<ServiceHeader> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              child: Image.asset(
-                imagePath,
-                width: 40,
-                height: 40,
-                errorBuilder: (context, error, stackTrace) {
-                  IconData fallbackIcon;
-                  switch (imagePath) {
-                    case 'assets/icons/pending.png':
-                      fallbackIcon = Icons.hourglass_empty;
-                      break;
-                    case 'assets/icons/Folder_Open.png':
-                      fallbackIcon = Icons.check_circle_outline;
-                      break;
-                    case 'assets/icons/File_Check.png':
-                      fallbackIcon = Icons.play_circle_outline;
-                      break;
-                    case 'assets/icons/Wavy_Check.png':
-                      fallbackIcon = Icons.star_outline;
-                      break;
-                    default:
-                      fallbackIcon = Icons.help_outline;
-                  }
-                  return Icon(
-                    fallbackIcon,
-                    color: const Color(0xFF003E77),
-                    size: 20,
-                  );
-                },
+              // Dùng Stack để thêm Badge
+              child: Stack(
+                clipBehavior: Clip.none, // Cho phép badge hiển thị bên ngoài
+                children: [
+                  Image.asset(
+                    imagePath,
+                    width: 40,
+                    height: 40,
+                    errorBuilder: (context, error, stackTrace) {
+                      IconData fallbackIcon;
+                      switch (imagePath) {
+                        case 'assets/icons/pending.png':
+                          fallbackIcon = Icons.hourglass_empty;
+                          break;
+                        case 'assets/icons/Folder_Open.png':
+                          fallbackIcon = Icons.check_circle_outline;
+                          break;
+                        case 'assets/icons/File_Check.png':
+                          fallbackIcon = Icons.play_circle_outline;
+                          break;
+                        case 'assets/icons/Wavy_Check.png':
+                          fallbackIcon = Icons.star_outline;
+                          break;
+                        default:
+                          fallbackIcon = Icons.help_outline;
+                      }
+                      return Icon(
+                        fallbackIcon,
+                        color: const Color(0xFF003E77),
+                        size: 20,
+                      );
+                    },
+                  ),
+                  // Widget Badge
+                  if (count > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 6),

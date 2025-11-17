@@ -73,4 +73,27 @@ class ApiBookingRepository implements BookingRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<Map<String, dynamic>> checkInBooking({
+    required String jobId
+  }) async {
+    try {
+      final path = "/bookings/$jobId/check-in";
+
+      final res = await _api.post(path);
+
+      _ensureOK(res);
+
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception("Phản hồi không hợp lệ từ server");
+      }
+
+      return decoded;
+    } catch (e, st) {
+      debugPrint("checkInBooking error: $e\n$st");
+      rethrow;
+    }
+  }
 }
