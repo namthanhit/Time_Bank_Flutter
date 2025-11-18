@@ -8,6 +8,7 @@ abstract class INotificationRepository {
   Future<void> markRead(List<String> ids);
   Future<void> setFcmToken(String token);
   Future<void> deactivateFcmToken(String token);
+  Future<int> getUnreadCount();
 }
 
 class NotificationRepository implements INotificationRepository {
@@ -50,5 +51,15 @@ class NotificationRepository implements INotificationRepository {
     } catch (e) {
       print('Failed to deactivate FCM token (ignoring): $e');
     }
+  }
+
+  @override
+  Future<int> getUnreadCount() async {
+    final http.Response res = await _api.get('/notifications/unread-count');
+    if (res.statusCode != 200) {
+      throw Exception('Failed to fetch unread count: ${res.statusCode}');
+    }
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return data['count'] as int;
   }
 }

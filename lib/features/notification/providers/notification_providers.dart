@@ -14,6 +14,11 @@ final activityNotificationsProvider =
 StateNotifierProvider<ActivityNotifier, AsyncValue<List<AppNotification>>>(
       (ref) => ActivityNotifier(ref),
 );
+final unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final count = await ref.read(notificationRepositoryProvider).getUnreadCount();
+  return count;
+});
+
 
 class ActivityNotifier extends StateNotifier<AsyncValue<List<AppNotification>>> {
   ActivityNotifier(this._ref) : super(const AsyncLoading()) {
@@ -34,6 +39,8 @@ class ActivityNotifier extends StateNotifier<AsyncValue<List<AppNotification>>> 
     } catch (e, st) {
       state = AsyncError(e, st);
     }
+    // Sau khi refresh, invalidate unread count để cập nhật badge (nếu có)
+    _ref.invalidate(unreadCountProvider);
   }
 
   Future<void> loadMore() async {
@@ -82,7 +89,35 @@ class ActivityNotifier extends StateNotifier<AsyncValue<List<AppNotification>>> 
     } catch (e, st) {
       print('Failed to mark read: $e');
     }
+    _ref.invalidate(unreadCountProvider); // Invalidate count after batch read
   }
+
+  // ===== HÀM MỚI: MARK AS READ ON TAP =====
+  Future<void> markSingleAsRead(String id) async {
+    final cur = state.valueOrNull;
+    if (cur == null || cur.isEmpty) return;
+
+    final idx = cur.indexWhere((n) => n.id == id);
+    if (idx == -1 || cur[idx].read) return;
+
+    // 1. Cập nhật state local (Optimistic Update)
+    final updated = [...cur];
+    final n = updated[idx];
+
+    updated[idx] = n.copyWith(read: true);
+    state = AsyncData(updated);
+
+    // 2. Gọi API (Best-effort, không chặn UI)
+    try {
+      await _repo.markRead([id]);
+    } catch (e) {
+      print('Failed to mark single notification read on API: $e');
+      // Thêm logic hoàn tác nếu cần thiết
+    }
+    _ref.invalidate(unreadCountProvider); // Invalidate count after single read
+  }
+  // ===========================================
+
   void upsertFromPush(AppNotification n) {
 
     final List<AppNotification> cur = [...(state.value ?? [])];
