@@ -168,6 +168,7 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
     );
   }
 
+  // ✅ ĐÃ SỬA: Thêm SingleChildScrollView để tránh lỗi overflow
   void _showReportSheet(String reportedUserName) {
     final reportReasons = [
       'Spam',
@@ -182,6 +183,7 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true, // Cho phép bottom sheet co giãn theo nội dung
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(16),
@@ -190,57 +192,58 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Báo cáo người dùng',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Color(0xFF003E77),
+          // Wrap bằng SingleChildScrollView để cuộn được nếu nội dung quá dài
+          child: SingleChildScrollView(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                // Cập nhật logic onTap
-                ...reportReasons.map((reason) {
-                  return ListTile(
-                    title: Text(reason, style: const TextStyle(fontSize: 16)),
-                    contentPadding: EdgeInsets.zero,
-                    onTap: () {
-                      Navigator.pop(context); // 1. Đóng bottom sheet
-
-                      // 2. Điều hướng đến trang ReportPage
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ReportPage(
-                            reportedUserName: reportedUserName,
-                            reportReason: reason,
-                            targetId: widget.userId,
-                            targetType: 'user',
+                  const SizedBox(height: 20),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Báo cáo người dùng',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Color(0xFF003E77),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Danh sách lý do
+                  ...reportReasons.map((reason) {
+                    return ListTile(
+                      title: Text(reason, style: const TextStyle(fontSize: 16)),
+                      contentPadding: EdgeInsets.zero,
+                      onTap: () {
+                        Navigator.pop(context); // Đóng bottom sheet
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ReportPage(
+                              reportedUserName: reportedUserName,
+                              reportReason: reason,
+                              targetId: widget.userId,
+                              targetType: 'user',
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                }).toList(),
-              ],
+                        );
+                      },
+                    );
+                  }).toList(),
+                ],
+              ),
             ),
           ),
         );
@@ -388,8 +391,11 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 8),
+
+                            // ------ ROW ĐÃ SỬA LỖI OVERFLOW ------
                             Row(
                               children: [
+                                // 1. Nút Theo dõi (Dùng Expanded)
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: _isLoadingFollow
@@ -433,6 +439,8 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                                 ),
 
                                 const SizedBox(width: 8),
+
+                                // 2. Nút Nhắn tin (Dùng Expanded)
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: () {},
@@ -457,6 +465,8 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                                 ),
 
                                 const SizedBox(width: 8),
+
+                                // 3. Nút Báo cáo (Fixed size)
                                 Container(
                                   width: 44,
                                   height: 44,
