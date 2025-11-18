@@ -183,7 +183,11 @@ class ApiServiceRepository implements ServiceRepository {
       final decoded = json.decode(utf8.decode(res.bodyBytes));
       debugPrint('Offer API success: ${decoded.runtimeType}');
       return Offer.fromJobJsonList(decoded);
-    } else {
+    } else if (res.statusCode == 404) {
+      debugPrint('Offer API returned 404 (No offers), returning empty list.');
+      return [];
+    }
+     else {
       debugPrint('Offer API failed: ${res.statusCode} -> ${res.body}');
       throw Exception('Failed to load offers: ${res.statusCode}');
     }
@@ -371,7 +375,7 @@ class ApiServiceRepository implements ServiceRepository {
       if (decoded is! Map<String, dynamic>) {
         throw Exception("Phản hồi không hợp lệ từ server");
       }
-
+      debugPrint("huerfiueoucfeofoeoi: $decoded");
       return decoded;
     } catch (e, st) {
       debugPrint("cancelJob error: $e\n$st");
