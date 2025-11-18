@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'widgets/account_header.dart';
 import 'change_password_page.dart';
-import 'change_pin_flow.dart';
+import 'change_pin_page.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../profile/ui/profile_page.dart';
 
@@ -121,7 +121,7 @@ class SettingsPage extends ConsumerWidget {
                       icon: Icons.vpn_key_outlined,
                       title: 'Đổi mã PIN',
                       onTap: () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePinFlow()));
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePinPage()));
                       },
                       isLast: true,
                     ),
