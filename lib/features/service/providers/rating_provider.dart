@@ -18,3 +18,7 @@ final pendingRatingsProvider = FutureProvider.autoDispose<List<RatingModel>>((re
 final historyRatingsProvider = FutureProvider.autoDispose<List<RatingModel>>((ref) async {
   return ref.watch(ratingRepositoryProvider).getHistoryRatings();
 });
+
+final reviewsForUserProvider = FutureProvider.family.autoDispose<List<RatingModel>, String>((ref, userId) async {
+  return ref.watch(ratingRepositoryProvider).getReviewsForUser(userId);
+});

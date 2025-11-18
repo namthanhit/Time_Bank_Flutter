@@ -563,9 +563,10 @@ class _ServiceCreatePageState extends ConsumerState<ServiceCreatePage> {
         backgroundColor: Colors.grey[200],
       );
     } else {
-      return const CircleAvatar(
+      return CircleAvatar(
         radius: 22,
-        backgroundImage: AssetImage('assets/images/avatar_1.png'),
+        backgroundColor: Colors.grey[200],
+        child: Icon(Icons.person, color: Colors.grey[500], size: 24),
       );
     }
   }

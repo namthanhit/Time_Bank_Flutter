@@ -4,17 +4,19 @@ import '../../time_transfer/providers/transaction_providers.dart';
 import '../../service/providers/service_providers.dart';
 import '../../service/domain/models/service.dart' as svc;
 import '../../auth/providers/auth_providers.dart';
+import '../data/api_home_repository.dart';
 
 final homeSummaryProvider = FutureProvider<HomeSummary>((ref) async {
   try {
+    final ratingFuture = ref.watch(homeRepositoryProvider).fetchSummary();
+
     final walletFuture = ref.watch(accountBalanceProvider.future);
     final profileFuture = ref.watch(userProfileProvider.future);
-
+    final ratingData = await ratingFuture;
     final wallet = await walletFuture;
     final userProfile = await profileFuture;
-
     return HomeSummary(
-      rating: 0.0,
+      rating: ratingData.rating,
       timeBalance: wallet.pretty,
       avatarUrl: userProfile.avatarUrl,
     );
@@ -31,7 +33,7 @@ final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
 
   final raw = jobsMap['data'];
   final List<svc.Service> services =
-      (raw is List) ? List<svc.Service>.from(raw) : [];
+  (raw is List) ? List<svc.Service>.from(raw) : [];
 
   String _formatTimeAgo(DateTime dt) {
     final now = DateTime.now();
@@ -82,4 +84,4 @@ final activitiesProvider = FutureProvider<List<Activity>>((ref) async {
 });
 
 /// Ẩn/hiện số dư
-final balanceHiddenProvider = StateProvider<bool>((_) => true);
+final balanceHiddenProvider = StateProvider<bool>((_) => false);

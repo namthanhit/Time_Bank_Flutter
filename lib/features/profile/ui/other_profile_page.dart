@@ -363,7 +363,7 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                               followersCount: followersAsync.value ?? 0,
                             ),
                             const SizedBox(height: 12),
-                            const ReviewsList(),
+                            ReviewsList(userId: widget.userId),
                           ],
                         ),
                       )

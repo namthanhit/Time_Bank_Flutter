@@ -89,4 +89,22 @@ class ApiRatingRepository implements RatingRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<List<RatingModel>> getReviewsForUser(String userId) async {
+    try {
+      final res = await _api.get('/ratings/user/$userId');
+      _ensureOK(res);
+      final body = json.decode(utf8.decode(res.bodyBytes));
+      if (body is List) {
+        return body
+            .map((item) => RatingModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching reviews for user: $e');
+      return [];
+    }
+  }
 }

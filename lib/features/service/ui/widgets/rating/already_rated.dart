@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../domain/models/rating_model.dart';
+import '../../../../service/domain/models/rating_model.dart';
 
 class AlreadyRatedWidget extends StatelessWidget {
   final RatingModel rating;
@@ -8,10 +8,11 @@ class AlreadyRatedWidget extends StatelessWidget {
     super.key,
     required this.rating,
   });
-
   String _formatDateTime(DateTime dt) {
-    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final local = dt.toLocal();
+
+    return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 
   String _formatDuration(int seconds) {
@@ -64,13 +65,12 @@ class AlreadyRatedWidget extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: const Color(0xFF003E77),
-                  backgroundImage:
-                  (avatarUrl != null && avatarUrl.isNotEmpty)
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
                       ? NetworkImage(avatarUrl)
                       : null,
                   child: (avatarUrl == null || avatarUrl.isEmpty)
-                      ? const Icon(Icons.person, color: Colors.white, size: 24)
+                      ? Icon(Icons.person, color: Colors.grey[500], size: 24)
                       : null,
                 ),
                 const SizedBox(width: 12),
@@ -99,7 +99,6 @@ class AlreadyRatedWidget extends StatelessWidget {
                 style: const TextStyle(color: Colors.grey, fontSize: 12)),
 
             const SizedBox(height: 12),
-
             if (images.isNotEmpty) ...[
               SizedBox(
                 height: 80,
@@ -125,7 +124,6 @@ class AlreadyRatedWidget extends StatelessWidget {
               const SizedBox(height: 12),
             ],
 
-            // Comment content
             if (comment.isNotEmpty) ...[
               Text(comment,
                   style: const TextStyle(fontSize: 14, color: Color(0xFF333333))),
@@ -133,7 +131,6 @@ class AlreadyRatedWidget extends StatelessWidget {
             ],
 
             const Divider(),
-
             if (jobTitle.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
