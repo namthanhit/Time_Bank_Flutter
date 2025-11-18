@@ -33,24 +33,56 @@ class AuthHttpClient extends http.BaseClient {
     if (token != null && token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';
     }
+    // debug: in ra URL và token rút gọn (chỉ dev)
+    try {
+      final short = token == null ? 'null' : (token.length > 8 ? '${token.substring(0, 6)}...' : token);
+      print('[AuthHttpClient] Request ${request.method} ${request.url} Authorization=$short');
+    } catch (_) {}
+    // Read and buffer the request body so we can retry if needed.
+    // We don't call `request` again after finalizing it; instead we create
+    // new StreamedRequest instances for the initial send and possible retry.
+    final bodyBytes = await request.finalize().toBytes();
 
-    final first = await _inner.send(request);
+    http.StreamedRequest _buildStreamed(String method, Uri url, Map<String, String> headers, List<int> bytes) {
+      final r = http.StreamedRequest(method, url);
+      r.headers.addAll(headers);
+      if (bytes.isNotEmpty) {
+        r.sink.add(bytes);
+      }
+      r.sink.close();
+      return r;
+    }
+
+    final initial = _buildStreamed(request.method, request.url, Map<String, String>.from(request.headers), bodyBytes);
+    final first = await _inner.send(initial);
+    print('[AuthHttpClient] Response ${first.statusCode} for ${request.method} ${request.url}');
     if (first.statusCode != 401 || _isAuthPath(request.url)) {
       return first;
     }
 
     // 401: thử refresh
     final dev = await _deviceInfo();
-    final newAccess = await _repo.refreshIfPossible(deviceInfo: dev);
-    if (newAccess == null) {
+    print('[AuthHttpClient] Got 401 for ${request.url}, attempting refresh...');
+    final refreshData = await _repo.refreshIfPossible(deviceInfo: dev);
+    if (refreshData == null) {
+      print('[AuthHttpClient] Refresh failed or no refresh token available');
       return first; // fail: để UI xử lý (đẩy về login)
     }
 
-    // retry 1 lần
-    final replay = http.Request(request.method, request.url);
-    replay.bodyBytes = await request.finalize().toBytes(); // copy body
-    replay.headers.addAll(request.headers);
-    replay.headers['Authorization'] = 'Bearer $newAccess';
+    final newAccess = refreshData['access_token'] as String?;
+    if (newAccess == null || newAccess.isEmpty) {
+      print('[AuthHttpClient] Refresh succeeded but access_token missing');
+      return first;
+    }
+
+    // retry 1 lần with same body and new Authorization header
+    final headers = Map<String, String>.from(request.headers);
+    headers['Authorization'] = 'Bearer $newAccess';
+    try {
+      final short2 = newAccess.length > 8 ? '${newAccess.substring(0,6)}...' : newAccess;
+      print('[AuthHttpClient] Retry with new token $short2');
+    } catch (_) {}
+    final replay = _buildStreamed(request.method, request.url, headers, bodyBytes);
     return _inner.send(replay);
   }
 }

@@ -65,18 +65,42 @@ class AuthRepository {
     final r = await storage.read(key: _kRefresh);
     if (r == null) return null;
     try {
+      try {
+        final shortR = r.length > 8 ? '${r.substring(0,6)}...' : r;
+        print('[AuthRepository] Attempt refresh with refresh_token=$shortR');
+      } catch (_) {}
       final data = await api.refresh(r, deviceInfo: deviceInfo); // data chứa mọi thứ
       final newAccess = data['access_token'] as String?;
       final newRefresh = data['refresh_token'] as String?;
 
-      if (newAccess != null) _access = newAccess;
-      if (newRefresh != null) {
-        await storage.write(key: _kRefresh, value: newRefresh);
+      // Always update in-memory access token when returned by server
+      if (newAccess != null) {
+        _access = newAccess;
       }
+
+      // Replace refresh token if server returned a new one. If server did
+      // not return a new refresh token, remove the stored refresh token to
+      // avoid reusing an old/invalid refresh token (server policy).
+      if (newRefresh != null && newRefresh.isNotEmpty) {
+        await storage.write(key: _kRefresh, value: newRefresh);
+        try {
+          final shortNew = newRefresh.length > 8 ? '${newRefresh.substring(0,6)}...' : newRefresh;
+          print('[AuthRepository] Got new refresh token $shortNew');
+        } catch (_) {}
+      } else {
+        await storage.delete(key: _kRefresh);
+        print('[AuthRepository] No refresh_token returned by server; cleared stored refresh token');
+      }
+
+      try {
+        final shortA = newAccess == null ? 'null' : (newAccess.length > 8 ? '${newAccess.substring(0,6)}...' : newAccess);
+        print('[AuthRepository] Refresh succeeded, access_token=$shortA');
+      } catch (_) {}
       return data;
     } catch (_) {
       _access = null;
       await storage.delete(key: _kRefresh);
+      print('[AuthRepository] Refresh failed: clearing access and refresh token');
       return null;
     }
   }
