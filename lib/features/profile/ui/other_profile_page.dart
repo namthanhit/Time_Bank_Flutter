@@ -223,7 +223,9 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                     title: Text(reason, style: const TextStyle(fontSize: 16)),
                     contentPadding: EdgeInsets.zero,
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.pop(context); // 1. Đóng bottom sheet
+
+                      // 2. Điều hướng đến trang ReportPage
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -387,68 +389,95 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                           children: [
                             const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                ElevatedButton.icon(
-                                  onPressed: _isLoadingFollow
-                                      ? null
-                                      : () =>
-                                          _onFollowPressed(effectiveFollowing),
-                                  icon: _isLoadingFollow
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Color(0xFF0D4C7B),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isLoadingFollow
+                                        ? null
+                                        : () => _onFollowPressed(
+                                            effectiveFollowing),
+                                    icon: _isLoadingFollow
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF0D4C7B),
+                                            ),
+                                          )
+                                        : Icon(
+                                            effectiveFollowing
+                                                ? Icons.how_to_reg_rounded
+                                                : Icons.person_add,
+                                            size: 20,
                                           ),
-                                        )
-                                      : Icon(effectiveFollowing
-                                          ? Icons.how_to_reg_rounded
-                                          : Icons.person_add),
-                                  label: Text(effectiveFollowing
-                                      ? 'Đang theo dõi'
-                                      : 'Theo dõi'),
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                    backgroundColor: const Color(0xFFF0F6F9),
-                                    foregroundColor: const Color(0xFF0D4C7B),
-                                    fixedSize: const Size(160, 44),
-                                    elevation: 0,
+                                    label: Text(
+                                      effectiveFollowing
+                                          ? 'Đang theo dõi'
+                                          : 'Theo dõi',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                      backgroundColor: const Color(0xFFF0F6F9),
+                                      foregroundColor: const Color(0xFF0D4C7B),
+                                      minimumSize: const Size(0, 44),
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                OutlinedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.message),
-                                  label: const Text('Nhắn tin'),
-                                  style: OutlinedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                    side: const BorderSide(
-                                        color: Color(0xFF0D4C7B)),
-                                    foregroundColor: const Color(0xFF0D4C7B),
-                                    fixedSize: const Size(140, 40),
+
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {},
+                                    icon: const Icon(Icons.message, size: 20),
+                                    label: const Text(
+                                      'Nhắn tin',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                      side: const BorderSide(
+                                          color: Color(0xFF0D4C7B)),
+                                      foregroundColor: const Color(0xFF0D4C7B),
+                                      minimumSize: const Size(0, 44),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+
+                                const SizedBox(width: 8),
                                 Container(
-                                  width: 40,
-                                  height: 40,
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: const Color(0xFF0D4C7B)),
+                                  ),
                                   child: IconButton(
                                     onPressed: () =>
                                         _showReportSheet(displayProfile.name),
                                     icon: const Icon(Icons.report_outlined,
-                                        color: Color(0xFF0D4C7B), size: 25),
+                                        color: Color(0xFF0D4C7B), size: 22),
                                     tooltip: 'Báo cáo người dùng',
                                     padding: EdgeInsets.zero,
                                   ),
                                 )
                               ],
                             ),
+                            // ----------------------------------------
+
                             const SizedBox(height: 12),
                             OtherProfileDetile(
                               profile: displayProfile,
