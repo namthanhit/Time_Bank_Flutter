@@ -23,9 +23,8 @@ class MyServiceDetailPage extends ConsumerStatefulWidget {
 class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   PageController? _pageController;
   int _currentImageIndex = 0;
-  int _currentStep =
-      0; 
-  bool _isCancelled = false; 
+  int _currentStep = 0;
+  bool _isCancelled = false;
 
   @override
   void initState() {
@@ -155,7 +154,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    service.isPublic ? Icons.people : Icons.group,
+                    service.isPublic ? Icons.group : Icons.person,
                     size: 25,
                     color: const Color(0xFF003E77),
                   ),
@@ -290,7 +289,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           'Số lượng nhân sự: ',
           style: TextStyle(fontSize: 16, color: Colors.grey[800]),
         ),
-
         bookedCountAsync.when(
           data: (bookedCount) {
             final bookedStr = bookedCount.toString().padLeft(2, '0');
@@ -313,7 +311,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           error: (error, stack) {
             debugPrint('Lỗi getCountBookedProvider: $error');
             return Text(
-              '?/$capStr', 
+              '?/$capStr',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -333,17 +331,17 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
     switch (label) {
       case 'Thời gian':
-        valueColor = const Color(0xFF419C23); 
+        valueColor = const Color(0xFF419C23);
         valueSize = 18;
         valueWeight = FontWeight.normal;
         break;
       case 'Thời lượng':
-        valueColor = Colors.red[600]!; 
+        valueColor = Colors.red[600]!;
         valueSize = 22;
         valueWeight = FontWeight.bold;
         break;
       default:
-        valueColor = Colors.grey[800]!; 
+        valueColor = Colors.grey[800]!;
         valueSize = 16;
         valueWeight = FontWeight.normal;
     }
@@ -530,7 +528,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             ),
           ),
           const SizedBox(height: 12),
-
           Container(
             child: Stack(
               alignment: Alignment.center,
@@ -589,9 +586,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               ],
             ),
           ),
-
           const SizedBox(height: 6),
-
           Row(
             children: List.generate(displaySteps.length, (index) {
               return Expanded(
@@ -905,14 +900,13 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                   );
 
                   ref.invalidate(serviceByIdProvider(widget.serviceId));
-                  
+
                   Navigator.of(context).pop(); // Quay về trang danh sách
-                  
                 } catch (e) {
                   // 6. Xử lý lỗi
                   if (!mounted) return;
                   Navigator.of(context).pop(); // Đóng dialog loading
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Hủy yêu cầu thất bại: $e'),
