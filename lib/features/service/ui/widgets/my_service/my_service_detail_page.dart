@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/service/providers/booking_providers.dart';
 import '../../../providers/service_providers.dart';
 import '../../../domain/models/service.dart';
-import '../../../data/mock_service_repository.dart';
+// import '../../../data/mock_service_repository.dart'; // Đã xoá vì dùng API thật
 import '../../page/service_applicants_page.dart';
 import '../../page/four_service_applicants_page.dart';
 import 'edit_service.dart';
@@ -23,8 +23,7 @@ class MyServiceDetailPage extends ConsumerStatefulWidget {
 class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   PageController? _pageController;
   int _currentImageIndex = 0;
-  int _currentStep =
-      0; // 0: Đã tạo, 1: Đang mở (mặc định), 2: Đang thực hiện, 3: Đã hoàn thành
+  int _currentStep = 0;
   bool _isCancelled = false;
 
   @override
@@ -75,7 +74,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             }
             return RefreshIndicator(
               onRefresh: () async {
-                // Invalidate provider đếm số booked cùng lúc
                 ref.invalidate(getCountBookedProvider(widget.serviceId));
                 ref.invalidate(serviceByIdProvider(widget.serviceId));
                 await Future.delayed(const Duration(milliseconds: 300));
@@ -107,6 +105,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
       ),
     );
   }
+
   Widget _buildServiceContent(Service service) {
     _initializeStatus(service);
     return SingleChildScrollView(
@@ -155,7 +154,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    service.isPublic ? Icons.people : Icons.group,
+                    service.isPublic ? Icons.group : Icons.person,
                     size: 25,
                     color: const Color(0xFF003E77),
                   ),
@@ -290,10 +289,8 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           'Số lượng nhân sự: ',
           style: TextStyle(fontSize: 16, color: Colors.grey[800]),
         ),
-
         bookedCountAsync.when(
           data: (bookedCount) {
-            // Dữ liệu đã có
             final bookedStr = bookedCount.toString().padLeft(2, '0');
             return Text(
               '$bookedStr/$capStr',
@@ -305,7 +302,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             );
           },
           loading: () {
-            // Đang tải
             return const SizedBox(
               height: 18,
               width: 18,
@@ -313,10 +309,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             );
           },
           error: (error, stack) {
-            // Bị lỗi
             debugPrint('Lỗi getCountBookedProvider: $error');
             return Text(
-              '?/$capStr', // Hiển thị dấu ? khi lỗi
+              '?/$capStr',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -330,24 +325,23 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildDetailItem(IconData icon, String label, String value) {
-    // Màu sắc đặc biệt cho từng loại theo community tab style
     Color valueColor;
     double valueSize;
     FontWeight valueWeight;
 
     switch (label) {
       case 'Thời gian':
-        valueColor = const Color(0xFF419C23); // Xanh lá
+        valueColor = const Color(0xFF419C23);
         valueSize = 18;
         valueWeight = FontWeight.normal;
         break;
       case 'Thời lượng':
-        valueColor = Colors.red[600]!; // Đỏ
+        valueColor = Colors.red[600]!;
         valueSize = 22;
         valueWeight = FontWeight.bold;
         break;
       default:
-        valueColor = Colors.grey[800]!; // Mặc định
+        valueColor = Colors.grey[800]!;
         valueSize = 16;
         valueWeight = FontWeight.normal;
     }
@@ -383,18 +377,15 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   Widget _buildSpecializationInline(Service service) {
-    // Debug: xem nội dung skillNames/providerSpecialization nếu cần
     debugPrint('service.skillNames: ${service.skillNames}');
     debugPrint(
         'service.providerSpecialization: ${service.providerSpecialization}');
 
-    // Sử dụng trực tiếp skillNames nếu có, không map từ skillId
     final List<String> fromSkillNames = (service.skillNames ?? <String>[])
         .map((e) => e.toString().trim())
         .where((s) => s.isNotEmpty)
         .toList();
 
-    // Nếu không có skillNames, fallback tách chuỗi providerSpecialization (nếu backend gộp)
     final List<String> fromProviderSpecialization =
         (service.providerSpecialization ?? '')
             .split(',')
@@ -528,7 +519,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tiêu đề
           const Text(
             'Trạng thái dịch vụ',
             style: TextStyle(
@@ -538,7 +528,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             ),
           ),
           const SizedBox(height: 12),
-
           Container(
             child: Stack(
               alignment: Alignment.center,
@@ -597,9 +586,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               ],
             ),
           ),
-
           const SizedBox(height: 6),
-
           Row(
             children: List.generate(displaySteps.length, (index) {
               return Expanded(
@@ -801,7 +788,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // Nút xem chi tiết ứng viên
           Expanded(
             child: SizedBox(
               height: 40,
@@ -824,7 +810,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                     ),
                   );
                 },
-                // icon: const Icon(Icons.people, size: 20, color: Colors.white),
                 label: const Text(
                   'Xem chi tiết ứng viên',
                   style: TextStyle(
@@ -836,7 +821,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               ),
             ),
           ),
-
           const SizedBox(width: 12),
           Container(
             width: 48,
@@ -869,7 +853,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           content: const Text(
-            'Bạn có chắc chắn muốn chắc chắn hủy yêu cầu không?',
+            'Bạn có chắc chắn muốn hủy yêu cầu này không?',
             style: TextStyle(
               fontSize: 16,
               color: Colors.black87,
@@ -887,28 +871,49 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                // 1. Đóng dialog xác nhận
                 Navigator.of(context).pop();
-                // Cập nhật trạng thái thành "Đã hủy"
-                setState(() {
-                  _isCancelled = true;
-                  _currentStep = 1; // Hủy ở bước "Đang mở"
-                });
-                // Also update the mock repository so the cancelled tab shows this
-                MockServiceRepository.setServiceStatus(
-                    widget.serviceId, 'cancelled');
 
-                // Open the FourServiceApplicantsPage on the 'Đã hủy' tab
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FourServiceApplicantsPage(
-                      serviceId: widget.serviceId,
-                      serviceTitle: service.title,
-                      initialTabIndex: 5, // index of 'Đã hủy'
-                    ),
+                // 2. Hiển thị dialog loading
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => const Center(
+                    child: CircularProgressIndicator(),
                   ),
                 );
+
+                try {
+                  // 3. Gọi API
+                  await ref.read(cancelJobProvider(service.id).future);
+
+                  // 4. Xử lý thành công
+                  if (!mounted) return;
+                  Navigator.of(context).pop(); // Đóng dialog loading
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã hủy yêu cầu thành công.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+
+                  ref.invalidate(serviceByIdProvider(widget.serviceId));
+
+                  Navigator.of(context).pop(); // Quay về trang danh sách
+                } catch (e) {
+                  // 6. Xử lý lỗi
+                  if (!mounted) return;
+                  Navigator.of(context).pop(); // Đóng dialog loading
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Hủy yêu cầu thất bại: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: const Text('Đồng ý',
                   style: TextStyle(

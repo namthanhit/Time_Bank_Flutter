@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/rating/already_rated.dart';
-import 'package:time_bank_flutter/features/service/ui/widgets/rating/not_rated_yet.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/rating_provider.dart';
+import '../widgets/rating/already_rated.dart';
+import '../widgets/rating/not_rated_yet.dart';
 
-// 🔹 Trang quản lý đánh giá với 2 tab
-class ServiceRatingPage extends StatefulWidget {
+class ServiceRatingPage extends ConsumerStatefulWidget {
   final int initialTabIndex;
 
   const ServiceRatingPage({
@@ -12,29 +13,14 @@ class ServiceRatingPage extends StatefulWidget {
   });
 
   @override
-  State<ServiceRatingPage> createState() => _ServiceRatingPageState();
+  ConsumerState<ServiceRatingPage> createState() => _ServiceRatingPageState();
 }
 
-class _ServiceRatingPageState extends State<ServiceRatingPage>
+class _ServiceRatingPageState extends ConsumerState<ServiceRatingPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // In-memory list of submitted reviews. Each review is a Map with keys
-  // 'applicant', 'rating', 'comment', 'imagePaths', 'reviewTime'.
-  final List<Map<String, dynamic>> _reviews = [];
-
-  void _handleNewReview(Map<String, dynamic> review) {
-    setState(() {
-      _reviews.insert(0, review);
-      // After submission, only insert the review. Do not change tabs
-      // automatically — the user requested to stay on the rating page.
-    });
-  }
-
-  final List<String> _tabs = [
-    'Chưa đánh giá',
-    'Đã đánh giá',
-  ];
+  final List<String> _tabs = ['Chưa đánh giá', 'Đã đánh giá'];
 
   @override
   void initState() {
@@ -52,127 +38,86 @@ class _ServiceRatingPageState extends State<ServiceRatingPage>
     super.dispose();
   }
 
+  Future<void> _refreshData() async {
+    ref.invalidate(pendingRatingsProvider);
+    ref.invalidate(historyRatingsProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pendingAsync = ref.watch(pendingRatingsProvider);
+    final historyAsync = ref.watch(historyRatingsProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // 🔹 Tiêu đề cố định
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: const Color(0xFF003E77),
         elevation: 0,
-        automaticallyImplyLeading: true,
-        titleSpacing: 0,
-        title: const Padding(
-          padding: EdgeInsets.only(left: 8),
-          child: Text(
-            'Chi tiết đánh giá',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-            ),
-          ),
+        title: const Text(
+          'Chi tiết đánh giá',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22),
         ),
-
-        // 🔹 TabBar 2 tab
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Container(
             color: Colors.white,
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
             child: TabBar(
-              isScrollable: false, // 🔹 Không cần cuộn
               controller: _tabController,
-              dividerColor: Colors.transparent,
               labelColor: const Color(0xFFE30000),
               unselectedLabelColor: const Color(0xFF003E77),
               indicator: UnderlineTabIndicator(
-                borderSide:
-                    const BorderSide(width: 5, color: Color(0xFFE30000)),
+                borderSide: const BorderSide(width: 5, color: Color(0xFFE30000)),
                 borderRadius: BorderRadius.circular(4),
-                insets: const EdgeInsets.only(bottom: 2),
-              ),
-              labelStyle: const TextStyle(
-                fontSize: 16,
-              ),
-              labelPadding: const EdgeInsets.symmetric(
-                vertical: 3,
               ),
               tabs: _tabs.map((t) => Tab(text: t)).toList(),
             ),
           ),
         ),
       ),
-
-      // 🔹 Tab content (Nơi bạn gọi widget của mình)
       body: TabBarView(
         controller: _tabController,
         children: [
-          // 1. Chưa đánh giá — pass callback so submitted reviews are
-          // registered here.
-          NotRatedYetWidget(onReviewSubmitted: _handleNewReview),
+          // Tab 1: Chưa đánh giá (Pending)
+          RefreshIndicator(
+            onRefresh: _refreshData,
+            child: pendingAsync.when(
+              data: (list) => NotRatedYetWidget(
+                pendingList: list,
+                onRatingSuccess: () {
+                  _refreshData();
+                  _tabController.animateTo(1);
+                },
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            ),
+          ),
 
-          // 2. Đã đánh giá — show the list of submitted reviews.
-          _buildRatedList(),
+          RefreshIndicator(
+            onRefresh: _refreshData,
+            child: historyAsync.when(
+              data: (list) {
+                if (list.isEmpty) {
+                  return const Center(child: Text('Chưa có lịch sử đánh giá nào'));
+                }
+                return Container(
+                  color: Colors.grey[100],
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      return AlreadyRatedWidget(rating: list[index]);
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildRatedList() {
-    if (_reviews.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.reviews, size: 56, color: Colors.grey),
-            SizedBox(height: 12),
-            Text('Chưa có đánh giá nào', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
-    // Lightweight list: tapping an item opens the full `AlreadyRatedPage`.
-    return Container(
-      color: Colors.grey[100],
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _reviews.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final r = _reviews[index];
-          final applicant = r['applicant'] as Map<String, dynamic>;
-          final rating = (r['rating'] as num).toDouble();
-          final comment = r['comment'] as String? ?? '';
-          final images =
-              (r['imagePaths'] as List<dynamic>?)?.cast<String>() ?? [];
-          final reviewTime = r['reviewTime'] as DateTime? ?? DateTime.now();
-
-          // Render the full card inline using the reusable widget so we
-          // don't need to push a separate page.
-          return AlreadyRatedWidget(
-            applicant: applicant,
-            rating: rating,
-            comment: comment,
-            imagePaths: images,
-            reviewerId: r['reviewerId'] as String?,
-            reviewTime: reviewTime,
-            onEdit: (updated) {
-              // Replace the review in-place if edited via RatingServicePage.
-              setState(() {
-                _reviews[index] = updated;
-              });
-            },
-            onDelete: () {
-              setState(() {
-                _reviews.removeAt(index);
-              });
-            },
-          );
-        },
       ),
     );
   }

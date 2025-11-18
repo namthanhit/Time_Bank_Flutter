@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_bank_flutter/features/service/ui/widgets/community/community_service_detail_page.dart';
 
 import '../../../domain/models/booking.dart';
 import '../../../providers/booking_providers.dart';
@@ -73,9 +74,23 @@ class ReceivedApplicants extends ConsumerWidget {
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final booking = bookingsToDisplay[index];
+
+                // << CẬP NHẬT LOGIC:
+                // Thay vì dùng this.onTap, chúng ta định nghĩa
+                // hành động điều hướng trực tiếp ở đây.
                 return _BookingCard(
                   booking: booking,
-                  onTap: onTap != null ? () => onTap!(booking) : null,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CommunityServiceDetailPage(
+                          // Truyền serviceId từ booking vào trang chi tiết
+                          serviceId: booking.serviceId,
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -95,14 +110,19 @@ class _BookingCard extends StatelessWidget {
 
   String _formatDateTime(DateTime dt) {
     debugPrint('Formatting DateTime: $dt');
-    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    final local = dt.toUtc().add(const Duration(hours: 7));
+
+    return '${local.day}/${local.month}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
   }
 
   String _formatDuration(int totalSeconds) {
     final duration = Duration(seconds: totalSeconds);
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    return "${duration.inHours}h ${twoDigitMinutes}m";
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   @override
@@ -113,7 +133,7 @@ class _BookingCard extends StatelessWidget {
     final location = (booking.place.trim().isNotEmpty) ? booking.place : '';
 
     return InkWell(
-      onTap: onTap,
+      onTap: onTap, // << SỬ DỤNG onTap đã được truyền vào
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(

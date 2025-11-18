@@ -184,7 +184,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                               },
                             ),
                             const SizedBox(height: 12),
-                            const ReviewsList(),
+                            ReviewsList(userId: profile.id),
                           ] else ...[
                             Consumer(
                               builder: (context, ref2, _) {

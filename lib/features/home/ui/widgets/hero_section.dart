@@ -16,13 +16,10 @@ class HeroSection extends StatelessWidget {
   final bool isHidden;
   final VoidCallback onToggleHidden;
   final VoidCallback onNotificationsTap;
-
   final String backgroundAsset;
 
   Widget _buildAvatar(BuildContext context) {
-
     final url = summary.avatarUrl;
-
     if (url != null &&
         url.isNotEmpty &&
         (url.startsWith('http://') || url.startsWith('https://'))) {
@@ -41,6 +38,45 @@ class HeroSection extends StatelessWidget {
         ),
       );
     }
+  }
+
+  Widget _buildRatingBadge() {
+    final double rating = summary.rating;
+    final bool hasRating = rating > 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+              Icons.star_rounded,
+              color: hasRating ? Colors.orange : Colors.grey,
+              size: 18
+          ),
+          const SizedBox(width: 4),
+          Text(
+            hasRating ? rating.toStringAsFixed(1) : "Mới",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: hasRating ? Colors.black87 : Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -73,7 +109,6 @@ class HeroSection extends StatelessWidget {
             ),
           ),
 
-          // content
           Positioned(
             left: 24,
             right: 24,
@@ -81,23 +116,18 @@ class HeroSection extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Cột Avatar + Rating
                 Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildAvatar(context),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.orange, size: 16),
-                        const SizedBox(width: 3),
-                        Text(
-                          summary.rating.toStringAsFixed(1),
-                          style: HomeTypography.ratingValue,
-                        ),
-                      ],
-                    ),
+                    const SizedBox(height: 8),
+                    _buildRatingBadge(),
                   ],
                 ),
+
                 const SizedBox(width: 20),
+
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
@@ -111,6 +141,7 @@ class HeroSection extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
+                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -130,7 +161,16 @@ class HeroSection extends StatelessWidget {
                             const SizedBox(height: 6),
                             Text(
                               isHidden ? "••••••" : summary.timeBalance,
-                              style: HomeTypography.heroBalanceValue.copyWith(color: Colors.white),
+                              style: HomeTypography.heroBalanceValue.copyWith(
+                                  color: Colors.white,
+                                  shadows: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    )
+                                  ]
+                              ),
                             ),
                           ],
                         ),

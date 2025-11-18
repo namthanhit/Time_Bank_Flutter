@@ -1,78 +1,39 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import '../../../data/mock_service_repository.dart';
-import 'rating_service_page.dart';
+import '../../../../service/domain/models/rating_model.dart';
 
-/// A reusable widget that renders a single review as a Card. This can be
-/// embedded inline (e.g., inside the 'Đã đánh giá' list) or used inside the
-/// full-page [AlreadyRatedPage] wrapper.
-class AlreadyRatedWidget extends StatefulWidget {
-  final Map<String, dynamic> applicant;
-  final double rating;
-  final String comment;
-  final List<String> imagePaths;
-  final DateTime reviewTime;
-  final String? reviewerId;
-  final void Function(Map<String, dynamic> /*updatedReview*/)? onEdit;
-  final VoidCallback? onDelete;
+class AlreadyRatedWidget extends StatelessWidget {
+  final RatingModel rating;
 
   const AlreadyRatedWidget({
     super.key,
-    required this.applicant,
     required this.rating,
-    required this.comment,
-    required this.imagePaths,
-    required this.reviewTime,
-    this.reviewerId,
-    this.onEdit,
-    this.onDelete,
   });
-
-  @override
-  State<AlreadyRatedWidget> createState() => _AlreadyRatedWidgetState();
-}
-
-class _AlreadyRatedWidgetState extends State<AlreadyRatedWidget> {
-  late double _rating;
-  late String _comment;
-  late List<String> _imagePaths;
-  late DateTime _reviewTime;
-
-  @override
-  void initState() {
-    super.initState();
-    _rating = widget.rating;
-    _comment = widget.comment;
-    _imagePaths = List<String>.from(widget.imagePaths);
-    _reviewTime = widget.reviewTime;
-  }
-
   String _formatDateTime(DateTime dt) {
-    final d = dt.day.toString().padLeft(2, '0');
-    final m = dt.month.toString().padLeft(2, '0');
-    final y = dt.year;
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '$d/$m/$y $hh:$mm';
+    final local = dt.toLocal();
+
+    return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildStarRow(double rating) {
+  String _formatDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  Widget _buildStarRow(int starCount) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        final idx = i + 1;
-        final IconData icon;
-        if (rating >= idx) {
-          icon = Icons.star;
-        } else if (rating >= idx - 0.5) {
-          icon = Icons.star_half;
-        } else {
-          icon = Icons.star_border;
-        }
         return Padding(
           padding: const EdgeInsets.only(right: 4.0),
-          child: Icon(icon, color: const Color(0xFFFFC107), size: 18),
+          child: Icon(
+            i < starCount ? Icons.star : Icons.star_border,
+            color: const Color(0xFFFFC107),
+            size: 18,
+          ),
         );
       }),
     );
@@ -80,30 +41,22 @@ class _AlreadyRatedWidgetState extends State<AlreadyRatedWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final applicant = widget.applicant;
-    final avatarUrl = applicant['avatar'] as String?;
-    final name = applicant['name'] ?? 'Người dùng';
-
-    final service =
-        MockServiceRepository.getServiceById(applicant['serviceId']);
-    final jobTitle = service?.title ?? '';
-    final jobTime = applicant['requestTime'] ?? '';
-    final duration = service != null
-        ? MockServiceRepository.formatDuration(service.minSlotMinutes)
-        : '';
-    String location = '';
-    if (service != null) {
-      location = (service.place.trim().isNotEmpty)
-          ? service.place
-          : (service.regionCode ?? '');
-    }
+    final avatarUrl = rating.partnerAvatar;
+    final name = rating.partnerName;
+    final jobTitle = rating.serviceTitle;
+    final reviewTime = rating.ratedAt ?? DateTime.now();
+    final images = rating.images ?? [];
+    final comment = rating.comment ?? '';
+    final location = rating.place;
+    final jobTimeStr = _formatDateTime(rating.startAt);
+    final durationStr = _formatDuration(rating.durationSecs);
 
     return Card(
       color: Colors.white,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -111,12 +64,13 @@ class _AlreadyRatedWidgetState extends State<AlreadyRatedWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xFF003E77),
-                  backgroundImage:
-                      avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl == null
-                      ? const Icon(Icons.person, color: Colors.white, size: 26)
+                  radius: 24,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: (avatarUrl == null || avatarUrl.isEmpty)
+                      ? Icon(Icons.person, color: Colors.grey[500], size: 24)
                       : null,
                 ),
                 const SizedBox(width: 12),
@@ -126,82 +80,57 @@ class _AlreadyRatedWidgetState extends State<AlreadyRatedWidget> {
                     children: [
                       Text(name,
                           style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                               color: Color(0xFF003E77))),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Row(children: [
-                        _buildStarRow(_rating),
+                        _buildStarRow(rating.stars ?? 0),
                         const SizedBox(width: 8),
-                        Text(_rating.toStringAsFixed(1),
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
                       ])
                     ],
                   ),
                 ),
-                if (widget.reviewerId != null &&
-                    widget.reviewerId == MockServiceRepository.currentUserId)
-                  PopupMenuButton<String>(
-                    color: Colors.white,
-                    icon: const Icon(Icons.more_vert, color: Color(0xFF003E77), size: 25),
-                    onSelected: (v) async {
-                       if (v == 'delete') {
-                        final should = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: Colors.white,
-                            title: const Text('Xóa đánh giá'),
-                            content: const Text(
-                                'Bạn có chắc muốn xóa đánh giá này?'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: const Text('Hủy')),
-                              TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text('Xóa',
-                                      style: TextStyle(color: Colors.red))),
-                            ],
-                          ),
-                        );
-                        if (should == true) widget.onDelete?.call();
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                          value: 'delete',
-                          child:
-                              Text('Xóa', style: TextStyle(color: Colors.red))),
-                    ],
-                  ),
               ],
             ),
+
             const SizedBox(height: 8),
-            Text(_formatDateTime(_reviewTime),
-                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            Text(_formatDateTime(reviewTime),
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+
             const SizedBox(height: 12),
-            if (_imagePaths.isNotEmpty) ...[
+            if (images.isNotEmpty) ...[
               SizedBox(
-                height: 100,
+                height: 80,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
+                  itemCount: images.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (ctx, i) => ClipRRect(
                       borderRadius: BorderRadius.circular(6),
-                      child: Image.file(File(_imagePaths[i]),
-                          width: 100, height: 100, fit: BoxFit.cover)),
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemCount: _imagePaths.length,
+                      child: Image.network(
+                        images[i],
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, _, __) => Container(
+                          width: 80, height: 80, color: Colors.grey[300],
+                          child: const Icon(Icons.error),
+                        ),
+                      )
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
             ],
-            if (_comment.trim().isNotEmpty) ...[
-              Text(_comment,
-                  style:
-                      const TextStyle(fontSize: 16, color: Color(0xFF333333))),
+
+            if (comment.isNotEmpty) ...[
+              Text(comment,
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF333333))),
               const SizedBox(height: 12),
             ],
+
+            const Divider(),
             if (jobTitle.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,69 +138,17 @@ class _AlreadyRatedWidgetState extends State<AlreadyRatedWidget> {
                   Text(jobTitle,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 16,
                           color: Color(0xFF003E77))),
                   const SizedBox(height: 6),
 
-                  RichText(
-                    text: TextSpan(
-                      text: 'Thời gian: ',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Color(0xFF333333),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: jobTime,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildRichInfo('Thời gian: ', jobTimeStr, Colors.green),
                   const SizedBox(height: 4),
-                  RichText(
-                    text: TextSpan(
-                      text: 'Thời lượng: ',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Color(0xFF333333),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: duration,
-                          style: const TextStyle(
-                            fontSize: 18, //
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildRichInfo('Thời lượng: ', durationStr, Colors.red),
 
                   if (location.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    RichText(
-                      text: TextSpan(
-                        text: 'Địa điểm: ',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Color(0xFF333333),
-                        ),
-                        children: [
-                          TextSpan(
-                            text: location,
-                            style: const TextStyle(
-                              fontSize: 17, //
-                              color: Color(0xFF003E77),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildRichInfo('Địa điểm: ', location, const Color(0xFF003E77)),
                   ]
                 ],
               ),
@@ -280,5 +157,19 @@ class _AlreadyRatedWidgetState extends State<AlreadyRatedWidget> {
       ),
     );
   }
-}
 
+  Widget _buildRichInfo(String label, String value, Color valueColor) {
+    return RichText(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(fontSize: 14, color: Color(0xFF555555)),
+        children: [
+          TextSpan(
+            text: value,
+            style: TextStyle(fontSize: 14, color: valueColor, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+}

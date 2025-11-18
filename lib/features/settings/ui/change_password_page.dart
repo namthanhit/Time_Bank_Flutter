@@ -6,7 +6,6 @@ import '../providers/providers.dart';
 class ChangePasswordPage extends ConsumerStatefulWidget {
   const ChangePasswordPage({Key? key}) : super(key: key);
 
-  /// Open ChangePasswordPage with a slide-from-bottom animation
   static Future<void> open(BuildContext context) {
     return Navigator.of(context).push(slideFromBottomRoute(const ChangePasswordPage()));
   }
@@ -35,7 +34,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   bool _loading = false;
   String? _currentPasswordError;
 
-  // password must be at least 8 chars, have one uppercase and one special char
   String? _passwordValidator(String? v) {
     if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu';
     if (v.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
@@ -70,7 +68,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    // reuse signup card style
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -130,7 +128,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                           Text(_currentPasswordError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
                         const SizedBox(height: 12),
 
-                        // new password
                         TextFormField(
                           controller: _newController,
                           focusNode: _focusNew,
@@ -216,7 +213,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                                     } catch (e) {
                                       final msg = e.toString();
                                       if (msg.contains('current_password') || msg.contains('Mật khẩu hiện tại') || msg.contains('Thiếu current_password')) {
-                                        // Show a concise, user-friendly message for current-password mismatch
                                         setState(() {
                                           _currentPasswordError = 'Mật khẩu hiện tại không đúng';
                                         });

@@ -53,6 +53,29 @@ class MockServiceRepository implements ServiceRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> cancelJob({
+    required String jobId,
+  }) async {
+    try {
+
+      return {};
+    } catch (e, st) {
+      debugPrint("cancelJob error: $e\n$st");
+      rethrow;
+    }
+  }
+
+    @override
+  Future<bool> deleteMyJob({required String jobId}) async {
+    try {
+      return true;
+    } catch (e, st) {
+      debugPrint("deleteMyJob error: $e\n$st");
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> updateOfferStatusAccepted(
       {required String offerId,
       required String jobId,
@@ -93,6 +116,16 @@ class MockServiceRepository implements ServiceRepository {
     List<String>? imageUrls,
   }) async {
     const path = '/jobs';
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> checkUpdateJob({
+    required String jobId,
+    required Map<String, dynamic> dto,
+  }) async {
+    final id = jobId.toString();
+    final path = '/jobs/$id';
     return {};
   }
 
@@ -839,6 +872,20 @@ class MockServiceRepository implements ServiceRepository {
 
     // Notify all listeners
     _notifyListeners();
+  }
+
+  @override
+  Future<Map<String, dynamic>> confirmUpdateJob({
+    required Map<String, dynamic> body,
+  }) async {
+    try {
+      return {
+        'message': 'Cập nhật công việc thành công (mock)',
+      };
+    } catch (e, st) {
+      debugPrint("confirmUpdateJob error: $e\n$st");
+      rethrow;
+    }
   }
 
   // Approve applicant (từ My Service)

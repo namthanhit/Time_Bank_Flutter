@@ -12,20 +12,35 @@ class HomeSummary {
     this.avatarUrl,
   });
 
-  factory HomeSummary.fromJson(Map<String, dynamic> j) => HomeSummary(
-    rating: (j['rating'] as num).toDouble(),
-    timeBalance: j['time_balance'] as String,
-    avatarUrl: (j['avatar'] ?? j['avatar_url'] ?? j['user_avatar']) as String?,
-  );
+  factory HomeSummary.fromJson(Map<String, dynamic> j) {
+    return HomeSummary(
+      rating: (j['rating'] is num) ? (j['rating'] as num).toDouble() : 0.0,
+      timeBalance: (j['time_balance'] ?? j['timeBalance'] ?? '00:00') as String,
+      avatarUrl: (j['avatar'] ?? j['avatar_url'] ?? j['user_avatar'] ?? j['avatarUrl']) as String?,
+    );
+  }
+
+  HomeSummary copyWith({
+    double? rating,
+    String? timeBalance,
+    String? avatarUrl,
+  }) {
+    return HomeSummary(
+      rating: rating ?? this.rating,
+      timeBalance: timeBalance ?? this.timeBalance,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+    );
+  }
 }
+
 
 @immutable
 class Activity {
   final String user;
   final String timeAgo;
   final String title;
-  final String taskTime; // "HH:mm dd/MM/yyyy"
-  final String duration; // "HH:mm:ss"
+  final String taskTime;
+  final String duration;
   final String location;
   final List<String> tags;
   final String status;
@@ -77,7 +92,7 @@ class Activity {
       tags: parseTags(j['tags'] ?? j['tag_list'] ?? [j['tag1'], j['tag2']]),
       status: j['status'] as String,
       avatarUrl:
-          (j['avatar'] ?? j['provider_avatar'] ?? j['avatar_url']) as String?,
+      (j['avatar'] ?? j['provider_avatar'] ?? j['avatar_url']) as String?,
     );
   }
 }

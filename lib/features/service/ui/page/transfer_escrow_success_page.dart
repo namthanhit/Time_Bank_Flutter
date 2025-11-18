@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../time_transfer/providers/transaction_providers.dart';
-import 'service_create_page.dart'; // Giả sử đây là đường dẫn đúng
+import '../widgets/create_page/service_create_page.dart'; // Giả sử đây là đường dẫn đúng
 
 class TransferEscrowSuccessPage extends ConsumerStatefulWidget {
   final int totalSecs;

@@ -21,3 +21,10 @@ final getCountBookedProvider =
   final repo = ref.watch(bookingRepositoryProvider);
   return repo.getCountBooked(jobId);
 });
+
+/// bookingId là param
+final checkInBookingProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, jobId) async {
+  final repo = ref.watch(bookingRepositoryProvider);
+  return repo.checkInBooking(jobId: jobId);
+});

@@ -95,3 +95,30 @@ final createJobProvider =
     imageUrls: imageUrls,
   );
 });
+
+final checkUpdateJobProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+        (ref, params) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+
+  return repo.checkUpdateJob(
+    jobId: params['jobId'],
+    dto: params['dto'],
+  );
+});
+
+final confirmUpdateProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+        (ref, params) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+
+  return repo.confirmUpdateJob(
+    body: params["body"],
+  );
+});
+
+final cancelJobProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, jobId) async {
+  final repo = ref.watch(serviceRepositoryProvider);
+  return repo.cancelJob(jobId: jobId);
+});

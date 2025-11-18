@@ -30,11 +30,9 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
   @override
   void initState() {
     super.initState();
-    // Rebuild when any controller changes so `_canSubmit` updates immediately.
     _pinCurrentController.addListener(_onControllersChanged);
     _pinNewController.addListener(_onControllersChanged);
     _pinConfirmController.addListener(_onControllersChanged);
-    // clear inline errors when user edits
     _pinCurrentController.addListener(() {
       if (_currentPinError != null) setState(() => _currentPinError = null);
     });
@@ -65,7 +63,6 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
   bool get _canSubmit {
     final n = _pinNewController.text.trim();
     final c = _pinConfirmController.text.trim();
-    // Allow submit when both new and confirm are filled; show mismatch error on submit.
     return n.length == 6 && c.length == 6 && !_loading;
   }
 
@@ -74,11 +71,10 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
     final current = _pinCurrentController.text.trim();
     final newPin = _pinNewController.text.trim();
     final confirm = _pinConfirmController.text.trim();
-    // client-side check: ensure new and confirm match, show inline error if not
     if (newPin.length == 6 && confirm.length == 6 && newPin != confirm) {
       setState(() {
         _confirmPinError = 'Mã PIN xác nhận không khớp';
-        _currentPinError = null; // clear any previous current-pin error when user retries
+        _currentPinError = null;
       });
       _focusConfirm.requestFocus();
       return;
@@ -88,8 +84,6 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
       _currentPinError = null;
     });
     try {
-      // Some backends do not expose a separate check-pin endpoint.
-      // Call changePin directly; pass `currentPin` only when provided.
       await repo.changePin(currentPin: current.isEmpty ? null : current, newPin: newPin);
       if (!mounted) return;
       await _showSuccessDialog('Đổi mã PIN thành công');
@@ -98,9 +92,7 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
-      // If server says missing or wrong current_pin, show inline error under current PIN
       if (msg.contains('Thiếu current_pin') || msg.contains('current_pin') || msg.contains('PIN hiện tại')) {
-        // Always show a simple, user-friendly message for current PIN issues.
         setState(() {
           _currentPinError = 'Mã PIN hiện tại không đúng';
         });
@@ -114,15 +106,12 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
   }
 
   String _extractMessage(String raw) {
-    // raw may be like "Exception: Thiếu current_pin" or JSON-wrapped messages.
-    // Provide a user-friendly fallback.
     final r = raw.replaceFirst('Exception: ', '').trim();
     return r.isEmpty ? 'Đã có lỗi xảy ra' : r;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use same visual style as ChangePasswordPage: full gradient background and centered white card
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -154,8 +143,6 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
                       const Text('Vui lòng nhập mã PIN hiện tại và mã PIN mới', style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 20),
 
-                      // current PIN
-                        // current PIN (label + circular boxes)
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -184,8 +171,6 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
                           ),
                       const SizedBox(height: 12),
 
-                      // new PIN
-                        // new PIN (label + circular boxes)
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -206,8 +191,6 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
                         ),
                       const SizedBox(height: 12),
 
-                      // confirm PIN
-                        // confirm PIN (label + circular boxes)
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -277,7 +260,6 @@ class _ChangePinPageState extends ConsumerState<ChangePinPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        // auto-dismiss the dialog shortly after it's shown
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Future.delayed(const Duration(milliseconds: 800), () {
             if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();

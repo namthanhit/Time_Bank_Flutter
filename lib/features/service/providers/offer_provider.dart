@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_bank_flutter/features/service/data/api_offer_repository.dart';
 import 'package:time_bank_flutter/features/service/domain/repositories/offer_repository.dart';
 
-import '../../auth/providers/auth_providers.dart';
+import 'package:time_bank_flutter/features/auth/providers/auth_providers.dart';
 
 final offerRepositoryProvider = Provider<OfferRepository>((ref) {
   final authedApi = ref.watch(authedApiClientProvider);
@@ -22,7 +22,6 @@ final offerStatusProvider =
   return repo.getOfferStatus(jobId);
 });
 
-/// Provider gọi API hủy offer (DELETE)
 final cancelOfferProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, jobId) async {
   final repo = ref.watch(offerRepositoryProvider);

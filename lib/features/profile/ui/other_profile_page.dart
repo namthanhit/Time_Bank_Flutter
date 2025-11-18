@@ -5,6 +5,7 @@ import '../domain/profile.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/other_profile_detile.dart';
 import 'widgets/reviews_list.dart';
+import 'report_page.dart';
 
 class OtherProfilePage extends ConsumerStatefulWidget {
   final String userId;
@@ -162,6 +163,84 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
               onPressed: () => Navigator.of(context).pop(true),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showReportSheet(String reportedUserName) {
+    final reportReasons = [
+      'Spam',
+      'Nội dung không phù hợp',
+      'Lừa đảo hoặc gian lận',
+      'Giả mạo tài khoản',
+      'Quấy rối hoặc bắt nạt',
+      'Vi phạm quyền riêng tư',
+      'Khác...',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Báo cáo người dùng',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Color(0xFF003E77),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Cập nhật logic onTap
+                ...reportReasons.map((reason) {
+                  return ListTile(
+                    title: Text(reason, style: const TextStyle(fontSize: 16)),
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReportPage(
+                            reportedUserName: reportedUserName,
+                            reportReason: reason,
+                            targetId: widget.userId,
+                            targetType: 'user',
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -355,6 +434,19 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                                     fixedSize: const Size(140, 40),
                                   ),
                                 ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  child: IconButton(
+                                    onPressed: () =>
+                                        _showReportSheet(displayProfile.name),
+                                    icon: const Icon(Icons.report_outlined,
+                                        color: Color(0xFF0D4C7B), size: 25),
+                                    tooltip: 'Báo cáo người dùng',
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                )
                               ],
                             ),
                             const SizedBox(height: 12),
@@ -363,7 +455,7 @@ class _OtherProfilePageState extends ConsumerState<OtherProfilePage> {
                               followersCount: followersAsync.value ?? 0,
                             ),
                             const SizedBox(height: 12),
-                            const ReviewsList(),
+                            ReviewsList(userId: widget.userId),
                           ],
                         ),
                       )

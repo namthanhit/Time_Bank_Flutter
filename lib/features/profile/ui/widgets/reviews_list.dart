@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/review.dart';
-import '../../providers/providers.dart';
+import '../../../service/domain/models/rating_model.dart';
+import '../../../service/providers/rating_provider.dart';
+import '../../../service/ui/widgets/rating/already_rated.dart';
 
 class ReviewsList extends ConsumerStatefulWidget {
-  /// userId: which user's reviews to show (default 'me')
   final String userId;
-  const ReviewsList({Key? key, this.userId = 'me'}) : super(key: key);
+  const ReviewsList({Key? key, required this.userId}) : super(key: key);
 
   @override
   ConsumerState<ReviewsList> createState() => _ReviewsListState();
@@ -26,136 +26,113 @@ class _ReviewsListState extends ConsumerState<ReviewsList> with SingleTickerProv
     _tabController.dispose();
     super.dispose();
   }
-
-  List<Review> _filteredForTab(List<Review> all, int tabIndex) {
+  List<RatingModel> _filteredForTab(List<RatingModel> all, int tabIndex) {
     if (tabIndex == 0) {
-      final copy = List<Review>.from(all);
+      final copy = List<RatingModel>.from(all);
       copy.sort((a, b) {
-        final r = b.rating.compareTo(a.rating);
+        final ratingA = a.stars ?? 0;
+        final ratingB = b.stars ?? 0;
+        final r = ratingB.compareTo(ratingA);
         if (r != 0) return r;
-        return b.date.compareTo(a.date);
+
+        final dateA = a.ratedAt ?? DateTime(2000);
+        final dateB = b.ratedAt ?? DateTime(2000);
+        return dateB.compareTo(dateA);
       });
       return copy;
     }
-    final rating = 6 - tabIndex; // 1->5 mapping
-    final items = all.where((r) => r.rating == rating).toList();
-    items.sort((a, b) => b.date.compareTo(a.date));
+
+    final targetRating = 6 - tabIndex;
+    final items = all.where((r) => (r.stars ?? 0) == targetRating).toList();
+
+    items.sort((a, b) {
+      final dateA = a.ratedAt ?? DateTime(2000);
+      final dateB = b.ratedAt ?? DateTime(2000);
+      return dateB.compareTo(dateA);
+    });
+
     return items;
   }
 
-  int _countForRating(List<Review> all, int rating) => all.where((r) => r.rating == rating).length;
+  int _countForRating(List<RatingModel> all, int rating) =>
+      all.where((r) => (r.stars ?? 0) == rating).length;
 
   @override
   Widget build(BuildContext context) {
-    final reviewsAsync = ref.watch(reviewsProvider(widget.userId));
+    final reviewsAsync = ref.watch(reviewsForUserProvider(widget.userId));
+
     return reviewsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => const Center(child: Text('Lỗi khi tải đánh giá')),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (e, st) => Center(child: Text('Lỗi khi tải đánh giá: $e')),
       data: (all) {
         final total = all.length;
+        if (total == 0) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            alignment: Alignment.center,
+            child: Column(
+              children: [
+                Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                const SizedBox(height: 8),
+                Text("Chưa có đánh giá nào", style: TextStyle(color: Colors.grey[600])),
+              ],
+            ),
+          );
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Đánh giá', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            const Text('Đánh giá từ cộng đồng',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF003E77))),
+            const SizedBox(height: 12),
             TabBar(
               controller: _tabController,
               isScrollable: true,
-              labelColor: Theme.of(context).primaryColor,
-              unselectedLabelColor: Colors.black54,
+              labelColor: const Color(0xFF003E77),
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: const Color(0xFFE30000),
+              indicatorSize: TabBarIndicatorSize.label,
               tabs: [
                 Tab(text: 'Tất cả ($total)'),
-                Tab(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 6),
-                    Text('5 (${_countForRating(all, 5)})'),
-                  ]),
-                ),
-                Tab(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 6),
-                    Text('4 (${_countForRating(all, 4)})'),
-                  ]),
-                ),
-                Tab(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 6),
-                    Text('3 (${_countForRating(all, 3)})'),
-                  ]),
-                ),
-                Tab(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 6),
-                    Text('2 (${_countForRating(all, 2)})'),
-                  ]),
-                ),
-                Tab(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 6),
-                    Text('1 (${_countForRating(all, 1)})'),
-                  ]),
-                ),
+                ...List.generate(5, (index) {
+                  final star = 5 - index;
+                  return Tab(
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.star, size: 16, color: Colors.amber),
+                      const SizedBox(width: 4),
+                      Text('$star (${_countForRating(all, star)})'),
+                    ]),
+                  );
+                }),
               ],
             ),
-            const SizedBox(height: 8),
+
+            const SizedBox(height: 12),
+
+
             SizedBox(
-              height: 300,
+              height: 400,
               child: TabBarView(
                 controller: _tabController,
                 children: List.generate(6, (index) {
                   final items = _filteredForTab(all, index);
-                  if (items.isEmpty) return const Center(child: Text('Chưa có đánh giá'));
+                  if (items.isEmpty) {
+                    return const Center(child: Text('Không có đánh giá nào', style: TextStyle(color: Colors.grey)));
+                  }
+
                   return ListView.separated(
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.only(bottom: 20),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, i) {
-                      final r = items[i];
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CircleAvatar(radius: 18, backgroundColor: Colors.grey),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(r.author, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      Row(children: List.generate(5, (idx) => Icon(idx < r.rating ? Icons.star : Icons.star_border, size: 14, color: Colors.amber))),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(r.text, style: const TextStyle(color: Colors.black87)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('${r.date.day}/${r.date.month}/${r.date.year}', style: const TextStyle(color: Colors.black45, fontSize: 12)),
-                          ],
-                        ),
-                      );
+                      final rating = items[i];
+                      return AlreadyRatedWidget(rating: rating);
                     },
                   );
                 }),
