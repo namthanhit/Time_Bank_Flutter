@@ -1,6 +1,13 @@
 import 'package:intl/intl.dart';
 
-enum NotificationType { transferOut, transferIn, systemAlert }
+enum NotificationType {
+  transferOut,
+  transferIn,
+  systemAlert,
+  offerReceived,
+  offerAccepted,
+  offerRejected,
+}
 
 NotificationType _mapType(String s) {
   switch (s) {
