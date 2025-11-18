@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fluttertoast/fluttertoast.dart'; // Import thư viện
+
 import 'package:time_bank_flutter/features/service/providers/booking_providers.dart';
 import '../../../providers/service_providers.dart';
 import '../../../domain/models/service.dart';
@@ -25,11 +27,87 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   int _currentImageIndex = 0;
   int _currentStep = 0;
   bool _isCancelled = false;
+  String _statusDisplayLabel = 'Đã hủy';
+
+  late FToast fToast;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 1.0);
+
+    fToast = FToast();
+    fToast.init(context);
+  }
+
+  void _showCustomToast(String message, {bool isSuccess = true}) {
+    final List<Color> colors = isSuccess
+        ? [const Color(0xFF00B09B), const Color(0xFF96C93D)]
+        : [const Color(0xFFFF5F6D), const Color(0xFFFFC371)];
+
+    final IconData icon = isSuccess ? Icons.check_rounded : Icons.close_rounded;
+
+    Widget toast = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 20.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(
+            20.0),
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            spreadRadius: 1,
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Ôm sát nội dung
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            margin: const EdgeInsets.only(
+                bottom: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 32),
+          ),
+
+          // Nội dung Text
+          Flexible(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                height: 1.4, // Giãn dòng nhẹ cho dễ đọc
+              ),
+              textAlign: TextAlign.center, // Căn giữa văn bản
+              maxLines: 3, // Giới hạn dòng để không quá dài
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    fToast.removeCustomToast();
+
+    fToast.showToast(
+      child: toast,
+      gravity: ToastGravity.CENTER,
+      toastDuration: const Duration(seconds: 2),
+      fadeDuration: const Duration(milliseconds: 350),
+    );
   }
 
   @override
@@ -177,31 +255,32 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               ),
               color: Colors.white,
               itemBuilder: (context) => [
-                const PopupMenuItem<String>(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('Chỉnh sửa'),
-                    ],
+                if (!_isCancelled)
+                  const PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 20, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Chỉnh sửa'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Xóa'),
-                    ],
+                if (!_isCancelled)
+                  const PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Xóa'),
+                      ],
+                    ),
                   ),
-                ),
               ],
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    // Open the edit page with the current service prefilled
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -231,37 +310,23 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           'Thời gian',
           _formatDateTime(service.preferredStart ?? DateTime.now()),
         ),
-
         const SizedBox(height: 12),
-
-        // Hàng 2: Thời lượng
         _buildDetailItem(
           Icons.timer,
           'Thời lượng',
           _formatDuration(service.minSlotMinutes),
         ),
-
         const SizedBox(height: 12),
-
-        // Hàng 3: Địa điểm
         _buildDetailItem(
           Icons.location_on,
           'Địa điểm',
           service.place ?? 'Chưa xác định',
         ),
-
         const SizedBox(height: 12),
-
-        // Hàng 4: Chuyên môn - cùng một dòng
         _buildSpecializationInline(service),
-
         const SizedBox(height: 12),
-        // Số lượng nhân sự: booked / capacity
         _buildPersonnelCount(service),
-
         const SizedBox(height: 16),
-
-        // Thanh tiến trình trạng thái
         _buildProgressIndicator(),
       ],
     );
@@ -269,7 +334,6 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
 
   Widget _buildPersonnelCount(Service service) {
     final bookedCountAsync = ref.watch(getCountBookedProvider(service.id));
-
     final cap = service.slot;
     final capStr = cap.toString().padLeft(2, '0');
 
@@ -460,35 +524,41 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   }
 
   void _initializeStatus(Service service) {
-    if (_isCancelled) return;
+    _isCancelled = false;
+    _statusDisplayLabel = 'Đã hủy';
 
     final s = service.status.toString().toLowerCase();
     debugPrint('service.status: ${s}');
+
     if (s == 'open' || s == 'đang mở' || s == 'dang mo' || s == 'mở') {
       _currentStep = 1;
-      _isCancelled = false;
     } else if (s == 'in_progress' ||
         s == 'doing' ||
         s == 'đang thực hiện' ||
         s == 'dang thuc hien' ||
         s == 'matched') {
       _currentStep = 2;
-      _isCancelled = false;
     } else if (s == 'completed' ||
         s == 'đã hoàn thành' ||
         s == 'da hoan thanh') {
       _currentStep = 3;
-      _isCancelled = false;
     } else if (s == 'cancelled' ||
         s == 'đã hủy' ||
         s == 'da huy' ||
-        s == 'hủy' ||
-        s == 'expired') {
+        s == 'hủy') {
       _currentStep = 1;
       _isCancelled = true;
+      _statusDisplayLabel = 'Đã hủy';
+    } else if (s == 'expired' || s == 'hết hạn') {
+      _currentStep = 1;
+      _isCancelled = true;
+      _statusDisplayLabel = 'Đã hết hạn';
+    } else if (s == 'banned' || s == 'banned' || s == 'bị cấm') {
+      _currentStep = 1;
+      _isCancelled = true;
+      _statusDisplayLabel = 'Đã bị cấm';
     } else {
       _currentStep = 1;
-      _isCancelled = false;
     }
   }
 
@@ -504,7 +574,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
     if (_isCancelled &&
         _currentStep >= 0 &&
         _currentStep < displaySteps.length) {
-      displaySteps[_currentStep] = 'Đã hủy';
+      displaySteps[_currentStep] = _statusDisplayLabel;
     }
 
     final Color completedColor = _isCancelled ? Colors.red : Colors.green;
@@ -821,21 +891,23 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            width: 48,
-            height: 48,
-            child: IconButton(
-              onPressed: () {
-                _showDeleteConfirmDialog(context, service);
-              },
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.red,
-                size: 35,
+          if (!_isCancelled) ...[
+            const SizedBox(width: 12),
+            Container(
+              width: 48,
+              height: 48,
+              child: IconButton(
+                onPressed: () {
+                  _showDeleteConfirmDialog(context, service);
+                },
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 35,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -844,7 +916,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
   void _showDeleteConfirmDialog(BuildContext context, Service service) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.white,
           title: const Text('Xác nhận hủy yêu cầu',
@@ -861,7 +933,7 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text(
                 'Hủy',
                 style: TextStyle(
@@ -872,10 +944,9 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
             ),
             TextButton(
               onPressed: () async {
-                // 1. Đóng dialog xác nhận
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
 
-                // 2. Hiển thị dialog loading
+                if (!mounted) return;
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -885,34 +956,25 @@ class _MyServiceDetailPageState extends ConsumerState<MyServiceDetailPage> {
                 );
 
                 try {
-                  // 3. Gọi API
                   await ref.read(cancelJobProvider(service.id).future);
 
-                  // 4. Xử lý thành công
                   if (!mounted) return;
-                  Navigator.of(context).pop(); // Đóng dialog loading
+                  Navigator.of(context).pop(); // Tắt loading
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã hủy yêu cầu thành công.'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  // ✅ SỬ DỤNG TOAST ĐÃ CUSTOM
+                  _showCustomToast("Đã hủy yêu cầu thành công.",
+                      isSuccess: true);
 
-                  ref.invalidate(serviceByIdProvider(widget.serviceId));
-
-                  Navigator.of(context).pop(); // Quay về trang danh sách
+                  if (mounted) {
+                    Navigator.of(context).pop(); // Quay về trang trước
+                  }
                 } catch (e) {
-                  // 6. Xử lý lỗi
                   if (!mounted) return;
-                  Navigator.of(context).pop(); // Đóng dialog loading
+                  Navigator.of(context).pop(); // Tắt loading
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hủy yêu cầu thất bại: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  // ✅ SỬ DỤNG TOAST ĐÃ CUSTOM
+                  _showCustomToast("Hủy yêu cầu thất bại: $e",
+                      isSuccess: false);
                 }
               },
               child: const Text('Đồng ý',

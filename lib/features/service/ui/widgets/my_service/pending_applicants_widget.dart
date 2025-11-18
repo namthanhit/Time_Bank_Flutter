@@ -54,7 +54,7 @@ class _PendingApplicantsWidgetState
 
     return {
       'id': offer.id,
-      'status': offer.status, // Sẽ là 'pending' hoặc 'withdrawn'
+      'status': offer.status,
       'serviceId': offer.jobId,
       'name': offer.offerUserName,
       'avatar': offer.offerUserAvatar,
@@ -191,14 +191,6 @@ class _PendingApplicantsWidgetState
                       ),
                     ),
                     const SizedBox(width: 12),
-                    IconButton(
-                      onPressed: () {
-                        _showFilterDialog(context);
-                      },
-                      icon: const Icon(Icons.filter_alt_outlined,
-                          color: Color(0xFF003E77), size: 28),
-                      tooltip: 'Lọc ứng viên',
-                    ),
                   ],
                 ),
               ),

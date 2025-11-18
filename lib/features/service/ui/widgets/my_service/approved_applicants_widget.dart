@@ -140,16 +140,6 @@ class _ApprovedApplicantsWidgetState
                     ),
                   ),
                   const SizedBox(width: 12),
-                  IconButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bộ lọc đang phát triển')),
-                      );
-                    },
-                    icon: const Icon(Icons.filter_alt_outlined,
-                        color: Color(0xFF003E77), size: 28),
-                    tooltip: 'Lọc ứng viên',
-                  ),
                 ],
               ),
             ),
