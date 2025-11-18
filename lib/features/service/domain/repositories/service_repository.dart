@@ -52,4 +52,17 @@ abstract class ServiceRepository {
     required String preferredStartTime,
     List<String>? imageUrls,
   });
+
+  Future<Map<String, dynamic>> checkUpdateJob({
+    required String jobId,
+    required Map<String, dynamic> dto,
+  });
+
+  Future<Map<String, dynamic>> confirmUpdateJob({
+    required Map<String, dynamic> body,
+  });
+
+  Future<Map<String, dynamic>> cancelJob({
+    required String jobId,
+  });
 }

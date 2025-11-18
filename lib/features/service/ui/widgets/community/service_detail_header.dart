@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../domain/models/service.dart';
+import '../../page/report_page.dart';
 
 class ServiceDetailHeader extends StatelessWidget {
   final Service service;
@@ -17,13 +18,84 @@ class ServiceDetailHeader extends StatelessWidget {
     this.showAllSpecializations = false,
   });
 
+  void _showReportServiceSheet(BuildContext context) {
+    final reportReasons = [
+      'Dịch vụ lừa đảo/không có thật',
+      'Nội dung không phù hợp/Vi phạm chính sách',
+      'Spam/Quảng cáo sai sự thật',
+      'Ngôn từ đả kích/Thù địch',
+      'Khác...',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Báo cáo dịch vụ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Color(0xFF003E77),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...reportReasons.map((reason) {
+                  return ListTile(
+                    title: Text(reason, style: const TextStyle(fontSize: 16)),
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReportPage(
+                            reportedUserName: service.title, // Tên dịch vụ
+                            reportReason: reason,
+                            targetId: service.id, // << ID Dịch vụ
+                            targetType: 'service', // << Loại đối tượng
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final visibilityIcon = service.isPublic ? Icons.people : Icons.group;
-
-    debugPrint('service.skillNames: ${service.skillNames}');
-    debugPrint(
-        'service.providerSpecialization: ${service.providerSpecialization}');
+    final visibilityIcon = service.isPublic ? Icons.person : Icons.group;
 
     final List<String> fromSkillNames = (service.skillNames ?? <String>[])
         .map((e) => e.toString().trim())
@@ -50,76 +122,88 @@ class ServiceDetailHeader extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(
-                service.title,
-                style: const TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.w700,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      service.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF003E77),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    service.isPublic ? Icons.group : Icons.person,
+                    size: 25,
+                    color: const Color(0xFF003E77),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: const Icon(
+                  Icons.more_horiz,
+                  size: 25,
                   color: Color(0xFF003E77),
                 ),
               ),
-            ),
-            Icon(visibilityIcon, size: 25, color: Color(0xFF003E77)),
-            if (isMyService) ...[
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                icon: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  // color: Colors.white,
-                  child: const Icon(
-                    Icons.more_horiz,
-                    size: 25,
-                    color: Color(0xFF003E77),
+              color: Colors.white,
+              itemBuilder: (context) => [
+                const PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.report, size: 20, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Báo cáo dịch vụ'),
+                    ],
                   ),
                 ),
-                color: Colors.white,
-                itemBuilder: (context) => [
+                if (isMyService) ...[
                   const PopupMenuItem<String>(
                     value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 20, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text('Sửa'),
-                      ],
-                    ),
+                    child: Row(children: [
+                      Icon(Icons.edit),
+                      SizedBox(width: 8),
+                      Text('Sửa')
+                    ]),
                   ),
                   const PopupMenuItem<String>(
                     value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 20, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Xóa'),
-                      ],
-                    ),
+                    child: Row(children: [
+                      Icon(Icons.delete),
+                      SizedBox(width: 8),
+                      Text('Xóa')
+                    ]),
                   ),
-                ],
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Chức năng sửa đang phát triển')),
-                    );
-                  } else if (value == 'delete') {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Chức năng xóa đang phát triển')),
-                    );
-                  }
-                },
-              ),
-            ],
+                ]
+              ],
+              onSelected: (value) {
+                if (value == 'report') {
+                  _showReportServiceSheet(context);
+                } else if (value == 'edit') {
+                  //
+                } else if (value == 'delete') {
+                  //
+                }
+              },
+            ),
           ],
         ),
         const SizedBox(height: 12),
-
-        // Time info column with heart icon on the right
+        // ... (Phần hiển thị thời gian/địa điểm giữ nguyên như cũ)
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -127,7 +211,6 @@ class ServiceDetailHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Thời gian
                   Row(
                     children: [
                       Icon(Icons.access_time,
@@ -145,8 +228,6 @@ class ServiceDetailHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-
-                  // Thời lượng (giờ:phút:giây)
                   Row(
                     children: [
                       Icon(Icons.timer, size: 16, color: Colors.grey[600]),
@@ -165,8 +246,6 @@ class ServiceDetailHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-
-                  // Địa điểm
                   Row(
                     children: [
                       Icon(Icons.location_on,
@@ -179,7 +258,6 @@ class ServiceDetailHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -245,7 +323,7 @@ class ServiceDetailHeader extends StatelessWidget {
               borderRadius: borderRadius,
             ),
             child: const Text(
-              'Chưa có', // Tên tag
+              'Chưa có',
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -384,14 +462,14 @@ class ServiceDetailHeader extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE0DC06), // Nền vàng
+                            color: const Color(0xFFE0DC06),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             tag,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF000000), // Chữ đen
+                              color: Color(0xFF000000),
                             ),
                           ),
                         ),

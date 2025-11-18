@@ -30,10 +30,8 @@ class ActivitiesList extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // Show only first two activities
         for (int i = 0; i < showCount; i++) ActivityCard(activity: items[i]),
 
-        // If there are more, show a "See more" card linking to ServicePage
         if (items.length > showCount)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -44,7 +42,8 @@ class ActivitiesList extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const ServicePage(initialTabIndex: 1),
+                    builder: (_) => const ServicePage(
+                        initialListTypeFilter: 'Dịch vụ của tôi'),
                   ));
                 },
                 child: Container(
