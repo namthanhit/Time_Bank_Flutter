@@ -8,6 +8,8 @@ abstract class INotificationRepository {
   Future<void> markRead(List<String> ids);
   Future<void> setFcmToken(String token);
   Future<void> deactivateFcmToken(String token);
+  Future<int> getUnreadCount();
+  Future<List<AppNotification>> listGeneralNotifications({String? cursor});
 }
 
 class NotificationRepository implements INotificationRepository {
@@ -50,5 +52,27 @@ class NotificationRepository implements INotificationRepository {
     } catch (e) {
       print('Failed to deactivate FCM token (ignoring): $e');
     }
+  }
+
+  @override
+  Future<int> getUnreadCount() async {
+    final http.Response res = await _api.get('/notifications/unread-count');
+    if (res.statusCode != 200) {
+      throw Exception('Failed to fetch unread count: ${res.statusCode}');
+    }
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return data['count'] as int;
+  }
+  @override
+  Future<List<AppNotification>> listGeneralNotifications({String? cursor}) async {
+    final http.Response res = await _api.get(
+      '/notifications/general',
+      query: { if (cursor != null) 'cursor': cursor },
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load general activity: ${res.statusCode}');
+    }
+    final List data = jsonDecode(res.body) as List;
+    return data.map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

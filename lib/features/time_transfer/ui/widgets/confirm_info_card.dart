@@ -57,7 +57,7 @@ class ConfirmInfoCard extends StatelessWidget {
             title: 'Người nhận',
             name: receiverName.toUpperCase(),
             number: receiverNumber,
-            avatarUrl: senderAvatarUrl,
+            avatarUrl: receiverAvatarUrl,
           ),
           const SizedBox(height: 12),
 

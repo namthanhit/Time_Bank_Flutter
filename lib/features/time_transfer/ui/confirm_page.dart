@@ -80,7 +80,7 @@ class ConfirmPage extends ConsumerWidget {
       'timestamp': DateTime.now(),
       'fee': 'Miễn phí',
       'senderAvatarUrl': userProfile?.avatarUrl, // Lấy avatar người gửi
-      'receiverAvatarUrl': null,
+      'receiverAvatarUrl': recipient?.avatarUrl,
     };
 
     return Scaffold(

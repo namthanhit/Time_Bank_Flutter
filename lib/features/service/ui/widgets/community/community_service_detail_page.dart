@@ -989,7 +989,7 @@ class _CommunityServiceDetailPageState
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _cancelRequest(); // <-- Nút này gọi hàm _cancelRequest
+                _cancelRequest();
               },
               child: const Text(
                 'Đồng ý',
@@ -1005,7 +1005,6 @@ class _CommunityServiceDetailPageState
       },
     );
   }
-
   void _showConfirmationDialog(Service service) {
     showModalBottomSheet(
       context: context,
@@ -1025,119 +1024,121 @@ class _CommunityServiceDetailPageState
               ),
             ),
             padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Xác nhận ứng tuyển',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF003E77),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Image.asset(
-                  'assets/images/image 2.png',
-                  width: 100,
-                  height: 100,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.work_outline,
-                        size: 40,
-                        color: Colors.grey[500],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                RichText(
-                  textAlign: TextAlign.justify,
-                  text: TextSpan(
-                    style:
-                        const TextStyle(fontSize: 16, color: Color(0xFF003E77)),
-                    children: [
-                      const TextSpan(
-                          text: 'Bạn đồng ý ứng tuyển vào yêu cầu: '),
-                      TextSpan(
-                        text: service.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(
-                          text:
-                              ', yêu cầu ứng tuyển sẽ được gửi tới người đăng và yêu cầu của bạn sẽ được xem xét, phê duyệt.'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Bạn có thể gửi lời nhắn cho người đăng bài:',
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Xác nhận ứng tuyển',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                       color: Color(0xFF003E77),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _noteController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập ghi chú...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF003E77)),
-                    ),
-                    contentPadding: const EdgeInsets.all(12),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _requestService();
+                  const SizedBox(height: 16),
+                  Image.asset(
+                    'assets/images/image 2.png',
+                    width: 100,
+                    height: 100,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.work_outline,
+                          size: 40,
+                          color: Colors.grey[500],
+                        ),
+                      );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text(
-                      'Đồng ý',
+                  ),
+                  const SizedBox(height: 16),
+                  RichText(
+                    textAlign: TextAlign.justify,
+                    text: TextSpan(
                       style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                      const TextStyle(fontSize: 16, color: Color(0xFF003E77)),
+                      children: [
+                        const TextSpan(
+                            text: 'Bạn đồng ý ứng tuyển vào yêu cầu: '),
+                        TextSpan(
+                          text: service.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const TextSpan(
+                            text:
+                            ', yêu cầu ứng tuyển sẽ được gửi tới người đăng và yêu cầu của bạn sẽ được xem xét, phê duyệt.'),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-              ],
+                  const SizedBox(height: 16),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Bạn có thể gửi lời nhắn cho người đăng bài:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF003E77),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _noteController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Nhập ghi chú...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF003E77)),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _requestService();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        'Đồng ý',
+                        style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
             ),
           ),
         );

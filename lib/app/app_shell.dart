@@ -66,7 +66,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
       if (notification != null) {
         ref.read(activityNotificationsProvider.notifier).upsertFromPush(notification);
-
+        ref.read(generalNotificationsProvider.notifier).upsertFromPush(notification);
         final String? title = message.notification?.title;
         final String? body = message.notification?.body;
 
@@ -93,6 +93,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         }
       }
     });
+
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         print('App opened from terminated state by message: ${message.data}');
@@ -122,14 +123,23 @@ class _AppShellState extends ConsumerState<AppShell> {
     try {
       final data = message.data;
       final notification = message.notification;
-      if (notification == null || data['notificationId'] == null || data['subtype'] == null) {
+      final String? notificationId = data['notificationId'];
+      final String? subtype = data['subtype'];
+      final String? createdAtString = data['createdAt'];
+
+      if (notification == null ||
+          notificationId == null ||
+          subtype == null ||
+          createdAtString == null) {
+        print('FCM Parse Error: Missing required field (ID, Subtype, or Date).');
         return null;
       }
-      final String typeString = data['subtype'] == 'IN' ? 'TRANSFER_IN' : 'TRANSFER_OUT';
-      final DateTime createdAt = DateTime.parse(data['createdAt'] as String).toLocal();
-
+      final DateTime createdAt = DateTime.parse(createdAtString).toLocal();
+      final String typeString = (subtype == 'IN' || subtype == 'OUT')
+          ? 'TRANSFER_${subtype}'
+          : subtype;
       return AppNotification(
-        id: data['notificationId'] as String,
+        id: notificationId,
         title: notification.title ?? 'Thông báo',
         body: notification.body ?? '',
         type: _mapType(typeString),
@@ -138,20 +148,32 @@ class _AppShellState extends ConsumerState<AppShell> {
         data: data,
       );
     } catch (e) {
-      print('Failed to parse FCM message: $e');
+      print('FCM Fatal Parse Error (Invalid Date/Format or unexpected data): $e');
       return null;
     }
   }
-
   NotificationType _mapType(String s) {
     switch (s) {
-      case 'TRANSFER_OUT': return NotificationType.transferOut;
-      case 'TRANSFER_IN':  return NotificationType.transferIn;
-      default:             return NotificationType.systemAlert;
+      case 'TRANSFER_OUT':
+      case 'OUT':
+        return NotificationType.transferOut;
+      case 'TRANSFER_IN':
+      case 'IN':
+        return NotificationType.transferIn;
+
+      case 'OFFER_RECEIVED':
+        return NotificationType.offerReceived;
+      case 'OFFER_ACCEPTED':
+        return NotificationType.offerAccepted;
+      case 'OFFER_REJECTED':
+        return NotificationType.offerRejected;
+
+      default:
+        return NotificationType.systemAlert;
     }
   }
 
-  // ===== LOGIC UI (Giữ nguyên) =====
+
   int _navToPage(int i) => i > 2 ? i - 1 : i;
   int get _pageToNav => _currentPageIndex >= 2 ? _currentPageIndex + 1 : _currentPageIndex;
 

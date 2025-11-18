@@ -87,7 +87,13 @@ class _ActivityListState extends ConsumerState<ActivityList> {
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (_, i) {
               final notification = items[i];
-              return TransactionNotificationCard(notification: notification);
+              return TransactionNotificationCard(
+                notification: notification,
+                onTap: () {
+                  ref.read(activityNotificationsProvider.notifier)
+                      .markSingleAsRead(notification.id);
+                },
+              );
             },
           );
         },

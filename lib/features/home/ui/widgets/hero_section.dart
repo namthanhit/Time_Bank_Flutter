@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/home_models.dart';
 import '../home_typography.dart';
+import 'package:time_bank_flutter/features/notification/providers/notification_providers.dart';
 
-class HeroSection extends StatelessWidget {
+class HeroSection extends ConsumerWidget {
   const HeroSection({
     super.key,
     required this.summary,
@@ -80,7 +82,9 @@ class HeroSection extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCountAsync = ref.watch(unreadCountProvider);
+
     return Container(
       height: 280,
       width: double.infinity,
@@ -101,9 +105,45 @@ class HeroSection extends StatelessWidget {
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: onNotificationsTap,
-                child: const Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Icon(Icons.notifications, color: Colors.white, size: 28),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Stack(
+                    children: [
+                      const Icon(Icons.notifications, color: Colors.white, size: 28),
+                      unreadCountAsync.when(
+                        loading: () => const SizedBox.shrink(),
+                        error: (e, s) => const SizedBox.shrink(),
+                        data: (count) => count > 0
+                            ? Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -116,7 +156,6 @@ class HeroSection extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Cột Avatar + Rating
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -127,7 +166,6 @@ class HeroSection extends StatelessWidget {
                 ),
 
                 const SizedBox(width: 20),
-
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
