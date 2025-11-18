@@ -75,10 +75,12 @@ class ProfileHeader extends StatelessWidget {
                       child: CircleAvatar(
                         radius: (outerSize / 2) - outerPadding,
                         backgroundColor: Colors.grey[200],
-                        backgroundImage: avatarUrl != null
+                        backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
                             ? NetworkImage(avatarUrl!)
-                            : const AssetImage('assets/images/avatar.png')
-                        as ImageProvider,
+                            : null,
+                        child: (avatarUrl == null || avatarUrl!.isEmpty)
+                            ? Icon(Icons.person, color: Colors.grey[500], size: (outerSize / 2))
+                            : null,
                       ),
                     ),
                   ],
