@@ -10,6 +10,6 @@ abstract class RatingRepository {
     required String bookingId,
     required int stars,
     String? comment,
-    List<String>? imageIds,
+    List<String>? imageUrls,
   });
 }

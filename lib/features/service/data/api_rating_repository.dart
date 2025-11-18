@@ -66,14 +66,14 @@ class ApiRatingRepository implements RatingRepository {
     required String bookingId,
     required int stars,
     String? comment,
-    List<String>? imageIds,
+    List<String>? imageUrls,
   }) async {
     try {
       final payload = {
         'booking_id': bookingId,
         'stars': stars,
         if (comment != null && comment.isNotEmpty) 'comment': comment,
-        if (imageIds != null && imageIds.isNotEmpty) 'image_ids': imageIds,
+        if (imageUrls != null && imageUrls.isNotEmpty) 'image_urls': imageUrls,
       };
 
       final res = await _api.post(
